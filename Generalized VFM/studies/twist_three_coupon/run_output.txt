@@ -1,0 +1,102 @@
+C:\Users\Afonso Mesquita\OneDrive - California Institute of Technology\PhD Work\Universal_Testing_Machine_Post_Candidacy\Conference_campaign_bending\Generalized VFM\vfm_optimal_field.py:268: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 2.1371064458254953e-16.
+  solution = _solve_dense(K_VFM, F_VFM)
+C:\Users\Afonso Mesquita\OneDrive - California Institute of Technology\PhD Work\Universal_Testing_Machine_Post_Candidacy\Conference_campaign_bending\Generalized VFM\vfm_optimal_field.py:268: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 1.978972359845252e-16.
+  solution = _solve_dense(K_VFM, F_VFM)
+C:\Users\Afonso Mesquita\OneDrive - California Institute of Technology\PhD Work\Universal_Testing_Machine_Post_Candidacy\Conference_campaign_bending\Generalized VFM\vfm_optimal_field.py:268: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 1.1089665808985017e-17.
+  solution = _solve_dense(K_VFM, F_VFM)
+C:\Users\Afonso Mesquita\OneDrive - California Institute of Technology\PhD Work\Universal_Testing_Machine_Post_Candidacy\Conference_campaign_bending\Generalized VFM\vfm_optimal_field.py:268: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 1.4467194078231348e-17.
+  solution = _solve_dense(K_VFM, F_VFM)
+==============================================================================
+  THREE-COUPON CAMPAIGN: longitudinal + transverse + EDGE TWIST
+==============================================================================
+
+  1. ORIENTATION AND SETUP
+  longitudinal  span x   8.72 mm, y  16.53 mm  -> length along y  [OK]
+                mean kappa_xx +5.238e-04, kappa_yy -9.658e-03  -> dominant |yy| is  18.4x the other (need > 5.0x)  [OK]
+  transverse-raw span x   8.37 mm, y  16.96 mm  -> length along y  [OK]
+                mean kappa_xx +1.571e-04, kappa_yy -1.131e-02  -> dominant |yy| is  71.9x the other (need > 5.0x)  [OK]
+  twist         span x   8.91 mm, y   9.48 mm  -> length along y  [OK]
+                mean kappa_xx +4.503e-04, kappa_yy +2.368e-03, kappa_xy -1.066e-02  -> dominant |xy| is   4.5x |yy| (need > 3.0x)  [OK]
+                secondary-bending ratio -0.2221  -> |.| < 1.0 is required for the response to be twist-dominated  [OK]
+  longitudinal  9 load steps, 3486 points each, BC = BC_Sample_6.py, mesh 2x2, area 144.18 mm^2, material frame +90.0 deg, BC form both-cuts (2 external group(s))
+  transverse-raw 9 load steps, 3485 points each, BC = BC_Transverse_raw.py, mesh 2x2, area 142.01 mm^2, material frame +0.0 deg, BC form both-cuts (2 external group(s))
+  twist         2 load steps, 2112 points each, BC = BC_Twist.py, mesh 2x2, area 84.38 mm^2, material frame +0.0 deg, BC form both-cuts (1 external group(s))
+    twist BC: 6 prescribed, 1 linking (W_X@top -- the rigid rotation), 1 external (W_X@top)
+
+  2. IDENTIFICATION
+                                                 D11        D12        D22        D66
+    two-coupon baseline (no twist)           174.349      2.074     61.428     -3.663   
+    three-coupon (with twist)                171.460      2.343     60.576     10.351   
+
+    D66: -3.66 -> +10.35 N mm.  The baseline number is not a
+         measurement -- neither bending coupon loads the twist channel, so a
+         negative D66 is what 'no information' looks like.  The twist coupon
+         is the first test in the campaign that constrains it directly.
+
+    chi2/dof = 1080.73, Birge factor 32.87 -- reported sigma must be Birge-scaled; eq. (20)
+    alone is a variance under a model the data reject.
+    per-experiment chi2/dof: 1:281.5, 2:1907.3, 4:3023.4
+
+  3. WEIGHTING LADDER
+     The twist coupon contributes only TWO load steps, so its
+     cross-time covariance block is 2x2.  If the answer depended
+     strongly on the weighting, that block would be doing work it
+     cannot support.
+                                                 D11        D12        D22        D66
+    gls                                      171.460      2.343     60.576     10.351   
+    block_diagonal                           170.775      2.065     61.218      6.522   
+    diagonal                                 173.935      0.150     61.284      7.221   
+    ols                                       71.177      0.074     28.789     -5.801   
+
+  4. LEAVE-ONE-OUT
+                                                 D11        D12        D22        D66
+    all three                                171.460      2.343     60.576     10.351   
+    drop twist                               174.349      2.074     61.428     -3.663   
+    drop transverse                        not identifiable: LinAlgError
+    drop longitudinal                         -8.099     -0.368     59.985      9.232   
+
+  5. BOUNDARY-CONDITION VARIANTS
+     Only the TWIST coupon's BC changes; the two bending coupons are
+     untouched, so every difference is attributable to it.
+                                                 D11        D12        D22        D66
+    A  shipped form                          171.460      2.343     60.576     10.351   
+    B  top W_XY free                         171.196      2.316     60.570     10.340   D66 +1.00x
+    C  top W_X not linked                    170.964      2.338     60.560     10.415   D66 +1.01x
+    D  top W = 0                             173.161      1.808     61.377     -3.622   D66 -0.35x
+    E  lateral edges clamped                 172.972      1.965     61.416     -3.634   D66 -0.35x
+    F  top W_Y free                          171.486      0.817     57.723     10.677   D66 +1.03x
+      B: LEAKS: dw*/dy no longer identically 0, so the unmeasured M_yy works
+      C: the loaded edge is no longer rigid, so phi* is not a rotation
+      D: the edge cannot lift one side: external work collapses
+      E: control: the laterals are physically free, so this only costs freedom
+      F: LEAKS: the unmeasured bending moment M_yy at the loaded cut does work
+
+  6. MATERIAL ORIENTATION OF THE TWIST COUPON
+     The cut angle was NEVER RECORDED for this coupon.  0 deg is
+     carried.  T(90) leaves the D66 PARAMETER untouched -- it
+     permutes 1 <-> 2 and D16 = D26 = 0 either way -- so it is easy
+     to assume the choice is free.  IT IS NOT: the coupon carries a
+     secondary kappa_yy at -0.22 of kappa_xy, and swapping the frame
+     re-attributes that channel between D11 and D22, moving the D66
+     the fit lands on.  Measured below.
+                                                 D11        D12        D22        D66
+    twist coupon at 0 deg                    171.460      2.343     60.576     10.351   <-- shipped
+    twist coupon at 90 deg                   168.550      2.002     61.125      3.809   
+    spread                                     2.910      0.341      0.549      6.542
+
+    D66 moves 10.35 -> 3.81 N mm, a factor of 2.7.  THE UNRECORDED CUT
+    ANGLE IS THIS COUPON'S DOMINANT UNCERTAINTY, larger than the
+    weighting, the window and every BC variant that does not break
+    the identification outright.  It is a missing measurement, not a
+    modelling choice, and it should be recovered from the specimen
+    records before this coupon's D66 is quoted on its own.
+
+  wrote data/results.csv
+  wrote data/bc_variants.csv
+  wrote figures/fig1_parameters.pdf + .png
+  wrote figures/fig2_bc_variants.pdf + .png
+  wrote figures/fig3_robustness.pdf + .png
+
+==============================================================================
+  D66 = 10.35 N mm from a directly loaded twist channel.
+==============================================================================

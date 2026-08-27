@@ -1,0 +1,23 @@
+experiment   edge    kind      max|W| node  max|tang| node  max|w*| ALONG  max|W_n| node
+------------------------------------------------------------------------------------------
+longitudinal top     LOADED      0.000e+00       0.000e+00      0.000e+00      6.492e+00
+longitudinal bottom  LOADED      0.000e+00       0.000e+00      0.000e+00      4.768e+00
+longitudinal left    FREE        2.229e+01       6.492e+00      2.233e+01      3.374e-01
+longitudinal right   FREE        2.254e+01       6.023e+00      2.286e+01      2.411e-01
+
+transverse-rawtop     LOADED      0.000e+00       0.000e+00      0.000e+00      4.225e+00
+transverse-rawbottom  LOADED      0.000e+00       0.000e+00      0.000e+00      6.462e+00
+transverse-rawleft    FREE        1.938e+01       1.717e+00      1.948e+01      1.937e+01
+transverse-rawright   FREE        3.086e+01       7.022e+00      3.703e+01      1.178e+01
+
+45deg        top     LOADED      0.000e+00       0.000e+00      0.000e+00      2.854e+01
+45deg        bottom  LOADED      0.000e+00       0.000e+00      0.000e+00      1.032e+01
+45deg        left    FREE        1.915e+01       2.304e+01      3.232e+01      1.887e+01
+45deg        right   FREE        3.931e+01       2.854e+01      3.995e+01      7.892e+00
+
+Reading: on every LOADED cut w* is zero AT the nodes and ALONG the whole
+edge (both < 1e-9), so the unknown Kirchhoff shear V_n and the unknown
+twisting moment do no virtual work.  The NORMAL rotation W_n is nonzero
+there -- that is the DOF the measured bending moment works against.
+On the FREE edges nothing is zero, which is the point: they are
+traction-free, so the virtual field is left completely unconstrained.

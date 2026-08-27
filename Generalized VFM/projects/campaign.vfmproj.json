@@ -1,0 +1,1398 @@
+{
+  "format": "vfm-generalized-project",
+  "version": 1,
+  "description": "Conference campaign: longitudinal (experiment 1) and transverse (experiment 2) bending, 9 load steps each. Reproduces run_campaign_gls.py.",
+  "created": "2026-08-17",
+  "experiment_names": {
+    "1": "longitudinal",
+    "2": "transverse-raw"
+  },
+  "material_type": "orthotropic",
+  "analysis_type": "out_of_plane",
+  "initial_parameters": [
+    1.0,
+    1.0,
+    1.0,
+    1.0
+  ],
+  "identification": {
+    "max_iterations": 40,
+    "convergence_tolerance": 1e-08
+  },
+  "gls": {
+    "basis_degree": 6,
+    "weighting": "gls",
+    "spatial_correction": false,
+    "covariance_tolerance": 0.0001
+  },
+  "tests": [
+    {
+      "data_file": "../../../Pre_Conference_Studies/Longitudinal_bending/VFM_export/mat/Sample_6_step03.mat",
+      "experiment_id": 1,
+      "label": "longitudinal:Sample_6_step03",
+      "description": "Sample_6 composite pure bending -- interior DIC window, clamped virtual field, end moment M_yy from the machine couple (per-step F supplied by each .mat)",
+      "sample_area_total": 144.17885,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": 0.892091,
+          "x_max": 9.61359,
+          "y_min": -9.96641,
+          "y_max": 6.56502
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_yy on bottom edge",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Longitudinal_bending/VFM_export/mat/Sample_6_step04.mat",
+      "experiment_id": 1,
+      "label": "longitudinal:Sample_6_step04",
+      "description": "Sample_6 composite pure bending -- interior DIC window, clamped virtual field, end moment M_yy from the machine couple (per-step F supplied by each .mat)",
+      "sample_area_total": 144.17885,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": 0.892091,
+          "x_max": 9.61359,
+          "y_min": -9.96641,
+          "y_max": 6.56502
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_yy on bottom edge",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Longitudinal_bending/VFM_export/mat/Sample_6_step05.mat",
+      "experiment_id": 1,
+      "label": "longitudinal:Sample_6_step05",
+      "description": "Sample_6 composite pure bending -- interior DIC window, clamped virtual field, end moment M_yy from the machine couple (per-step F supplied by each .mat)",
+      "sample_area_total": 144.17885,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": 0.892091,
+          "x_max": 9.61359,
+          "y_min": -9.96641,
+          "y_max": 6.56502
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_yy on bottom edge",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Longitudinal_bending/VFM_export/mat/Sample_6_step06.mat",
+      "experiment_id": 1,
+      "label": "longitudinal:Sample_6_step06",
+      "description": "Sample_6 composite pure bending -- interior DIC window, clamped virtual field, end moment M_yy from the machine couple (per-step F supplied by each .mat)",
+      "sample_area_total": 144.17885,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": 0.892091,
+          "x_max": 9.61359,
+          "y_min": -9.96641,
+          "y_max": 6.56502
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_yy on bottom edge",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Longitudinal_bending/VFM_export/mat/Sample_6_step07.mat",
+      "experiment_id": 1,
+      "label": "longitudinal:Sample_6_step07",
+      "description": "Sample_6 composite pure bending -- interior DIC window, clamped virtual field, end moment M_yy from the machine couple (per-step F supplied by each .mat)",
+      "sample_area_total": 144.17885,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": 0.892091,
+          "x_max": 9.61359,
+          "y_min": -9.96641,
+          "y_max": 6.56502
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_yy on bottom edge",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Longitudinal_bending/VFM_export/mat/Sample_6_step08.mat",
+      "experiment_id": 1,
+      "label": "longitudinal:Sample_6_step08",
+      "description": "Sample_6 composite pure bending -- interior DIC window, clamped virtual field, end moment M_yy from the machine couple (per-step F supplied by each .mat)",
+      "sample_area_total": 144.17885,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": 0.892091,
+          "x_max": 9.61359,
+          "y_min": -9.96641,
+          "y_max": 6.56502
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_yy on bottom edge",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Longitudinal_bending/VFM_export/mat/Sample_6_step09.mat",
+      "experiment_id": 1,
+      "label": "longitudinal:Sample_6_step09",
+      "description": "Sample_6 composite pure bending -- interior DIC window, clamped virtual field, end moment M_yy from the machine couple (per-step F supplied by each .mat)",
+      "sample_area_total": 144.17885,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": 0.892091,
+          "x_max": 9.61359,
+          "y_min": -9.96641,
+          "y_max": 6.56502
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_yy on bottom edge",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Longitudinal_bending/VFM_export/mat/Sample_6_step10.mat",
+      "experiment_id": 1,
+      "label": "longitudinal:Sample_6_step10",
+      "description": "Sample_6 composite pure bending -- interior DIC window, clamped virtual field, end moment M_yy from the machine couple (per-step F supplied by each .mat)",
+      "sample_area_total": 144.17885,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": 0.892091,
+          "x_max": 9.61359,
+          "y_min": -9.96641,
+          "y_max": 6.56502
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_yy on bottom edge",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Longitudinal_bending/VFM_export/mat/Sample_6_step11.mat",
+      "experiment_id": 1,
+      "label": "longitudinal:Sample_6_step11",
+      "description": "Sample_6 composite pure bending -- interior DIC window, clamped virtual field, end moment M_yy from the machine couple (per-step F supplied by each .mat)",
+      "sample_area_total": 144.17885,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": 0.892091,
+          "x_max": 9.61359,
+          "y_min": -9.96641,
+          "y_max": 6.56502
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_yy on bottom edge",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Transverse_bending/VFM_export_raw_frame/mat/Transverse_raw_step03.mat",
+      "experiment_id": 2,
+      "label": "transverse-raw:Transverse_raw_step03",
+      "description": "Generated by bc_gui (plate)",
+      "sample_area_total": 142.013028,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.026368,
+          "x_max": 8.34678,
+          "y_min": 1.24657,
+          "y_max": 18.2071
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "right  w*=0  [raw frame: was right / W]",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  dw*/dy=0  [raw frame: was right / W_Y]",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  d2w*/dxdy=0  [raw frame: was right / W_XY]",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "left   w*=0  [raw frame: was left / W]",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   dw*/dy=0  [raw frame: was left / W_Y]",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   d2w*/dxdy=0  [raw frame: was left / W_XY]",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_xx on right edge  [raw frame: was right / W_X]",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_xx on left edge  [raw frame: was left / W_X]",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Transverse_bending/VFM_export_raw_frame/mat/Transverse_raw_step04.mat",
+      "experiment_id": 2,
+      "label": "transverse-raw:Transverse_raw_step04",
+      "description": "Generated by bc_gui (plate)",
+      "sample_area_total": 142.013028,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.026368,
+          "x_max": 8.34678,
+          "y_min": 1.24657,
+          "y_max": 18.2071
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "right  w*=0  [raw frame: was right / W]",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  dw*/dy=0  [raw frame: was right / W_Y]",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  d2w*/dxdy=0  [raw frame: was right / W_XY]",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "left   w*=0  [raw frame: was left / W]",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   dw*/dy=0  [raw frame: was left / W_Y]",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   d2w*/dxdy=0  [raw frame: was left / W_XY]",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_xx on right edge  [raw frame: was right / W_X]",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_xx on left edge  [raw frame: was left / W_X]",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Transverse_bending/VFM_export_raw_frame/mat/Transverse_raw_step05.mat",
+      "experiment_id": 2,
+      "label": "transverse-raw:Transverse_raw_step05",
+      "description": "Generated by bc_gui (plate)",
+      "sample_area_total": 142.013028,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.026368,
+          "x_max": 8.34678,
+          "y_min": 1.24657,
+          "y_max": 18.2071
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "right  w*=0  [raw frame: was right / W]",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  dw*/dy=0  [raw frame: was right / W_Y]",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  d2w*/dxdy=0  [raw frame: was right / W_XY]",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "left   w*=0  [raw frame: was left / W]",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   dw*/dy=0  [raw frame: was left / W_Y]",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   d2w*/dxdy=0  [raw frame: was left / W_XY]",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_xx on right edge  [raw frame: was right / W_X]",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_xx on left edge  [raw frame: was left / W_X]",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Transverse_bending/VFM_export_raw_frame/mat/Transverse_raw_step06.mat",
+      "experiment_id": 2,
+      "label": "transverse-raw:Transverse_raw_step06",
+      "description": "Generated by bc_gui (plate)",
+      "sample_area_total": 142.013028,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.026368,
+          "x_max": 8.34678,
+          "y_min": 1.24657,
+          "y_max": 18.2071
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "right  w*=0  [raw frame: was right / W]",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  dw*/dy=0  [raw frame: was right / W_Y]",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  d2w*/dxdy=0  [raw frame: was right / W_XY]",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "left   w*=0  [raw frame: was left / W]",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   dw*/dy=0  [raw frame: was left / W_Y]",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   d2w*/dxdy=0  [raw frame: was left / W_XY]",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_xx on right edge  [raw frame: was right / W_X]",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_xx on left edge  [raw frame: was left / W_X]",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Transverse_bending/VFM_export_raw_frame/mat/Transverse_raw_step07.mat",
+      "experiment_id": 2,
+      "label": "transverse-raw:Transverse_raw_step07",
+      "description": "Generated by bc_gui (plate)",
+      "sample_area_total": 142.013028,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.026368,
+          "x_max": 8.34678,
+          "y_min": 1.24657,
+          "y_max": 18.2071
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "right  w*=0  [raw frame: was right / W]",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  dw*/dy=0  [raw frame: was right / W_Y]",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  d2w*/dxdy=0  [raw frame: was right / W_XY]",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "left   w*=0  [raw frame: was left / W]",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   dw*/dy=0  [raw frame: was left / W_Y]",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   d2w*/dxdy=0  [raw frame: was left / W_XY]",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_xx on right edge  [raw frame: was right / W_X]",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_xx on left edge  [raw frame: was left / W_X]",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Transverse_bending/VFM_export_raw_frame/mat/Transverse_raw_step08.mat",
+      "experiment_id": 2,
+      "label": "transverse-raw:Transverse_raw_step08",
+      "description": "Generated by bc_gui (plate)",
+      "sample_area_total": 142.013028,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.026368,
+          "x_max": 8.34678,
+          "y_min": 1.24657,
+          "y_max": 18.2071
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "right  w*=0  [raw frame: was right / W]",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  dw*/dy=0  [raw frame: was right / W_Y]",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  d2w*/dxdy=0  [raw frame: was right / W_XY]",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "left   w*=0  [raw frame: was left / W]",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   dw*/dy=0  [raw frame: was left / W_Y]",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   d2w*/dxdy=0  [raw frame: was left / W_XY]",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_xx on right edge  [raw frame: was right / W_X]",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_xx on left edge  [raw frame: was left / W_X]",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Transverse_bending/VFM_export_raw_frame/mat/Transverse_raw_step09.mat",
+      "experiment_id": 2,
+      "label": "transverse-raw:Transverse_raw_step09",
+      "description": "Generated by bc_gui (plate)",
+      "sample_area_total": 142.013028,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.026368,
+          "x_max": 8.34678,
+          "y_min": 1.24657,
+          "y_max": 18.2071
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "right  w*=0  [raw frame: was right / W]",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  dw*/dy=0  [raw frame: was right / W_Y]",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  d2w*/dxdy=0  [raw frame: was right / W_XY]",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "left   w*=0  [raw frame: was left / W]",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   dw*/dy=0  [raw frame: was left / W_Y]",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   d2w*/dxdy=0  [raw frame: was left / W_XY]",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_xx on right edge  [raw frame: was right / W_X]",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_xx on left edge  [raw frame: was left / W_X]",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Transverse_bending/VFM_export_raw_frame/mat/Transverse_raw_step10.mat",
+      "experiment_id": 2,
+      "label": "transverse-raw:Transverse_raw_step10",
+      "description": "Generated by bc_gui (plate)",
+      "sample_area_total": 142.013028,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.026368,
+          "x_max": 8.34678,
+          "y_min": 1.24657,
+          "y_max": 18.2071
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "right  w*=0  [raw frame: was right / W]",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  dw*/dy=0  [raw frame: was right / W_Y]",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  d2w*/dxdy=0  [raw frame: was right / W_XY]",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "left   w*=0  [raw frame: was left / W]",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   dw*/dy=0  [raw frame: was left / W_Y]",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   d2w*/dxdy=0  [raw frame: was left / W_XY]",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_xx on right edge  [raw frame: was right / W_X]",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_xx on left edge  [raw frame: was left / W_X]",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Pre_Conference_Studies/Transverse_bending/VFM_export_raw_frame/mat/Transverse_raw_step11.mat",
+      "experiment_id": 2,
+      "label": "transverse-raw:Transverse_raw_step11",
+      "description": "Generated by bc_gui (plate)",
+      "sample_area_total": 142.013028,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.026368,
+          "x_max": 8.34678,
+          "y_min": 1.24657,
+          "y_max": 18.2071
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "right  w*=0  [raw frame: was right / W]",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  dw*/dy=0  [raw frame: was right / W_Y]",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "right  d2w*/dxdy=0  [raw frame: was right / W_XY]",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "left   w*=0  [raw frame: was left / W]",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   dw*/dy=0  [raw frame: was left / W_Y]",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "left   d2w*/dxdy=0  [raw frame: was left / W_XY]",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_xx on right edge  [raw frame: was right / W_X]",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          },
+          {
+            "label": "M_xx on left edge  [raw frame: was left / W_X]",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "loadType": "distributed",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+variant,title,sealed,chi2_per_dof,birge,D11,D12,D22,D66,birge_std_D11,birge_std_D12,birge_std_D22,birge_std_D66,top_free,bottom_free,note
+A,A  reference (all rules),1,284.7,16.87,120.170456,0.436066,63.317893,-4.098954,6.964419,2.045944,3.131598,2.050989,-,-,bottom sealed; top open only on the measured M_yy
+B,B  both cuts loaded,1,830.1,28.81,174.348938,2.073890,61.428175,-3.663366,12.372226,4.325557,2.473990,3.540811,-,-,bottom W_Y free + EXTERNAL: assumes equal and opposite moments
+C,C  bottom W_XY free,0,297.6,17.25,117.173772,-0.946814,62.087819,-3.458084,6.730954,1.991769,3.086254,2.017683,-,W_XY,LEAKS: bottom twisting moment does unaccounted work
+D,D  bottom W_X free,0,299.3,17.30,119.403891,0.759144,63.084134,-3.965127,7.080561,2.021456,3.196396,2.087767,-,W_X,LEAKS: bottom twisting moment does unaccounted work
+E,E  top W_XY free,0,393.5,19.84,115.339887,-5.857374,62.692971,-4.979767,7.758374,2.151014,3.606555,1.808804,W_XY,-,LEAKS: top twist does work but is not supplied
+F,F  top W_X free + measured M_xy,1,443.5,21.06,119.876978,1.288136,60.302066,-7.088085,8.535011,2.333051,3.610923,2.231129,-,-,rule 6: W_X opened AND its measured twist supplied
+G,G  link W_Y across top,1,247.0,15.72,122.160486,1.071498,63.660962,-2.985032,6.635337,1.933926,2.945900,2.266160,-,-,"rule 7: top rotates as one; admissible, smaller field space"
+H,H  link W_Y top + free bottom W_XY,0,255.7,15.99,119.024293,-0.140477,62.502459,-2.633680,6.372882,1.875163,2.893969,2.231256,-,W_XY,"linking on top, C's leak on the bottom"

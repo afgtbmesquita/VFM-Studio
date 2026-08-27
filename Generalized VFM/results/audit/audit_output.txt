@@ -1,0 +1,77 @@
+==============================================================================
+  ASSUMPTION AUDIT
+==============================================================================
+  reference theta = [ 61.4282   2.0739 174.3489  -3.6634]
+  eq. (20) sigma  = [0.0859 0.1501 0.4294 0.1229]
+
+  D eigenvalues = [ -3.663  61.39  174.387]   positive definite = False
+
+  Per-experiment FGLS (is there a common theta?)
+    longitudinal  D11=    1.26+/-  0.12  D12=   -0.02+/-  0.05  D22=  181.70+/-  0.47  D66=   -9.16+/-  0.26
+    transverse    D11=   61.19+/-  0.09  D12=   -0.01+/-  0.01  D22=    0.19+/-  0.02  D66=   -2.01+/-  0.05
+    disagreement in sigma: D11=  398.5  D12=    0.1  D22=  382.0  D66=   26.8
+
+  Leave-one-load-step-out jackknife...
+    [2.1958 1.2934 3.528  0.3445]
+
+  Parametric bootstrap, 150 replicates each...
+    white: 10/150 (3.6 s/replicate)
+    white: 20/150 (3.4 s/replicate)
+    white: 30/150 (3.4 s/replicate)
+    white: 40/150 (3.2 s/replicate)
+    white: 50/150 (3.2 s/replicate)
+    white: 60/150 (3.2 s/replicate)
+    white: 70/150 (3.1 s/replicate)
+    white: 80/150 (3.2 s/replicate)
+    white: 90/150 (3.2 s/replicate)
+    white: 100/150 (3.2 s/replicate)
+    white: 110/150 (3.2 s/replicate)
+    white: 120/150 (3.3 s/replicate)
+    white: 130/150 (3.3 s/replicate)
+    white: 140/150 (3.3 s/replicate)
+    white: 150/150 (3.3 s/replicate)
+    correlated: 10/150 (2.8 s/replicate)
+    correlated: 20/150 (2.9 s/replicate)
+    correlated: 30/150 (3.0 s/replicate)
+    correlated: 40/150 (3.0 s/replicate)
+    correlated: 50/150 (3.1 s/replicate)
+    correlated: 60/150 (3.1 s/replicate)
+    correlated: 70/150 (3.1 s/replicate)
+    correlated: 80/150 (3.2 s/replicate)
+    correlated: 90/150 (3.2 s/replicate)
+    correlated: 100/150 (3.2 s/replicate)
+    correlated: 110/150 (3.2 s/replicate)
+    correlated: 120/150 (3.2 s/replicate)
+    correlated: 130/150 (3.2 s/replicate)
+    correlated: 140/150 (3.2 s/replicate)
+    correlated: 150/150 (3.2 s/replicate)
+
+  Basis-degree sensitivity...
+
+==============================================================================
+  THE UNCERTAINTY LADDER  (N.mm)
+==============================================================================
+  source                                            D11      D12      D22      D66
+  --------------------------------------------------------------------------------
+  eq. (20), eq. (3) verbatim  <- what is reported    0.086    0.150    0.429    0.123
+    bootstrap, spatially WHITE noise              0.297    0.344    0.660    0.139
+    bootstrap, measured spatial correlation       0.698    0.916    1.640    0.464
+  jackknife over load steps                       2.196    1.293    3.528    0.344
+  spread over basis degree 2-10                   0.214    0.622    1.546    0.230
+  eq. (20) x sqrt(chi2/dof) = x28.8               2.474    4.326   12.372    3.541
+  |longitudinal - transverse|                    59.933    0.004  181.504    7.149
+  [sensitivity only] eq. (20) with kappa          0.396    0.585    1.494    0.543
+
+  Is eq. (20) internally consistent?  bootstrap / eq.(20):
+    white / eq.(20), eq. (3) verbatim              3.45     2.29     1.54     1.13
+  -> ~1 means the FORMULA is right.  The error bar is nonetheless
+     far too small, because the MODEL feeding it is wrong:
+     chi2/dof = 830, so eq. (20) is a variance
+     UNDER THE MODEL, not the variability of the data.
+
+  NOTE: kappa is measured but NEVER applied.  Introducing it would
+  be fitting the covariance to remove a misfit whose cause is not
+  spatial correlation.  Scaling by sqrt(chi2/dof) reaches the same
+  interval (2.47 vs 2.58 on D11) without inventing a parameter.
+
+  wrote audit_results.npz

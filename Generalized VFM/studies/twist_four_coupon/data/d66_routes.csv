@@ -1,0 +1,5 @@
+route,D66_N_mm,note
+"45 deg coupon, stacked FGLS",9.865060,indirect: anticlastic ratio; twist suppressed ~15x by the yoke
+"45 deg coupon, closed form from the anticlastic ratio",21.639515,moment-free (width and gradient cancel); r = -0.3814
+"twist coupon, stacked FGLS",10.351468,direct: loaded kappa_xy; scales as 1/width; cut angle unrecorded
+all four together,10.555749,both routes stacked

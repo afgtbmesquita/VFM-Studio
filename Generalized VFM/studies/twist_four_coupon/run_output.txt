@@ -1,0 +1,100 @@
+C:\Users\Afonso Mesquita\OneDrive - California Institute of Technology\PhD Work\Universal_Testing_Machine_Post_Candidacy\Conference_campaign_bending\Generalized VFM\vfm_optimal_field.py:268: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 2.1371064458254953e-16.
+  solution = _solve_dense(K_VFM, F_VFM)
+C:\Users\Afonso Mesquita\OneDrive - California Institute of Technology\PhD Work\Universal_Testing_Machine_Post_Candidacy\Conference_campaign_bending\Generalized VFM\vfm_optimal_field.py:268: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 1.978972359845252e-16.
+  solution = _solve_dense(K_VFM, F_VFM)
+C:\Users\Afonso Mesquita\OneDrive - California Institute of Technology\PhD Work\Universal_Testing_Machine_Post_Candidacy\Conference_campaign_bending\Generalized VFM\vfm_optimal_field.py:268: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 1.1089665808985017e-17.
+  solution = _solve_dense(K_VFM, F_VFM)
+C:\Users\Afonso Mesquita\OneDrive - California Institute of Technology\PhD Work\Universal_Testing_Machine_Post_Candidacy\Conference_campaign_bending\Generalized VFM\vfm_optimal_field.py:268: LinAlgWarning: An ill-conditioned matrix detected: slice 0 has rcond = 1.4467194078231348e-17.
+  solution = _solve_dense(K_VFM, F_VFM)
+==============================================================================
+  FOUR-COUPON CAMPAIGN: longitudinal + transverse + 45 deg + TWIST
+==============================================================================
+
+  1. ORIENTATION
+  longitudinal  span x   8.72 mm, y  16.53 mm  -> length along y  [OK]
+                mean kappa_xx +5.238e-04, kappa_yy -9.658e-03  -> dominant |yy| is  18.4x the other (need > 5.0x)  [OK]
+  transverse-raw span x   8.37 mm, y  16.96 mm  -> length along y  [OK]
+                mean kappa_xx +1.571e-04, kappa_yy -1.131e-02  -> dominant |yy| is  71.9x the other (need > 5.0x)  [OK]
+  45deg         span x   8.87 mm, y   9.27 mm  -> length along y  [OK]
+                mean kappa_xx -9.536e-03, kappa_yy +2.713e-02  -> dominant |yy| is   2.8x the other (need > 2.0x)  [OK]
+                anticlastic ratio -0.3514  -> |.| < 1.0 is required for S, D66 > 0 at 45 deg  [OK]
+  twist         span x   8.91 mm, y   9.48 mm  -> length along y  [OK]
+                mean kappa_xx +4.503e-04, kappa_yy +2.368e-03, kappa_xy -1.066e-02  -> dominant |xy| is   4.5x |yy| (need > 3.0x)  [OK]
+                secondary-bending ratio -0.2221  -> |.| < 1.0 is required for the response to be twist-dominated  [OK]
+  longitudinal  9 load steps, 3486 points each, BC = BC_Sample_6.py, mesh 2x2, area 144.18 mm^2, material frame +90.0 deg, BC form both-cuts (2 external group(s))
+  transverse-raw 9 load steps, 3485 points each, BC = BC_Transverse_raw.py, mesh 2x2, area 142.01 mm^2, material frame +0.0 deg, BC form both-cuts (2 external group(s))
+  45deg         9 load steps, 1978 points each, BC = BC_FortyFive.py, mesh 2x2, area 82.19 mm^2, material frame +45.0 deg, BC form both-cuts (2 external group(s))
+  twist         2 load steps, 2112 points each, BC = BC_Twist.py, mesh 2x2, area 84.38 mm^2, material frame +0.0 deg, BC form both-cuts (1 external group(s))
+
+  2. IDENTIFICATION, AGAINST EVERY BASELINE
+                                                 D11        D12        D22        D66
+    two-coupon (bending only)                174.349      2.074     61.428     -3.663   
+    three-coupon (+45 deg)                   153.311     -7.938     55.843      9.865   
+    three-coupon (+twist)                    171.460      2.343     60.576     10.351   
+    four-coupon (+both)                      149.619     -7.615     55.074     10.556   
+
+    chi2/dof = 2403.67, Birge factor 49.03
+    per-experiment chi2/dof: 1:677.5, 2:2614.0, 3:4738.8, 4:3060.1
+
+  3. D66 BY TWO INDEPENDENT ROUTES
+    45 deg coupon, stacked FGLS                                  9.87 N mm
+    45 deg coupon, closed form from the anticlastic ratio       21.64 N mm
+    twist coupon, stacked FGLS                                  10.35 N mm
+    all four together                                           10.56 N mm
+
+    (45 deg closed form uses the measured anticlastic ratio r = -0.3814
+     and S = (D11+D22+2 D12)/4 = 48.32 N mm from the same fit.)
+
+    THE TWO IDENTIFIED ROUTES AGREE TO 6.7%: 9.87 (45 deg, indirect)
+    against 10.35 (twist, direct), and 10.56 with both stacked.
+
+    That is the result worth having.  The two routes share almost no
+    assumptions: the 45 deg answer comes from a ratio of curvatures
+    in which the moment cancels, so no specimen width, machine
+    calibration or moment gradient enters it, but it does depend on
+    the 45/135 cut sense and on a twist the yoke suppresses ~15x.
+    The twist answer comes from a directly loaded kappa_xy, is
+    indifferent to the cut sense, and instead scales as 1/width and
+    depends on its own unrecorded cut angle (a factor of 2.7 --
+    see ../twist_three_coupon section 6).  Two estimators with
+    disjoint dominant errors landing within a few percent of each
+    other is evidence neither is dominated by its own weakness.
+
+    THE CLOSED FORM IS THE OUTLIER at 21.64 N mm, and that is
+    a statement about S, not about D66.  D66 = S(1+r)/(1-r) is
+    linear in S, and S = 48.32 N mm here carries a D12 of
+    -7.94 -- negative, i.e. the campaign's weakest
+    parameter.  The closed form inherits that weakness undiluted;
+    the stacked fits do not.
+
+  4. LEAVE-ONE-OUT
+                                                 D11        D12        D22        D66
+    drop longitudinal                         69.011      4.824     57.015     13.347   
+    drop transverse-raw                      174.815     -3.588    -24.327     14.809   
+    drop 45deg                               171.460      2.343     60.576     10.351   
+    drop twist                               153.311     -7.938     55.843      9.865   
+    longitudinal + transverse-raw            174.349      2.074     61.428     -3.663   
+    longitudinal + 45deg                     178.241     -1.021    -35.600     15.431   
+    longitudinal + twist                   not identifiable: LinAlgError
+    transverse-raw + 45deg                    69.011      4.729     57.620     13.419   
+    transverse-raw + twist                    -8.099     -0.368     59.985      9.232   
+    45deg + twist                            -13.124     28.408     56.216     16.544   
+
+  5. WEIGHTING AND JACKKNIFE
+                                                 D11        D12        D22        D66
+    gls                                      149.619     -7.615     55.074     10.556   
+    block_diagonal                           168.402    -19.774     58.677      8.805   
+    diagonal                                 166.984      1.146     59.781     12.357   
+    ols                                       95.939      2.373      5.650      2.147   
+    jackknife mean                           149.930     -7.738     55.069     10.539   
+    jackknife std                              7.411      3.365      2.532      1.023   
+
+  wrote data/results.csv
+  wrote data/d66_routes.csv
+  wrote figures/fig1_parameters.pdf + .png
+  wrote figures/fig2_d66_routes.pdf + .png
+  wrote figures/fig3_leave_one_out.pdf + .png
+
+==============================================================================
+  Four-coupon theta = D11 149.62, D12 -7.62, D22 55.07, D66 10.56
+==============================================================================

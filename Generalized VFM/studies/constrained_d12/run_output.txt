@@ -1,0 +1,83 @@
+==============================================================================
+  EXPERIMENT SETUP  (read from each experiment's own files)
+==============================================================================
+
+  longitudinal  (experiment 1, BC_Sample_6.py)
+    material frame        phi = 90 deg   (angle from this experiment's +x to the material 1-axis)
+    length runs along     y
+    WINDOW START / END    y = -9.9664 -> 6.5650 mm   (length 16.531 mm)
+    full node bounds      x [0.892091, 9.613590]  y [-9.966410, 6.565020] mm
+    virtual-mesh bounds   x [0.892091, 9.613590]  y [-9.966410, 6.565020] mm
+    width                 8.721 mm, area 144.1789 mm^2, mesh 2x2, 3486 points x 9 steps
+    FREE edges            left+right  (unconstrained: M_nn = 0 and V_n = 0 there)
+    LOADED cuts           bottom+top
+    clamped DOFs          top:W, top:W_X, top:W_XY, bottom:W, bottom:W_X, bottom:W_XY
+    external work         top:W_Y, bottom:W_Y
+
+  transverse-raw  (experiment 2, BC_Transverse_raw.py)
+    material frame        phi = 0 deg   (angle from this experiment's +x to the material 1-axis)
+    length runs along     y
+    WINDOW START / END    y = 1.2466 -> 18.2071 mm   (length 16.961 mm)
+    full node bounds      x [-0.026368, 8.346780]  y [1.246570, 18.207100] mm
+    virtual-mesh bounds   x [-0.026368, 8.346780]  y [1.246570, 18.207100] mm
+    width                 8.373 mm, area 142.0130 mm^2, mesh 2x2, 3485 points x 9 steps
+    FREE edges            left+right  (unconstrained: M_nn = 0 and V_n = 0 there)
+    LOADED cuts           bottom+top
+    clamped DOFs          top:W, top:W_X, top:W_XY, bottom:W, bottom:W_X, bottom:W_XY
+    external work         top:W_Y, bottom:W_Y
+
+  45deg  (experiment 3, BC_FortyFive.py)
+    material frame        phi = 45 deg   (angle from this experiment's +x to the material 1-axis)
+    length runs along     y
+    WINDOW START / END    y = 5.3020 -> 14.5722 mm   (length 9.270 mm)
+    full node bounds      x [0.054803, 8.920920]  y [5.302040, 14.572200] mm
+    virtual-mesh bounds   x [0.054802, 8.920920]  y [5.302040, 14.572200] mm
+    width                 8.866 mm, area 82.1903 mm^2, mesh 2x2, 1978 points x 9 steps
+    FREE edges            left+right  (unconstrained: M_nn = 0 and V_n = 0 there)
+    LOADED cuts           bottom+top
+    clamped DOFs          top:W, top:W_X, top:W_XY, bottom:W, bottom:W_X, bottom:W_XY
+    external work         top:W_Y, bottom:W_Y
+
+  wrote data/experiment_setup.csv
+  wrote figures/fig1_setup.pdf + .png
+
+==============================================================================
+  IDENTIFICATION, ALL LOAD STEPS
+==============================================================================
+
+  2 coupons  (18 load steps)
+                              D11        D12        D22        D66   chi2/dof
+    unconstrained         174.349      2.074     61.428     -3.663        830
+    D12 >= 0              174.349      2.074     61.428     -3.663        830
+    constraint INACTIVE (D12 = +2.074 >= 0 already)
+
+  3 coupons  (27 load steps)
+                              D11        D12        D22        D66   chi2/dof
+    unconstrained         153.311     -7.938     55.843      9.865       2418
+    D12 >= 0              143.882      0.000     54.686      9.779       2439
+    constraint ACTIVE.  DeltaQ = 4635.7, Birge-scaled = 1.92, p = 0.383
+    projection vs column-deletion: 4.26e-14
+  wrote figures/fig2_coefficients.pdf + .png
+
+==============================================================================
+  ONE LOAD STEP PER EXPERIMENT  (3 steps total, not 27)
+==============================================================================
+  Step 1 here is the first EXPORTED step, which is step 3 of the
+  original ramp -- the exports drop step 1 and reference on step 2.
+
+   step        D11        D12        D22        D66   chi2/dof   BirgeQ       p     dQ/Q*    projErr
+      1    105.572     -0.000     69.262      8.571       1135     0.49   0.783  6.12e-02    1.8e-15
+      2    115.567      0.000     51.646      9.185       3394     1.37   0.504  1.71e-01    1.4e-14
+      3    122.086      0.000     54.629      7.808       5471     1.65   0.439  2.06e-01    1.4e-14
+      4    138.138      0.000     55.492      8.740       6018     1.53   0.465  1.91e-01    7.1e-15
+      5    136.406      0.000     58.027      7.589       6797     1.60   0.449  2.00e-01    2.8e-14
+      6    143.487     -0.000     51.887      8.468       9809     1.38   0.502  1.73e-01    0.0e+00
+      7    148.212      0.000     58.171      8.931       9763     1.35   0.510  1.68e-01    2.8e-14
+      8    144.117      0.000     51.709      8.551      10756     1.02   0.600  1.28e-01    0.0e+00
+      9    148.967      0.000     55.719      8.833       9410     0.89   0.639  1.12e-01    2.8e-14
+  spread %       34.1        0.7       29.1       19.0
+  all 9    143.882      0.000     54.686      9.779       2439
+  wrote figures/fig3_single_step.pdf + .png
+  wrote figures/fig4_constraint_cost.pdf + .png
+
+  wrote data/results.csv

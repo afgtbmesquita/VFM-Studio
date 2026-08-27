@@ -1,0 +1,18 @@
+A: A  both cuts loaded  [SHIPPED]
+    F = [-M, +M]; external work follows the MEAN of the two cut moments
+B: B  top loaded, bottom sealed
+    assumes the TOP cut moment equals the machine couple
+C: C  bottom loaded, top sealed
+    assumes the BOTTOM cut moment equals the machine couple
+D: D  both cuts loaded + linked W_Y
+    each cut rotates as one; admissible, smaller virtual-field space
+E: E  bottom W_XY free  [LEAKS]
+    LEAKS: the bottom twisting moment does unaccounted work
+F: F  top W_XY free  [LEAKS]
+    LEAKS: the top twisting moment does unaccounted work
+G: G  lateral edges: w* = 0
+    w*=0 along the free edges; still RELIES on M_xx = 0 there, since the normal slope W_X is left free
+H: H  lateral edges fully sealed
+    the free-edge assumption is NOT used at all -- the honest test of whether the window really reaches the free edges
+S: S  BOTH CUTS SEALED  (scale-free)
+    no traction does virtual work: K.theta = 0, theta up to scale

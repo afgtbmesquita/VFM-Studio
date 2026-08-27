@@ -1,0 +1,7 @@
+key,variant,D11,D12,D22,D66,note
+A,shipped form,171.459710,2.343086,60.576376,10.351468,reference
+B,top W_XY free,171.196404,2.315629,60.570016,10.339651,"LEAKS: dw*/dy no longer identically 0, so the unmeasured M_yy works"
+C,top W_X not linked,170.963559,2.338167,60.559600,10.414992,"the loaded edge is no longer rigid, so phi* is not a rotation"
+D,top W = 0,173.160786,1.808464,61.377443,-3.622210,the edge cannot lift one side: external work collapses
+E,lateral edges clamped,172.972490,1.964525,61.416048,-3.633643,"control: the laterals are physically free, so this only costs freedom"
+F,top W_Y free,171.486039,0.817351,57.722592,10.676834,LEAKS: the unmeasured bending moment M_yy at the loaded cut does work

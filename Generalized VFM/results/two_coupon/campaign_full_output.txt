@@ -1,0 +1,192 @@
+==============================================================================
+  GENERALIZED VFM -- longitudinal + transverse, FGLS
+==============================================================================
+  Orientation checks (read off the shipped .mat):
+  longitudinal  span x   8.72 mm, y  16.53 mm  -> length along y  [OK]
+                mean kappa_xx +5.238e-04, kappa_yy -9.658e-03  -> dominant |yy| is  18.4x the other  [OK]
+  transverse    span x  16.96 mm, y   8.37 mm  -> length along x  [OK]
+                mean kappa_xx -1.131e-02, kappa_yy +1.571e-04  -> dominant |xx| is  71.9x the other  [OK]
+
+  Cases:
+  longitudinal  9 load steps, 3486 points each, BC = BC_Sample_6.py, mesh 2x2, area 144.18 mm^2
+  transverse    9 load steps, 3485 points each, BC = BC_Transverse.py, mesh 2x2, area 142.01 mm^2
+
+------------------------------------------------------------------------------
+  THE IDENTIFICATION
+------------------------------------------------------------------------------
+[VFM-GLS] 18 load steps in 2 experiment(s); weighting = 'gls'
+[VFM-GLS] experiment 1 (longitudinal): 9 load steps, 3486 points, dA = 0.041359 mm^2
+[VFM-GLS]   Gamma 27x27 from a degree-6 basis (d = 28)
+[VFM-GLS]   residual rho at the nearest neighbour (0.201 mm) = 0.916  [1.0 would mean pure smoothing, 0.0 spatially white]
+[VFM-GLS]   spatial correction ON: kappa = 10.5, nu = 3192 (white nu = 3458) -> C inflated x11.4
+[VFM-GLS] experiment 2 (transverse): 9 load steps, 3485 points, dA = 0.040750 mm^2
+[VFM-GLS]   Gamma 27x27 from a degree-6 basis (d = 28)
+[VFM-GLS]   residual rho at the nearest neighbour (0.201 mm) = 0.935  [1.0 would mean pure smoothing, 0.0 spatially white]
+[VFM-GLS]   spatial correction ON: kappa = 18.5, nu = 2967 (white nu = 3457) -> C inflated x21.6
+[VFM-GLS] spatial-correction inflation per experiment: 11.4, 21.6  -> spread 1.899x
+[VFM-GLS]   only the SPREAD moves theta; a common factor cancels because every H_i is the identity.
+[VFM-GLS] iter  1: [ 61.2033   1.912  179.2862  -5.5833]  deltaQ = 1.135e+02
+[VFM-GLS] iter  2: [ 61.1883   1.5044 177.9634  -4.044 ]  deltaQ = 2.183e-01  deltaC = 1.525e-01
+[VFM-GLS] iter  3: [ 61.1901   1.5256 177.9555  -4.0357]  deltaQ = 1.958e-04  deltaC = 1.683e-02
+[VFM-GLS] iter  4: [ 61.19     1.5245 177.9566  -4.0365]  deltaQ = 5.528e-07  deltaC = 5.309e-05
+[VFM-GLS] iter  5: [ 61.19     1.5245 177.9566  -4.0365]  deltaQ = 1.461e-09  deltaC = 7.022e-06
+
+==============================================================================
+  THE MEASURED NOISE -- what the weighting is actually built on
+==============================================================================
+
+  longitudinal  (9 load steps, 3486 points)
+    sigma per load step and component (x1e3):
+        step   kappa_xx   kappa_yy   kappa_xy
+           0     1.5963     1.1234     1.7247
+           1     1.7022     1.1963     1.6913
+           2     1.7883     1.1791     1.8185
+           3     1.9098     1.2612     1.8839
+           4     1.8222     1.3251     1.7007
+           5     1.9338     1.3788     1.8199
+           6     2.1327     1.6073     2.1847
+           7     2.0063     1.6473     2.0355
+           8     2.3471     1.7523     2.4543
+    temporal correlation of the PRIMARY curvature across load steps:
+        1.000  0.834  0.790  0.733  0.639  0.646  0.591  0.577  0.600
+        0.834  1.000  0.834  0.766  0.704  0.671  0.661  0.630  0.679
+        0.790  0.834  1.000  0.809  0.822  0.781  0.754  0.736  0.728
+        0.733  0.766  0.809  1.000  0.792  0.816  0.805  0.797  0.794
+        0.639  0.704  0.822  0.792  1.000  0.859  0.854  0.849  0.848
+        0.646  0.671  0.781  0.816  0.859  1.000  0.867  0.853  0.855
+        0.591  0.661  0.754  0.805  0.854  0.867  1.000  0.896  0.901
+        0.577  0.630  0.736  0.797  0.849  0.853  0.896  1.000  0.898
+        0.600  0.679  0.728  0.794  0.848  0.855  0.901  0.898  1.000
+    mean off-diagonal = 0.769 -- 0.0 would mean the load steps are independent estimates,
+      which is what the earlier inverse-variance pooling assumed.
+    spatial: rho at the nearest neighbour (0.201 mm) = 0.916, kappa = 10.49
+    C conditioning: PD = True, cond = 8.07e+03
+
+  transverse  (9 load steps, 3485 points)
+    sigma per load step and component (x1e3):
+        step   kappa_xx   kappa_yy   kappa_xy
+           0     0.3724     0.4981     0.5343
+           1     0.5406     0.5316     0.6751
+           2     0.5740     0.5607     0.6769
+           3     0.6045     0.6329     0.8513
+           4     0.6820     0.6456     0.8745
+           5     0.7434     0.5875     0.8567
+           6     0.8290     0.7003     0.9027
+           7     0.9553     0.7826     1.0593
+           8     1.0134     0.8470     1.0963
+    temporal correlation of the PRIMARY curvature across load steps:
+        1.000  0.531  0.531  0.483  0.498  0.447  0.403  0.382  0.365
+        0.531  1.000  0.711  0.589  0.664  0.619  0.456  0.495  0.477
+        0.531  0.711  1.000  0.763  0.731  0.695  0.491  0.537  0.462
+        0.483  0.589  0.763  1.000  0.816  0.764  0.671  0.704  0.607
+        0.498  0.664  0.731  0.816  1.000  0.841  0.720  0.743  0.685
+        0.447  0.619  0.695  0.764  0.841  1.000  0.796  0.806  0.742
+        0.403  0.456  0.491  0.671  0.720  0.796  1.000  0.886  0.861
+        0.382  0.495  0.537  0.704  0.743  0.806  0.886  1.000  0.912
+        0.365  0.477  0.462  0.607  0.685  0.742  0.861  0.912  1.000
+    mean off-diagonal = 0.636 -- 0.0 would mean the load steps are independent estimates,
+      which is what the earlier inverse-variance pooling assumed.
+    spatial: rho at the nearest neighbour (0.201 mm) = 0.935, kappa = 18.51
+    C conditioning: PD = True, cond = 2.18e+05
+
+==============================================================================
+  SIDE BY SIDE
+==============================================================================
+  run                                   D11        D12        D22        D66
+  --------------------------------------------------------------------------
+  longitudinal alone (OLS)             4.13       0.52     173.03      -9.92
+  transverse alone (OLS)              63.41       0.12      -0.97      -2.66
+  stacked naive (OLS)                 32.27      -0.36      85.46      -7.86
+  stacked inverse-variance            60.33      -0.16     178.73      -6.47
+  stacked naive (OLS, rerun)          32.27      -0.36      85.46      -7.86
+  FGLS block-diagonal                 61.42       2.39     175.72      -5.73
+  FGLS no spatial correction          61.43       2.07     174.35      -3.66
+  FGLS (this method)                  61.19       1.52     177.96      -4.04
+
+  The first four rows are the earlier folder's results, quoted for
+  comparison.  'no spatial correction' is eq. (3) verbatim; the
+  difference against the last row is what the measured spatial
+  correlation is worth, and it is small because a covariance factor
+  common to both experiments cancels exactly.
+
+==============================================================================
+  THE CONSISTENCY CHECK
+==============================================================================
+  Each stiffness has an independent single-test value.  Agreement
+  between the two routes is itself a result.
+
+              FGLS   single test      gap    inverse-variance gap
+  D11        61.19         63.41     3.5%                    4.9%
+        (transverse coupon alone)
+  D22       177.96        173.03     2.8%                    3.3%
+        (longitudinal coupon alone)
+
+==============================================================================
+  UNCERTAINTY
+==============================================================================
+  eq. (20), the model-based first-order GLS covariance:
+       D11 =     61.190 +/-    0.396 N.mm (0.65 %)
+       D12 =      1.525 +/-    0.585 N.mm (38.35 %)
+       D22 =    177.957 +/-    1.494 N.mm (0.84 %)
+       D66 =     -4.036 +/-    0.543 N.mm (13.46 %)
+
+  This is a LOWER BOUND.  It excludes the uncertainty in Gamma
+  itself (estimated from the same finite data) and the higher-order
+  effect of virtual fields computed from noisy measurements.
+
+  Leave-one-load-step-out jackknife (re-estimating Gamma inside
+  every replicate, so it does propagate the noise model's own
+  uncertainty):
+    18 replicates
+       D11 =     61.190 +/-    2.203 N.mm (3.60 %)   [eq.20 said 0.396]
+       D12 =      1.525 +/-    1.076 N.mm (70.57 %)   [eq.20 said 0.585]
+       D22 =    177.957 +/-    3.541 N.mm (1.99 %)   [eq.20 said 1.494]
+       D66 =     -4.036 +/-    0.354 N.mm (8.76 %)   [eq.20 said 0.543]
+    jackknife / eq.(20) = [5.6 1.8 2.4 0.7]
+    QUOTE THE JACKKNIFE.  The ratio is how much the noise model
+    is carrying that eq. (20) cannot see.
+
+==============================================================================
+  SENSITIVITY TO THE SMOOTHING BASIS
+==============================================================================
+  The basis separates smooth field from fluctuation when
+  estimating Gamma.  Too coarse leaks real mechanics into the
+  noise; too fine fits the noise.  If D11 and D22 barely move,
+  the noise model is not carrying the result.
+
+    degree     d        D11        D12        D22        D66
+         2     6      61.34       1.55     179.35      -4.57
+         4    15      60.76       1.42     178.77      -4.39
+         6    28      61.19       1.52     177.96      -4.04
+         8    45      61.07       0.29     177.57      -3.75
+        10    66      61.22       1.24     175.76      -4.15
+
+==============================================================================
+  IDENTIFIABILITY (Pierron H / CID), both tests pooled
+==============================================================================
+  aggregate cond(H) = 1.076e+03
+  singular values   = [1.938e-03 2.156e-05 1.711e-05 1.802e-06]
+  parameter correlation matrix:
+                 D11      D12      D22      D66
+       D11     1.000    0.084    0.002    0.000
+       D12     0.084    1.000    0.060    0.000
+       D22     0.002    0.060    1.000    0.000
+       D66     0.000    0.000    0.000    1.000
+
+==============================================================================
+  FGLS -- THE RESULT
+==============================================================================
+     D11 =      61.1900 N.mm +/-   2.2031
+     D12 =       1.5245 N.mm +/-   1.0759
+     D22 =     177.9566 N.mm +/-   3.5411
+     D66 =      -4.0365 N.mm +/-   0.3536
+
+  derived at t = 0.2564 mm (micro-CT, longitudinal coupon):
+    E1_flex =   43.6 GPa   E2_flex =  126.7 GPa   nu12 = 0.0086   nu12*nu21 = 0.0002
+
+  QUOTE D11 and D22 ONLY.  D12 and D66 are not recovered by two
+  near-cylindrical bending tests -- validate_gls.py shows the same
+  failure on a synthetic built at these coupons' own biaxiality.
+
+  wrote gls_results_orthotropic.csv
+  wrote gls_step_estimates.csv

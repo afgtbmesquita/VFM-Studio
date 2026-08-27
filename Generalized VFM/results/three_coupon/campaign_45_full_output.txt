@@ -1,0 +1,270 @@
+==============================================================================
+  GENERALIZED VFM -- longitudinal + transverse + 45 deg, FGLS
+==============================================================================
+  Orientation checks (read off the shipped .mat):
+  longitudinal  span x   8.72 mm, y  16.53 mm  -> length along y  [OK]
+                mean kappa_xx +5.238e-04, kappa_yy -9.658e-03  -> dominant |yy| is  18.4x the other (need > 5.0x)  [OK]
+  transverse    span x  16.96 mm, y   8.37 mm  -> length along x  [OK]
+                mean kappa_xx -1.131e-02, kappa_yy +1.571e-04  -> dominant |xx| is  71.9x the other (need > 5.0x)  [OK]
+  45deg         span x   8.87 mm, y   9.27 mm  -> length along y  [OK]
+                mean kappa_xx -9.536e-03, kappa_yy +2.713e-02  -> dominant |yy| is   2.8x the other (need > 2.0x)  [OK]
+                anticlastic ratio -0.3514  -> |.| < 1.0 is required for S, D66 > 0 at 45 deg  [OK]
+
+  Cases:
+  longitudinal  9 load steps, 3486 points each, BC = BC_Sample_6.py, mesh 2x2, area 144.18 mm^2, material frame +90.0 deg, BC form both-cuts (2 external group(s))
+  transverse    9 load steps, 3485 points each, BC = BC_Transverse.py, mesh 2x2, area 142.01 mm^2, material frame +90.0 deg, BC form both-cuts (2 external group(s))
+  45deg         9 load steps, 1978 points each, BC = BC_FortyFive.py, mesh 2x2, area 82.19 mm^2, material frame +45.0 deg, BC form both-cuts (2 external group(s))
+
+------------------------------------------------------------------------------
+  THE IDENTIFICATION
+------------------------------------------------------------------------------
+[VFM-GLS] 27 load steps in 3 experiment(s); weighting = 'gls'
+[VFM-GLS] experiment 1 (longitudinal): 9 load steps, 3486 points, dA = 0.041359 mm^2
+[VFM-GLS]   Gamma 27x27 from a degree-6 basis (d = 28)
+[VFM-GLS]   residual rho at the nearest neighbour (0.201 mm) = 0.916  [1.0 would mean pure smoothing, 0.0 spatially white]
+[VFM-GLS]   eq. (3) verbatim: kappa = 1. The measured kappa is 10.5, reported as a diagnostic only.
+[VFM-GLS]   => C is the covariance UNDER THE MODEL, not the variability of the data.
+[VFM-GLS] experiment 2 (transverse): 9 load steps, 3485 points, dA = 0.040750 mm^2
+[VFM-GLS]   Gamma 27x27 from a degree-6 basis (d = 28)
+[VFM-GLS]   residual rho at the nearest neighbour (0.201 mm) = 0.935  [1.0 would mean pure smoothing, 0.0 spatially white]
+[VFM-GLS]   eq. (3) verbatim: kappa = 1. The measured kappa is 18.5, reported as a diagnostic only.
+[VFM-GLS]   => C is the covariance UNDER THE MODEL, not the variability of the data.
+[VFM-GLS] experiment 3 (45deg): 9 load steps, 1978 points, dA = 0.041552 mm^2
+[VFM-GLS]   Gamma 27x27 from a degree-6 basis (d = 28)
+[VFM-GLS]   residual rho at the nearest neighbour (0.201 mm) = 0.897  [1.0 would mean pure smoothing, 0.0 spatially white]
+[VFM-GLS]   eq. (3) verbatim: kappa = 1. The measured kappa is 14.6, reported as a diagnostic only.
+[VFM-GLS]   => C is the covariance UNDER THE MODEL, not the variability of the data.
+[VFM-GLS] iter  1: [167.0252  -3.2368  52.3822   7.499 ]  deltaQ = 5.638e+01
+[VFM-GLS] iter  2: [154.1823  -9.1664  55.8137  10.0941]  deltaQ = 4.953e-01  deltaC = 8.900e-01
+[VFM-GLS] iter  3: [153.5031  -7.9389  55.942    9.7892]  deltaQ = 2.491e-02  deltaC = 1.529e-01
+[VFM-GLS] iter  4: [153.322   -7.9472  55.831    9.8671]  deltaQ = 6.885e-05  deltaC = 3.713e-03
+[VFM-GLS] iter  5: [153.314   -7.939   55.845    9.8644]  deltaQ = 1.193e-06  deltaC = 2.520e-03
+[VFM-GLS] iter  6: [153.3114  -7.9378  55.8433   9.865 ]  deltaQ = 3.171e-08  deltaC = 1.461e-04
+[VFM-GLS] iter  7: [153.3112  -7.9377  55.8433   9.8651]  deltaQ = 4.183e-11  deltaC = 3.400e-05
+
+==============================================================================
+  THE MEASURED NOISE -- what the weighting is actually built on
+==============================================================================
+
+  longitudinal  (9 load steps, 3486 points)
+    sigma per load step and component (x1e3):
+        step   kappa_xx   kappa_yy   kappa_xy
+           0     1.5963     1.1234     1.7247
+           1     1.7022     1.1963     1.6913
+           2     1.7883     1.1791     1.8185
+           3     1.9098     1.2612     1.8839
+           4     1.8222     1.3251     1.7007
+           5     1.9338     1.3788     1.8199
+           6     2.1327     1.6073     2.1847
+           7     2.0063     1.6473     2.0355
+           8     2.3471     1.7523     2.4543
+    mean off-diagonal temporal correlation of the PRIMARY curvature = 0.769
+    spatial: rho at the nearest neighbour (0.201 mm) = 0.916, kappa = 10.49
+    C conditioning: PD = True, cond = 7.85e+03
+
+  transverse  (9 load steps, 3485 points)
+    sigma per load step and component (x1e3):
+        step   kappa_xx   kappa_yy   kappa_xy
+           0     0.3724     0.4981     0.5343
+           1     0.5406     0.5316     0.6751
+           2     0.5740     0.5607     0.6769
+           3     0.6045     0.6329     0.8513
+           4     0.6820     0.6456     0.8745
+           5     0.7434     0.5875     0.8567
+           6     0.8290     0.7003     0.9027
+           7     0.9553     0.7826     1.0593
+           8     1.0134     0.8470     1.0963
+    mean off-diagonal temporal correlation of the PRIMARY curvature = 0.636
+    spatial: rho at the nearest neighbour (0.201 mm) = 0.935, kappa = 18.51
+    C conditioning: PD = True, cond = 1.89e+05
+
+  45deg  (9 load steps, 1978 points)
+    sigma per load step and component (x1e3):
+        step   kappa_xx   kappa_yy   kappa_xy
+           0     0.3639     0.4883     0.4392
+           1     0.3527     0.5118     0.5128
+           2     0.4226     0.5521     0.5332
+           3     0.4955     0.7486     0.7342
+           4     0.5502     0.7750     0.8095
+           5     0.6506     0.7670     0.9064
+           6     0.7494     0.8909     0.9477
+           7     0.8234     0.9567     1.1135
+           8     0.9475     1.1703     1.3342
+    mean off-diagonal temporal correlation of the PRIMARY curvature = 0.690
+    spatial: rho at the nearest neighbour (0.201 mm) = 0.897, kappa = 14.61
+    C conditioning: PD = True, cond = 3.89e+05
+
+==============================================================================
+  TWO COUPONS vs THREE
+==============================================================================
+  run                                      D11       D12       D22       D66    chi2/dof
+  --------------------------------------------------------------------------------------
+  2 coupons (the old campaign)          174.35      2.07     61.43     -3.66         830
+  3 coupons (with 45 deg)               153.31     -7.94     55.84      9.87        2418
+
+  2 coupons, eq.(20) sigma                0.43      0.15      0.09      0.12
+  3 coupons, eq.(20) sigma                0.31      0.12      0.08      0.03
+  sigma ratio (3 / 2)                     0.72      0.78      0.89      0.22
+
+==============================================================================
+  SIDE BY SIDE, three coupons
+==============================================================================
+  run                                      D11       D12       D22       D66
+  --------------------------------------------------------------------------
+  stacked naive (OLS)                   107.71      2.48      5.74      1.44
+  FGLS block-diagonal                   171.03    -20.23     59.00      8.43
+  FGLS (this method, eq. 3 verbatim)    153.31     -7.94     55.84      9.87
+  [sensitivity only] FGLS with kappa    161.51     -7.89     54.58      9.59
+
+==============================================================================
+  THE D66 CROSS-CHECK -- closed form vs the full identification
+==============================================================================
+  At 45 deg with traction-free lateral edges the measured
+  anticlastic ratio r = kappa_xx/kappa_yy fixes D66 in closed form:
+      r = -(S - D66)/(S + D66)   with   S = (D11 + D22 + 2 D12)/4
+      =>  D66 = S (1 + r) / (1 - r)
+  This uses ONLY the two normal curvature channels of the 45 deg
+  coupon and the D11, D22, D12 the other two coupons supply.  It is
+  an independent route to the same number, and it is immune to the
+  specimen width and the moment gradient, both of which cancel from
+  a ratio of curvatures.
+
+  measured r                      = -0.3814 +/- 0.0173  (9 load steps)
+  S from the fitted D11, D12, D22 =     48.32 N.mm
+  D66 from the closed form        =     21.64 N.mm
+  D66 from the full FGLS          =      9.87 N.mm
+  gap                             =      54.4 %
+
+==============================================================================
+  IDENTIFIABILITY (Pierron H / CID) -- 2 coupons
+==============================================================================
+  aggregate cond(H) = 1.320e+02
+  singular values   = [3.245e-04 2.550e-05 2.194e-05 2.459e-06]
+  parameter correlation matrix:
+                 D11      D12      D22      D66
+       D11     1.000   -0.147    0.016    0.000
+       D12    -0.147    1.000   -0.007   -0.000
+       D22     0.016   -0.007    1.000    0.000
+       D66     0.000   -0.000    0.000    1.000
+
+==============================================================================
+  IDENTIFIABILITY (Pierron H / CID) -- 3 coupons
+==============================================================================
+  aggregate cond(H) = 7.119e+02
+  singular values   = [2.787e-03 5.007e-05 2.690e-05 3.915e-06]
+  parameter correlation matrix:
+                 D11      D12      D22      D66
+       D11     1.000   -0.187    0.111   -0.000
+       D12    -0.187    1.000   -0.306   -0.000
+       D22     0.111   -0.306    1.000    0.000
+       D66    -0.000   -0.000    0.000    1.000
+
+==============================================================================
+  CUT SENSE: IS THE MATERIAL 1-AXIS AT +45 OR +135 DEG?
+==============================================================================
+  The coupon length runs along its own +y (90 deg from +x) and the
+  material 1-axis is 45 deg from the length, so the 1-axis is at
+  either 90-45 = 45 deg or 90+45 = 135 deg.  Both are geometrically
+  possible; only the data can say which.
+
+  T(45)^T B66 T(45)  diag/offdiag = +1.00 / -1.00
+  T(135)^T B66 T(135) diag/offdiag = +1.00 / -1.00
+    -> identical.  D66 cannot distinguish the two senses, by
+       construction, so the ambiguity is harmless for it.
+
+  phi = 45 deg  (shipped)               153.31     -7.94     55.84      9.87        2418
+  phi = 135 deg (other sense)           124.95     -6.48     59.10     10.69        2355
+  |difference|                           28.36      1.46      3.26      0.83
+  |difference| / |value|  [%]            18.50     18.37      5.84      8.37
+
+  The two senses differ by up to 18.5 %.  The cut sense
+  MUST then be established independently (fixture photographs,
+  or the sign of the machine Tx channel) before quoting theta.
+
+==============================================================================
+  THE TWO OPEN INPUTS OF THE 45 DEG COUPON
+==============================================================================
+  (1) SPECIMEN WIDTH -- placeholder 9.28 mm, M scales as 1/width
+  assumed width                            D11       D12       D22       D66
+  --------------------------------------------------------------------------
+  9.00 mm                               154.86     -7.58     55.87     10.41
+  9.14 mm                               154.07     -7.76     55.86     10.14
+  9.28 mm   [SHIPPED]                   153.31     -7.94     55.84      9.87
+  9.45 mm                               152.42     -8.15     55.83      9.55
+  9.60 mm                               151.66     -8.32     55.82      9.27
+
+  (2) BOTH TOGETHER -- the four corners of the plausible box
+  variant                                  D11       D12       D22       D66
+  --------------------------------------------------------------------------
+  w = 9.06 mm,  phi = 45 deg            154.52     -7.66     55.86     10.29
+  w = 9.06 mm,  phi = 135 deg           125.95     -6.20     59.13     11.14
+  w = 9.34 mm,  phi = 45 deg            152.99     -8.01     55.84      9.75
+  w = 9.34 mm,  phi = 135 deg           124.68     -6.55     59.10     10.57
+
+  envelope min                          124.68     -8.01     55.84      9.75
+  envelope max                          154.52     -6.20     59.13     11.14
+  span [% of midpoint]                   21.37     25.52      5.72     13.27
+
+  D66 STAYS POSITIVE over the whole envelope.  That is the
+  robust result: whatever the width and whichever the cut
+  sense, adding this coupon moves D66 out of the physically
+  impossible negative region the two-coupon campaign put it in.
+
+==============================================================================
+  WHAT EACH COUPON CONTRIBUTES
+==============================================================================
+  Each row drops one coupon and re-identifies.  A coefficient that
+  barely moves when a coupon is removed was not being constrained
+  by it.
+
+  campaign                                 D11       D12       D22       D66    chi2/dof
+  --------------------------------------------------------------------------------------
+  all three                             153.31     -7.94     55.84      9.87        2418
+  drop 45deg  (the old campaign)        174.35      2.07     61.43     -3.66         830
+  drop transverse                       178.24     -1.02    -35.60     15.43        1100
+  drop longitudinal                      69.01      4.73     57.62     13.42        3574
+  45deg alone                           -14.48     28.58     58.34     16.70        4517
+  longitudinal alone                    181.70     -0.02      1.26     -9.16          95
+  transverse alone                        0.19     -0.01     61.19     -2.01        1314
+
+==============================================================================
+  JACKKNIFE (leave one load step out, Gamma re-estimated inside)
+==============================================================================
+  27 replicates
+       D11 =    153.311 +/-    6.598 N.mm   [eq.20 said 0.308]
+       D12 =     -7.938 +/-    3.500 N.mm   [eq.20 said 0.117]
+       D22 =     55.843 +/-    2.564 N.mm   [eq.20 said 0.076]
+       D66 =      9.865 +/-    1.451 N.mm   [eq.20 said 0.027]
+
+==============================================================================
+  SENSITIVITY TO THE SMOOTHING BASIS
+==============================================================================
+    degree     d        D11        D12        D22        D66
+         2     6     170.64      -2.78      59.21       7.09
+         4    15     162.05      -8.86      57.08       8.49
+         6    28     153.31      -7.94      55.84       9.87
+         8    45     152.05     -11.74      54.41       9.91
+        10    66     161.31     -19.29      51.41      10.87
+
+==============================================================================
+  FGLS, THREE COUPONS -- THE RESULT
+==============================================================================
+     D11 =     153.3112 N.mm +/-   6.5979
+     D12 =      -7.9377 N.mm +/-   3.4996
+     D22 =      55.8433 N.mm +/-   2.5635
+     D66 =       9.8651 N.mm +/-   1.4513
+
+  derived at t = 0.2564 mm (micro-CT, longitudinal coupon):
+    E1_flex =  108.3 GPa   E2_flex =   39.5 GPa   nu12 = -0.1421   nu12*nu21 = 0.0074
+
+  Birge factor sqrt(chi2/dof) = 49.2.  Eq. (20) is a variance
+  UNDER THE NOISE MODEL, and the data reject that model here as they
+  do on the two-coupon campaign.  A defensible interval is at least
+  the eq. (20) sigma times that factor:
+       D11 =    153.31 +/-   15.16 N.mm
+       D12 =     -7.94 +/-    5.73 N.mm
+       D22 =     55.84 +/-    3.76 N.mm
+       D66 =      9.87 +/-    1.35 N.mm
+
+  wrote gls_results_orthotropic_with45.csv
+  wrote gls_step_estimates_with45.csv

@@ -1,0 +1,18 @@
+# Python dependencies for the plate VFM inverse-solution (uniform-mesh stage).
+#
+# Install everything with:
+#     pip install -r requirements.txt
+#
+# Versions are loose lower bounds; any reasonably recent release works.
+
+numpy>=1.24
+scipy>=1.10
+scikit-fem>=11.0
+
+# Optional: required only if you launch the GUI boundary-condition editor
+# (run_vfm.py answers 'y' to "Customize BCs in the GUI?") or the post-run
+# 3D optimal virtual-field viewer ("Visualize optimal virtual fields ...").
+# These packages are imported lazily inside ``bc_gui``; the solver itself
+# does not need them and works fine without them.
+PySide6>=6.5
+matplotlib>=3.7
