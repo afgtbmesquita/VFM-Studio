@@ -12,10 +12,12 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QStackedWidget,
@@ -26,8 +28,19 @@ from PySide6.QtWidgets import (
 from vfmstudio.core import mesh_convert
 from vfmstudio.core.fields import sync_mesh_bounds_from_file
 from vfmstudio.core.jobs import reduced_chi_square
+from vfmstudio.core.document import parameter_unit_plain
+from vfmstudio.core.parameter_space import (
+    default_axis_labels,
+    group_statistics,
+    space_from_document,
+)
 from vfmstudio.core.step_series import step_display_label
+from vfmstudio.core.uncertainty import default_baseline_flags
+from vfmstudio.gui.results.experiment_check import collect_experiment_steps
+from vfmstudio.gui.results.plot_style import experiment_colour
+from vfmstudio.gui.results.table_style import format_number
 from vfmstudio.gui.session import AppSession, Selection, is_post_kind, is_uncertainty_kind
+from vfmstudio.gui.widgets.color_swatch import ColorSwatchButton, LINE_PALETTE
 
 
 def _block_set_text(widget: QLineEdit, text: str) -> None:
@@ -39,6 +52,15 @@ def _block_set_text(widget: QLineEdit, text: str) -> None:
 def _block_set_combo(widget: QComboBox, text: str) -> None:
     widget.blockSignals(True)
     widget.setCurrentText(text)
+    widget.blockSignals(False)
+
+
+def _block_set_combo_data(widget: QComboBox, data) -> None:
+    index = widget.findData(data)
+    if index < 0:
+        index = 0
+    widget.blockSignals(True)
+    widget.setCurrentIndex(index)
     widget.blockSignals(False)
 
 
@@ -283,6 +305,118 @@ class PropertyEditorDock(QWidget):
         self._post_status.setWordWrap(True)
         post.addRow(self._post_status)
 
+        experiment_check = self._add_page("post_experiment_check")
+        self._exp_check_status = QLabel("No identification result.")
+        self._exp_check_status.setWordWrap(True)
+        experiment_check.addRow(self._exp_check_status)
+        self._exp_check_scroll = QScrollArea()
+        self._exp_check_scroll.setWidgetResizable(True)
+        self._exp_check_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._exp_check_scroll.setMinimumHeight(160)
+        self._exp_check_host = QWidget()
+        self._exp_check_layout = QVBoxLayout(self._exp_check_host)
+        self._exp_check_layout.setContentsMargins(0, 0, 0, 0)
+        self._exp_check_layout.setSpacing(4)
+        self._exp_check_scroll.setWidget(self._exp_check_host)
+        experiment_check.addRow(self._exp_check_scroll)
+
+        ident_strength = self._add_page("post_identifiability_strength")
+        self._ident_strength_status = QLabel(
+            "The left plot always shows eq. (63) for every test. Untick tests "
+            "to measure the information they add on the right (G_k)."
+        )
+        self._ident_strength_status.setWordWrap(True)
+        ident_strength.addRow(self._ident_strength_status)
+        self._ident_shift_scale = QComboBox()
+        self._ident_shift_scale.addItem("Parameter units", "units")
+        self._ident_shift_scale.addItem("Relative to |θ̂|", "relative")
+        self._ident_shift_scale.currentIndexChanged.connect(self._on_ident_shift_scale)
+        ident_strength.addRow("Eq. (63) values", self._ident_shift_scale)
+        self._ident_base_scroll = QScrollArea()
+        self._ident_base_scroll.setWidgetResizable(True)
+        self._ident_base_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._ident_base_scroll.setMinimumHeight(160)
+        self._ident_base_host = QWidget()
+        self._ident_base_layout = QVBoxLayout(self._ident_base_host)
+        self._ident_base_layout.setContentsMargins(0, 0, 0, 0)
+        self._ident_base_layout.setSpacing(4)
+        self._ident_base_scroll.setWidget(self._ident_base_host)
+        ident_strength.addRow(self._ident_base_scroll)
+
+        plots = self._add_page("post_plots")
+        self._fit_tests_status = QLabel(
+            "Tick the tests in the combination. After Identify, every "
+            "non-empty subset is already available; ticking applies it instantly."
+        )
+        self._fit_tests_status.setWordWrap(True)
+        plots.addRow(self._fit_tests_status)
+        self._fit_tests_scroll = QScrollArea()
+        self._fit_tests_scroll.setWidgetResizable(True)
+        self._fit_tests_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._fit_tests_scroll.setMinimumHeight(160)
+        self._fit_tests_host = QWidget()
+        self._fit_tests_layout = QVBoxLayout(self._fit_tests_host)
+        self._fit_tests_layout.setContentsMargins(0, 0, 0, 0)
+        self._fit_tests_layout.setSpacing(4)
+        self._fit_tests_scroll.setWidget(self._fit_tests_host)
+        plots.addRow(self._fit_tests_scroll)
+        fit_buttons = QWidget()
+        fit_row = QHBoxLayout(fit_buttons)
+        fit_row.setContentsMargins(0, 0, 0, 0)
+        self._fit_tests_all = QPushButton("All")
+        self._fit_tests_all.clicked.connect(lambda: self._set_all_fit_tests(True))
+        self._fit_tests_none = QPushButton("None")
+        self._fit_tests_none.clicked.connect(lambda: self._set_all_fit_tests(False))
+        fit_row.addWidget(self._fit_tests_all)
+        fit_row.addWidget(self._fit_tests_none)
+        plots.addRow(fit_buttons)
+
+        parameter_space = self._add_page("post_parameter_space")
+        self._ps_status = QLabel(
+            "Each point is one non-empty combination of the identified tests, "
+            "using the virtual fields from Identify. The star is all tests."
+        )
+        self._ps_status.setWordWrap(True)
+        parameter_space.addRow(self._ps_status)
+        self._ps_left_x = QComboBox()
+        self._ps_left_y = QComboBox()
+        self._ps_right_x = QComboBox()
+        self._ps_right_y = QComboBox()
+        self._ps_combos = (
+            self._ps_left_x,
+            self._ps_left_y,
+            self._ps_right_x,
+            self._ps_right_y,
+        )
+        for combo in self._ps_combos:
+            combo.currentIndexChanged.connect(self._on_parameter_space_axis)
+        parameter_space.addRow("Left plot X", self._ps_left_x)
+        parameter_space.addRow("Left plot Y", self._ps_left_y)
+        parameter_space.addRow("Right plot X", self._ps_right_x)
+        parameter_space.addRow("Right plot Y", self._ps_right_y)
+        self._ps_groups_hint = QLabel(
+            "Colour every combination that includes all ticked tests. "
+            "Ticking more tests keeps the intersection, so fewer points "
+            "stay highlighted. If several groups match, the stricter one wins."
+        )
+        self._ps_groups_hint.setWordWrap(True)
+        self._ps_groups_hint.setProperty("role", "hint")
+        parameter_space.addRow(self._ps_groups_hint)
+        self._ps_groups_scroll = QScrollArea()
+        self._ps_groups_scroll.setWidgetResizable(True)
+        self._ps_groups_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._ps_groups_scroll.setMinimumHeight(200)
+        self._ps_groups_host = QWidget()
+        self._ps_groups_layout = QVBoxLayout(self._ps_groups_host)
+        self._ps_groups_layout.setContentsMargins(0, 0, 0, 0)
+        self._ps_groups_layout.setSpacing(4)
+        self._ps_groups_scroll.setWidget(self._ps_groups_host)
+        parameter_space.addRow(self._ps_groups_scroll)
+        self._ps_add_group = QPushButton("Add group")
+        self._ps_add_group.clicked.connect(self._on_ps_add_group)
+        parameter_space.addRow(self._ps_add_group)
+        self._ps_group_stat_labels: list[QLabel] = []
+
         uq = self._add_page("uncertainty")
         self._uq_status = QLabel("No uncertainty analysis.")
         self._uq_status.setWordWrap(True)
@@ -301,6 +435,14 @@ class PropertyEditorDock(QWidget):
     def _page_name(self, kind: str) -> str:
         if is_uncertainty_kind(kind):
             return "uncertainty"
+        if kind == "post_plots":
+            return "post_plots"
+        if kind == "post_parameter_space":
+            return "post_parameter_space"
+        if kind == "post_experiment_check":
+            return "post_experiment_check"
+        if kind == "post_identifiability_strength":
+            return "post_identifiability_strength"
         if is_post_kind(kind):
             return "post_processing"
         if kind in {"project", "experiments"}:
@@ -341,8 +483,10 @@ class PropertyEditorDock(QWidget):
             "empty": "Properties",
             "post_processing": "Post Processing",
             "post_plots": "Coefficient Evolution",
+            "post_parameter_space": "Parameter space",
             "post_experiment_check": "Individual Experiment check",
             "post_identifiability": "Identifiability",
+            "post_identifiability_strength": "Identifiability strength",
             "post_virtual_fields": "Virtual fields",
             "post_uncertainty": "Uncertainty quantification",
             "post_uncertainty_cov": "Cov(θ)",
@@ -377,6 +521,14 @@ class PropertyEditorDock(QWidget):
             self._fill_step(session, selection)
         elif page_name == "post_processing":
             self._fill_post_processing(session)
+        elif page_name == "post_plots":
+            self._fill_fit_tests(session)
+        elif page_name == "post_parameter_space":
+            self._fill_parameter_space(session)
+        elif page_name == "post_experiment_check":
+            self._fill_experiment_check(session)
+        elif page_name == "post_identifiability_strength":
+            self._fill_identifiability_strength(session)
         elif page_name == "uncertainty":
             self._fill_uncertainty(session, selection)
 
@@ -391,6 +543,522 @@ class PropertyEditorDock(QWidget):
             )
         else:
             self._post_status.setText("Identification complete.")
+
+    def _clear_fit_test_rows(self) -> None:
+        while self._fit_tests_layout.count():
+            item = self._fit_tests_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+    def _fill_fit_tests(self, session: AppSession) -> None:
+        self._clear_fit_test_rows()
+        experiments = session.document.experiments
+        if not experiments:
+            self._fit_tests_status.setText(
+                "Add experiments first. Tick the tests in the combination "
+                "after Identify."
+            )
+            self._fit_tests_all.setEnabled(False)
+            self._fit_tests_none.setEnabled(False)
+            return
+        self._fit_tests_all.setEnabled(True)
+        self._fit_tests_none.setEnabled(True)
+        for experiment in experiments:
+            name = experiment.name or f"Experiment {experiment.experiment_id}"
+            n_steps = len(experiment.included_step_indices())
+            step_text = "1 load step" if n_steps == 1 else f"{n_steps} load steps"
+            box = QCheckBox(f"{name}  ({step_text})")
+            box.setChecked(bool(experiment.include_in_identification))
+            box.toggled.connect(
+                lambda checked, eid=int(experiment.experiment_id): self._on_fit_test(
+                    eid, checked
+                )
+            )
+            self._fit_tests_layout.addWidget(box)
+        self._fit_tests_layout.addStretch(1)
+        self._refresh_fit_tests_status()
+
+    def _refresh_fit_tests_status(self) -> None:
+        if self._session is None:
+            return
+        experiments = self._session.document.experiments
+        n_all = len(experiments)
+        n_on = len(self._session.document.experiments_in_identification())
+        if n_all == 0:
+            return
+        if n_on == 0:
+            self._fit_tests_status.setText(
+                "No tests selected. Tick at least one test to show a combination."
+            )
+            return
+        if n_on == n_all:
+            scope = "all tests"
+        elif n_on == 1:
+            scope = "1 test"
+        else:
+            scope = f"{n_on} of {n_all} tests"
+        prefix = (
+            f"Selected combination: {scope}. Each ticked test contributes all "
+            "of its load steps (analysis window)."
+        )
+        from vfmstudio.core.parameter_space import (
+            is_full_combination,
+            selected_experiment_ids,
+            space_from_document,
+            theta_for_experiment_ids,
+        )
+
+        space = space_from_document(self._session.result, self._session.document)
+        ids = selected_experiment_ids(self._session.document)
+        theta = theta_for_experiment_ids(space, ids) if space is not None else None
+        if self._session.result is None or space is None:
+            self._fit_tests_status.setText(
+                prefix + " Identify to solve; every combination is then "
+                "available by ticking tests."
+            )
+            return
+        if theta is None:
+            self._fit_tests_status.setText(
+                prefix + " Those tests were not in the last Identify."
+            )
+            return
+        if is_full_combination(space, ids):
+            self._fit_tests_status.setText(
+                prefix + " Showing the last Identify. Tick a subset to apply "
+                "that combination instantly."
+            )
+            return
+        self._fit_tests_status.setText(
+            prefix + " Showing that combination instantly from the last Identify."
+        )
+
+    def _on_fit_test(self, experiment_id: int, checked: bool) -> None:
+        if self._session is None:
+            return
+        experiment = self._session.document.experiment_by_id(int(experiment_id))
+        if experiment is None:
+            return
+        experiment.include_in_identification = bool(checked)
+        self._session.mark_dirty()
+        self._refresh_fit_tests_status()
+        self.view_changed.emit()
+
+    def _set_all_fit_tests(self, included: bool) -> None:
+        if self._session is None:
+            return
+        for experiment in self._session.document.experiments:
+            experiment.include_in_identification = bool(included)
+        for index in range(self._fit_tests_layout.count()):
+            widget = self._fit_tests_layout.itemAt(index).widget()
+            if isinstance(widget, QCheckBox):
+                widget.blockSignals(True)
+                widget.setChecked(bool(included))
+                widget.blockSignals(False)
+        self._session.mark_dirty()
+        self._refresh_fit_tests_status()
+        self.view_changed.emit()
+
+    def _clear_exp_check_rows(self) -> None:
+        while self._exp_check_layout.count():
+            item = self._exp_check_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+    def _fill_experiment_check(self, session: AppSession) -> None:
+        self._clear_exp_check_rows()
+        if session.result is None:
+            self._exp_check_status.setText("Run Identify first.")
+            return
+        series, _, _ = collect_experiment_steps(session.result, session.document)
+        if not series:
+            self._exp_check_status.setText("This result has no per-load-step estimates.")
+            return
+        self._exp_check_status.setText(
+            "Choose which tests are drawn, and the colour of each line."
+        )
+        for rec in series:
+            experiment_id = int(rec.experiment_id)
+            session.experiment_check_visible.setdefault(experiment_id, True)
+            session.experiment_check_colors.setdefault(
+                experiment_id, experiment_colour(rec.series_index)
+            )
+            row = QWidget()
+            row_layout = QHBoxLayout(row)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.setSpacing(6)
+            box = QCheckBox(rec.name)
+            box.setChecked(bool(session.experiment_check_visible[experiment_id]))
+            box.toggled.connect(
+                lambda checked, eid=experiment_id: self._on_exp_check_visible(eid, checked)
+            )
+            swatch = ColorSwatchButton(session.experiment_check_colors[experiment_id])
+            swatch.colorChanged.connect(
+                lambda color, eid=experiment_id: self._on_exp_check_color(eid, color)
+            )
+            row_layout.addWidget(box, 1)
+            row_layout.addWidget(swatch)
+            self._exp_check_layout.addWidget(row)
+        self._exp_check_layout.addStretch(1)
+
+    def _clear_ident_base_rows(self) -> None:
+        while self._ident_base_layout.count():
+            item = self._ident_base_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+    def _fill_identifiability_strength(self, session: AppSession) -> None:
+        self._clear_ident_base_rows()
+        if session.uncertainty is None:
+            self._ident_strength_status.setText(
+                "Information gain and deletion influence need Identify. "
+                "Run Identify first."
+            )
+            return
+        names = session.uncertainty.cluster_names
+        ids = session.uncertainty.cluster_ids
+        defaults = default_baseline_flags(names, ids)
+        self._ident_strength_status.setText(
+            "Left: eq. (63) for every test. Choose parameter units or "
+            "(θ̂₍₋ᵢ₎ − θ̂)/|θ̂|. Untick tests below to measure the information "
+            "they add on the right (G_k)."
+        )
+        scale = str(getattr(session, "identifiability_shift_scale", "units") or "units")
+        if scale not in {"units", "relative"}:
+            scale = "units"
+        _block_set_combo_data(self._ident_shift_scale, scale)
+        for name, experiment_id in zip(names, ids):
+            eid = int(experiment_id)
+            session.identifiability_baseline.setdefault(eid, defaults.get(eid, True))
+            box = QCheckBox(str(name))
+            box.setChecked(bool(session.identifiability_baseline[eid]))
+            box.toggled.connect(
+                lambda checked, experiment=eid: self._on_ident_baseline(experiment, checked)
+            )
+            self._ident_base_layout.addWidget(box)
+        self._ident_base_layout.addStretch(1)
+
+    def _on_ident_baseline(self, experiment_id: int, checked: bool) -> None:
+        if self._session is None:
+            return
+        self._session.identifiability_baseline[int(experiment_id)] = bool(checked)
+        self.view_changed.emit()
+
+    def _on_ident_shift_scale(self) -> None:
+        if self._session is None:
+            return
+        data = self._ident_shift_scale.currentData()
+        self._session.identifiability_shift_scale = str(data or "units")
+        self.view_changed.emit()
+
+    def _parameter_space_labels(self, session: AppSession) -> list[str]:
+        labels = list(session.document.material.labels())
+        if labels:
+            return labels
+        result = session.result
+        if result is None:
+            return []
+        model = getattr(result, "constitutive_model", None)
+        return list(getattr(model, "parameter_labels", ()) or ())
+
+    def _rebuild_ps_combo(self, combo: QComboBox, labels: list[str], current: str) -> None:
+        combo.blockSignals(True)
+        combo.clear()
+        combo.setEnabled(True)
+        for name in labels:
+            combo.addItem(name, name)
+        index = combo.findData(current)
+        if index < 0:
+            index = combo.findText(current)
+        combo.setCurrentIndex(max(index, 0))
+        combo.blockSignals(False)
+
+    def _fill_parameter_space(self, session: AppSession) -> None:
+        labels = self._parameter_space_labels(session)
+        if not labels:
+            self._ps_status.setText(
+                "Set a material model, then run Identify. Combinations use "
+                "the per-test GLS blocks from that solve."
+            )
+            for combo in self._ps_combos:
+                combo.blockSignals(True)
+                combo.clear()
+                combo.setEnabled(False)
+                combo.blockSignals(False)
+            self._fill_ps_groups(session)
+            return
+        defaults = default_axis_labels(labels)
+        if not session.parameter_space_left_x:
+            (
+                session.parameter_space_left_x,
+                session.parameter_space_left_y,
+                session.parameter_space_right_x,
+                session.parameter_space_right_y,
+            ) = defaults
+        reports = list(getattr(session.result, "experiments", None) or [])
+        n_tests = len(reports)
+        if n_tests:
+            n_subsets = (1 << n_tests) - 1
+            self._ps_status.setText(
+                f"{n_subsets} non-empty combination"
+                f"{'s' if n_subsets != 1 else ''} of {n_tests} identified "
+                "test"
+                f"{'s' if n_tests != 1 else ''}. Choose which stiffnesses "
+                "appear on each plot. The star is all tests together."
+            )
+        else:
+            self._ps_status.setText(
+                "Choose which stiffnesses appear on each plot. Run Identify "
+                "to fill every non-empty combination of tests."
+            )
+        current = (
+            session.parameter_space_left_x,
+            session.parameter_space_left_y,
+            session.parameter_space_right_x,
+            session.parameter_space_right_y,
+        )
+        for combo, value in zip(self._ps_combos, current):
+            self._rebuild_ps_combo(combo, labels, value)
+        session.parameter_space_left_x = str(
+            self._ps_left_x.currentData() or self._ps_left_x.currentText() or ""
+        )
+        session.parameter_space_left_y = str(
+            self._ps_left_y.currentData() or self._ps_left_y.currentText() or ""
+        )
+        session.parameter_space_right_x = str(
+            self._ps_right_x.currentData() or self._ps_right_x.currentText() or ""
+        )
+        session.parameter_space_right_y = str(
+            self._ps_right_y.currentData() or self._ps_right_y.currentText() or ""
+        )
+        self._fill_ps_groups(session)
+
+    def _parameter_space_experiments(self, session: AppSession) -> list[tuple[int, str]]:
+        rows: list[tuple[int, str]] = []
+        seen: set[int] = set()
+        for experiment in session.document.experiments:
+            experiment_id = int(experiment.experiment_id)
+            seen.add(experiment_id)
+            name = experiment.name or f"Experiment {experiment_id}"
+            rows.append((experiment_id, name))
+        for report in list(getattr(session.result, "experiments", None) or []):
+            experiment_id = int(getattr(report, "experiment_id", 0) or 0)
+            if experiment_id <= 0 or experiment_id in seen:
+                continue
+            seen.add(experiment_id)
+            name = str(getattr(report, "label", "") or "")
+            experiment = session.document.experiment_by_id(experiment_id)
+            if experiment is not None and experiment.name:
+                name = experiment.name
+            rows.append((experiment_id, name or f"Experiment {experiment_id}"))
+        return rows
+
+    def _clear_ps_groups(self) -> None:
+        self._ps_group_stat_labels: list[QLabel] = []
+        while self._ps_groups_layout.count():
+            item = self._ps_groups_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+
+    def _fill_ps_groups(self, session: AppSession) -> None:
+        self._clear_ps_groups()
+        experiments = self._parameter_space_experiments(session)
+        self._ps_add_group.setEnabled(bool(experiments))
+        if not experiments:
+            empty = QLabel(
+                "Add experiments in the solver, then add a group to colour "
+                "their combinations (A tests, twist only, A+B bending, …)."
+            )
+            empty.setWordWrap(True)
+            self._ps_groups_layout.addWidget(empty)
+            self._ps_groups_layout.addStretch(1)
+            return
+        for index, group in enumerate(session.parameter_space_groups):
+            self._ps_groups_layout.addWidget(
+                self._make_ps_group_card(index, group, experiments)
+            )
+        self._ps_groups_layout.addStretch(1)
+
+    def _make_ps_group_card(
+        self,
+        index: int,
+        group: dict,
+        experiments: list[tuple[int, str]],
+    ) -> QWidget:
+        card = QWidget()
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(0, 4, 0, 8)
+        layout.setSpacing(4)
+        header = QWidget()
+        row = QHBoxLayout(header)
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+        color = str(group.get("color") or LINE_PALETTE[index % len(LINE_PALETTE)])
+        swatch = ColorSwatchButton(color)
+        swatch.setToolTip("Group colour")
+        swatch.colorChanged.connect(
+            lambda value, i=index: self._on_ps_group_color(i, value)
+        )
+        name = QLineEdit(str(group.get("name") or f"Group {index + 1}"))
+        name.setPlaceholderText("Group name")
+        name.editingFinished.connect(
+            lambda i=index, edit=name: self._on_ps_group_name(i, edit.text())
+        )
+        remove = QPushButton("Remove")
+        remove.clicked.connect(lambda _checked=False, i=index: self._on_ps_remove_group(i))
+        row.addWidget(swatch)
+        row.addWidget(name, 1)
+        row.addWidget(remove)
+        layout.addWidget(header)
+        selected = {int(experiment_id) for experiment_id in (group.get("experiment_ids") or [])}
+        for experiment_id, label in experiments:
+            box = QCheckBox(label)
+            box.setChecked(experiment_id in selected)
+            box.toggled.connect(
+                lambda checked, i=index, eid=experiment_id: self._on_ps_group_experiment(
+                    i, eid, checked
+                )
+            )
+            layout.addWidget(box)
+        stats = QLabel()
+        stats.setWordWrap(True)
+        stats.setProperty("role", "hint")
+        layout.addWidget(stats)
+        self._ps_group_stat_labels.append(stats)
+        stats.setText(self._ps_group_stats_text(self._ps_space(), group))
+        return card
+
+    def _ps_space(self):
+        if self._session is None:
+            return None
+        return space_from_document(self._session.result, self._session.document)
+
+    def _ps_group_stats_text(self, space, group: dict) -> str:
+        ids = list(group.get("experiment_ids") or [])
+        if not ids:
+            return "Tick tests to compute mean and σ of their combinations."
+        if space is None:
+            return "Run Identify to compute mean and σ."
+        stats = group_statistics(space, ids)
+        n = int(stats["n"])
+        if n == 0:
+            return "No combinations include all ticked tests."
+        noun = "combination" if n == 1 else "combinations"
+        lines = [f"{n} {noun}"]
+        mean = stats["mean"]
+        std = stats["std"]
+        for name, mu, sigma in zip(stats["labels"], mean, std):
+            unit = parameter_unit_plain(name)
+            unit_bit = f" {unit}" if unit else ""
+            mu_text = format_number(mu)
+            if n < 2 or sigma != sigma:
+                lines.append(f"{name}: {mu_text}{unit_bit}")
+            else:
+                lines.append(
+                    f"{name}: {mu_text} ± {format_number(sigma)}{unit_bit}"
+                )
+        if n < 2:
+            lines.append("σ needs at least 2 combinations.")
+        return "\n".join(lines)
+
+    def _refresh_ps_group_stats(self) -> None:
+        session = self._session
+        groups = list(session.parameter_space_groups) if session is not None else []
+        space = self._ps_space()
+        for index, label in enumerate(self._ps_group_stat_labels):
+            group = groups[index] if index < len(groups) else {}
+            label.setText(self._ps_group_stats_text(space, group))
+
+    def _on_ps_add_group(self) -> None:
+        if self._session is None:
+            return
+        n = len(self._session.parameter_space_groups)
+        self._session.parameter_space_groups.append(
+            {
+                "name": f"Group {n + 1}",
+                "color": LINE_PALETTE[n % len(LINE_PALETTE)],
+                "experiment_ids": [],
+            }
+        )
+        self._fill_ps_groups(self._session)
+        self.view_changed.emit()
+
+    def _on_ps_remove_group(self, index: int) -> None:
+        if self._session is None:
+            return
+        groups = self._session.parameter_space_groups
+        if 0 <= index < len(groups):
+            groups.pop(index)
+        self._fill_ps_groups(self._session)
+        self.view_changed.emit()
+
+    def _on_ps_group_name(self, index: int, text: str) -> None:
+        if self._session is None:
+            return
+        groups = self._session.parameter_space_groups
+        if not (0 <= index < len(groups)):
+            return
+        groups[index]["name"] = str(text).strip() or f"Group {index + 1}"
+        self.view_changed.emit()
+
+    def _on_ps_group_color(self, index: int, color: str) -> None:
+        if self._session is None:
+            return
+        groups = self._session.parameter_space_groups
+        if not (0 <= index < len(groups)):
+            return
+        groups[index]["color"] = str(color)
+        self.view_changed.emit()
+
+    def _on_ps_group_experiment(
+        self, index: int, experiment_id: int, checked: bool
+    ) -> None:
+        if self._session is None:
+            return
+        groups = self._session.parameter_space_groups
+        if not (0 <= index < len(groups)):
+            return
+        ids = [int(item) for item in (groups[index].get("experiment_ids") or [])]
+        key = int(experiment_id)
+        if checked and key not in ids:
+            ids.append(key)
+        if not checked:
+            ids = [item for item in ids if item != key]
+        groups[index]["experiment_ids"] = ids
+        self._refresh_ps_group_stats()
+        self.view_changed.emit()
+
+    def _on_parameter_space_axis(self) -> None:
+        if self._session is None:
+            return
+        self._session.parameter_space_left_x = str(
+            self._ps_left_x.currentData() or self._ps_left_x.currentText() or ""
+        )
+        self._session.parameter_space_left_y = str(
+            self._ps_left_y.currentData() or self._ps_left_y.currentText() or ""
+        )
+        self._session.parameter_space_right_x = str(
+            self._ps_right_x.currentData() or self._ps_right_x.currentText() or ""
+        )
+        self._session.parameter_space_right_y = str(
+            self._ps_right_y.currentData() or self._ps_right_y.currentText() or ""
+        )
+        self.view_changed.emit()
+
+    def _on_exp_check_visible(self, experiment_id: int, checked: bool) -> None:
+        if self._session is None:
+            return
+        self._session.experiment_check_visible[int(experiment_id)] = bool(checked)
+        self.view_changed.emit()
+
+    def _on_exp_check_color(self, experiment_id: int, color: str) -> None:
+        if self._session is None:
+            return
+        self._session.experiment_check_colors[int(experiment_id)] = str(color)
+        self.view_changed.emit()
 
     def _fill_uncertainty(self, session: AppSession, selection: Selection) -> None:
         _block_set_combo(self._uq_kind, session.uncertainty_kind)

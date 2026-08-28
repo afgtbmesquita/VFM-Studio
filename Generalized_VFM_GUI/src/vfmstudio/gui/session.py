@@ -40,6 +40,15 @@ class AppSession:
     warp_scale: float = 1.0
     show_xy_axes: bool = False
     show_element_point_counts: bool = False
+    experiment_check_visible: dict = field(default_factory=dict)
+    experiment_check_colors: dict = field(default_factory=dict)
+    identifiability_baseline: dict = field(default_factory=dict)
+    identifiability_shift_scale: str = "units"
+    parameter_space_left_x: str = ""
+    parameter_space_left_y: str = ""
+    parameter_space_right_x: str = ""
+    parameter_space_right_y: str = ""
+    parameter_space_groups: list = field(default_factory=list)
     status_n_points: int = 0
     available_scalars: tuple = ()
 

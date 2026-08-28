@@ -66,12 +66,14 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     post = window.tree.tree.topLevelItem(labels.index("Post Processing"))
     assert _child_labels(post) == [
         "Coefficient Evolution",
+        "Parameter space",
         "Individual Experiment check",
         "Identifiability",
+        "Identifiability strength",
         "Virtual fields",
         "Uncertainty quantification",
     ]
-    uq = post.child(4)
+    uq = post.child(6)
     assert _child_labels(uq) == [
         "Cov(θ)",
         "Experiment uncertainty",
@@ -84,10 +86,25 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     assert window._central.currentWidget() is window.post
     assert window.post._stack.currentWidget() is window.post.plots
     assert window.props._title.text() == "Coefficient Evolution"
+    assert hasattr(window.props, "_fit_tests_scroll")
+    assert not hasattr(window.props, "_fit_tests_run")
+    assert not hasattr(window.props, "request_identify")
+    assert hasattr(window.post.plots, "apply_combination")
     assert not hasattr(window.post, "coeff")
+    window._on_tree_selection(Selection(kind="post_parameter_space"))
+    assert window.post._stack.currentWidget() is window.post.parameter_space
+    assert window.props._title.text() == "Parameter space"
+    assert hasattr(window.props, "_ps_left_x")
+    assert hasattr(window.props, "_ps_right_y")
     window._on_tree_selection(Selection(kind="post_experiment_check"))
     assert window.post._stack.currentWidget() is window.post.experiment_check
     assert window.props._title.text() == "Individual Experiment check"
+    assert hasattr(window.props, "_exp_check_status")
+    window._on_tree_selection(Selection(kind="post_identifiability_strength"))
+    assert window.post._stack.currentWidget() is window.post.ident_strength
+    assert window.props._title.text() == "Identifiability strength"
+    assert hasattr(window.props, "_ident_base_scroll")
+    assert hasattr(window.props, "_ident_shift_scale")
     window._on_tree_selection(Selection(kind="post_virtual_fields"))
     assert window._central.currentWidget() is window.post
     assert window.post._stack.currentWidget() is window.post.vf_panel
@@ -254,3 +271,190 @@ def test_virtual_fields_tiled_draw_all_parameters(qapp):
     ]
     assert len(titled_kx) == 4
     view.close()
+
+
+def test_coefficient_evolution_selects_tests_for_identification(qapp):
+    from PySide6.QtWidgets import QCheckBox
+
+    from vfmstudio.core.document import ExperimentModel
+    from vfmstudio.gui.docks.property_editor import PropertyEditorDock
+    from vfmstudio.gui.session import AppSession
+
+    session = AppSession()
+    session.document.experiments = [
+        ExperimentModel(experiment_id=1, name="A1_PB"),
+        ExperimentModel(experiment_id=2, name="B1_PB"),
+        ExperimentModel(experiment_id=3, name="A1_Twist"),
+    ]
+    dock = PropertyEditorDock()
+    dock.show_selection(session, Selection(kind="post_plots"))
+    checks = [
+        dock._fit_tests_layout.itemAt(index).widget()
+        for index in range(dock._fit_tests_layout.count())
+        if isinstance(dock._fit_tests_layout.itemAt(index).widget(), QCheckBox)
+    ]
+    assert [box.text().split()[0] for box in checks] == ["A1_PB", "B1_PB", "A1_Twist"]
+    assert all(box.isChecked() for box in checks)
+    assert "all tests" in dock._fit_tests_status.text()
+    checks[1].setChecked(False)
+    checks[2].setChecked(False)
+    included = session.document.experiments_in_identification()
+    assert [item.experiment_id for item in included] == [1]
+    assert "1 test" in dock._fit_tests_status.text()
+    dock._set_all_fit_tests(True)
+    assert all(
+        experiment.include_in_identification
+        for experiment in session.document.experiments
+    )
+    dock.close()
+
+
+def test_coefficient_evolution_applies_frozen_combination(qapp):
+    import numpy as np
+
+    from vfmstudio.core.document import ExperimentModel, empty_document
+    from vfmstudio.core.uncertainty import system_from_blocks
+    from vfmstudio.gui.docks.plot_dock import PlotDock
+
+    rng = np.random.default_rng(8)
+    theta = rng.normal(size=4)
+    designs, observations, covariances, names = [], [], [], []
+    for index in range(3):
+        design = np.eye(4) + 0.05 * rng.normal(size=(4, 4))
+        covariance = np.eye(4)
+        observation = design @ theta + 0.1 * rng.normal(size=4)
+        designs.append(design)
+        observations.append(observation)
+        covariances.append(covariance)
+        names.append(f"E{index + 1}")
+    system = system_from_blocks(
+        designs, observations, covariances, theta, ["D11", "D12", "D22", "D66"], names
+    )
+    document = empty_document()
+    document.experiments = [
+        ExperimentModel(experiment_id=1, name="A1_PB"),
+        ExperimentModel(experiment_id=2, name="B1_PB"),
+        ExperimentModel(experiment_id=3, name="A1_Twist"),
+    ]
+    document.experiments[2].include_in_identification = False
+    dock = PlotDock()
+    dock.set_results(system, document=document)
+    assert "Frozen GLS" in dock._subtitle.text()
+    assert "A1_PB" in dock._subtitle.text()
+    assert "B1_PB" in dock._subtitle.text()
+    document.experiments[2].include_in_identification = True
+    dock.apply_combination(document)
+    assert "Frozen GLS" not in dock._subtitle.text()
+    dock.close()
+
+
+def test_parameter_space_properties_choose_axes(qapp):
+    from vfmstudio.gui.docks.property_editor import PropertyEditorDock
+    from vfmstudio.gui.session import AppSession
+
+    session = AppSession()
+    dock = PropertyEditorDock()
+    dock.show_selection(session, Selection(kind="post_parameter_space"))
+    assert dock._title.text() == "Parameter space"
+    assert dock._ps_left_x.count() >= 2
+    assert dock._ps_left_x.currentText()
+    assert dock._ps_left_y.currentText()
+    assert session.parameter_space_left_x
+    assert session.parameter_space_left_y
+    first = dock._ps_left_x.itemText(0)
+    other = dock._ps_left_x.itemText(1)
+    dock._ps_left_x.setCurrentText(other if session.parameter_space_left_x == first else first)
+    assert session.parameter_space_left_x in {first, other}
+    dock.close()
+
+
+def test_parameter_space_properties_highlight_groups(qapp):
+    import numpy as np
+    from PySide6.QtWidgets import QCheckBox
+
+    from vfmstudio.core.document import ExperimentModel
+    from vfmstudio.core.uncertainty import system_from_blocks
+    from vfmstudio.gui.docks.property_editor import PropertyEditorDock
+    from vfmstudio.gui.session import AppSession
+
+    session = AppSession()
+    session.document.experiments = [
+        ExperimentModel(experiment_id=1, name="A1_PB"),
+        ExperimentModel(experiment_id=2, name="A2_PB"),
+        ExperimentModel(experiment_id=3, name="B1_Twist"),
+    ]
+    dock = PropertyEditorDock()
+    dock.show_selection(session, Selection(kind="post_parameter_space"))
+    assert dock._ps_add_group.isEnabled()
+    assert session.parameter_space_groups == []
+    dock._ps_add_group.click()
+    assert len(session.parameter_space_groups) == 1
+    assert session.parameter_space_groups[0]["experiment_ids"] == []
+    card = dock._ps_groups_layout.itemAt(0).widget()
+    boxes = card.findChildren(QCheckBox)
+    assert [box.text() for box in boxes] == ["A1_PB", "A2_PB", "B1_Twist"]
+    boxes[0].setChecked(True)
+    boxes[1].setChecked(True)
+    assert set(session.parameter_space_groups[0]["experiment_ids"]) == {1, 2}
+    assert "Identify" in dock._ps_group_stat_labels[0].text()
+    rng = np.random.default_rng(0)
+    theta = np.array([500.0, 20.0, 400.0, 30.0])
+    designs, observations, covariances, names = [], [], [], []
+    for index in range(3):
+        design = np.eye(4) + 0.05 * rng.normal(size=(4, 4))
+        covariance = np.eye(4)
+        observation = design @ theta + 0.1 * rng.normal(size=4)
+        designs.append(design)
+        observations.append(observation)
+        covariances.append(covariance)
+        names.append(["A1_PB", "A2_PB", "B1_Twist"][index])
+    session.result = system_from_blocks(
+        designs, observations, covariances, theta, ["D11", "D12", "D22", "D66"], names
+    )
+    dock.show_selection(session, Selection(kind="post_parameter_space"))
+    stats = dock._ps_group_stat_labels[0].text()
+    assert "2 combinations" in stats
+    assert "±" in stats
+    assert "D11" in stats
+    dock.close()
+
+
+def test_parameter_space_panel_draws_two_plots(qapp):
+    import numpy as np
+
+    from vfmstudio.core.parameter_space import from_system
+    from vfmstudio.core.uncertainty import system_from_blocks
+    from vfmstudio.gui.results.parameter_space import ParameterSpacePanel
+
+    rng = np.random.default_rng(0)
+    theta = np.array([500.0, 20.0, 400.0, 30.0])
+    designs, observations, covariances, names = [], [], [], []
+    for index in range(3):
+        design = np.eye(4) + 0.05 * rng.normal(size=(4, 4))
+        covariance = np.eye(4)
+        observation = design @ theta + 0.1 * rng.normal(size=4)
+        designs.append(design)
+        observations.append(observation)
+        covariances.append(covariance)
+        names.append(f"E{index + 1}")
+    system = system_from_blocks(
+        designs, observations, covariances, theta, ["D11", "D12", "D22", "D66"], names
+    )
+    panel = ParameterSpacePanel()
+    panel._space = from_system(system)
+    panel.refresh()
+    assert panel._space.n_subsets == 7
+    assert len(panel._axes) == 2
+    assert all(xy is not None and len(xy) == 7 for xy in panel._xy)
+    panel.set_groups(
+        [{"name": "A tests", "color": "#D55E00", "experiment_ids": [1, 2]}]
+    )
+    panel.refresh()
+    assert panel._assigned is not None
+    assert int(np.sum(panel._assigned == 0)) == 2
+    panel.set_groups(
+        [{"name": "A1", "color": "#D55E00", "experiment_ids": [1]}]
+    )
+    panel.refresh()
+    assert int(np.sum(panel._assigned == 0)) == 4
+    panel.close()

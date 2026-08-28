@@ -15,7 +15,7 @@ from vfmstudio.core.document import (
 
 
 _SIDECAR_INT_KEYS = ("analysis_start", "analysis_end", "reference_step")
-_SIDECAR_BOOL_KEYS = ("fit_data_to_system_axes",)
+_SIDECAR_BOOL_KEYS = ("fit_data_to_system_axes", "include_in_identification")
 
 
 def _vfmstudio_sidecar(document: SessionDocument) -> Dict[str, Any]:

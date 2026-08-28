@@ -42,8 +42,10 @@ _KIND_ICONS = {
     "solver": "solver",
     "post_processing": "post",
     "post_plots": "post",
+    "post_parameter_space": "post",
     "post_experiment_check": "post",
     "post_identifiability": "post",
+    "post_identifiability_strength": "post",
     "post_virtual_fields": "post",
     "post_uncertainty": "post",
     "post_uncertainty_cov": "post",
@@ -55,8 +57,10 @@ _KIND_ICONS = {
 
 _POST_CHILDREN = (
     ("Coefficient Evolution", "post_plots", ()),
+    ("Parameter space", "post_parameter_space", ()),
     ("Individual Experiment check", "post_experiment_check", ()),
     ("Identifiability", "post_identifiability", ()),
+    ("Identifiability strength", "post_identifiability_strength", ()),
     ("Virtual fields", "post_virtual_fields", ()),
     (
         "Uncertainty quantification",

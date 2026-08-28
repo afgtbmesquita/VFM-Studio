@@ -1,0 +1,4444 @@
+{
+  "format": "vfm-generalized-project",
+  "version": 1,
+  "description": "Samples A/B stacked campaign (all): All tests stacked. Complete encastre on the bottom cut of every test; the only EXTERNAL virtual work is the load-cell couple on the top cut.",
+  "created": "2026-08-27",
+  "experiment_names": {
+    "1": "A1_PB",
+    "2": "A2_PB",
+    "3": "A3_PB",
+    "4": "B1_PB",
+    "5": "B2_PB",
+    "6": "B3_PB",
+    "7": "A1_Twist",
+    "8": "B1_Twist"
+  },
+  "material_type": "orthotropic",
+  "analysis_type": "out_of_plane",
+  "initial_parameters": [
+    400.0,
+    50.0,
+    400.0,
+    100.0
+  ],
+  "identification": {
+    "max_iterations": 40,
+    "convergence_tolerance": 1e-08
+  },
+  "gls": {
+    "basis_degree": 6,
+    "weighting": "gls",
+    "spatial_correction": false,
+    "covariance_tolerance": 0.0001
+  },
+  "tests": [
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_PB/mat/A1_PB_step03.mat",
+      "experiment_id": 1,
+      "label": "A1_PB:A1_PB_step03",
+      "description": "A1_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.68932624338,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.246559,
+          "x_max": 9.27436,
+          "y_min": 1.37458,
+          "y_max": 26.5496
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": 4.872332409090909
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_PB/mat/A1_PB_step04.mat",
+      "experiment_id": 1,
+      "label": "A1_PB:A1_PB_step04",
+      "description": "A1_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.68932624338,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.246559,
+          "x_max": 9.27436,
+          "y_min": 1.37458,
+          "y_max": 26.5496
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": 9.011631372859025
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_PB/mat/A1_PB_step05.mat",
+      "experiment_id": 1,
+      "label": "A1_PB:A1_PB_step05",
+      "description": "A1_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.68932624338,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.246559,
+          "x_max": 9.27436,
+          "y_min": 1.37458,
+          "y_max": 26.5496
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": 13.531544272727272
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_PB/mat/A1_PB_step06.mat",
+      "experiment_id": 1,
+      "label": "A1_PB:A1_PB_step06",
+      "description": "A1_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.68932624338,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.246559,
+          "x_max": 9.27436,
+          "y_min": 1.37458,
+          "y_max": 26.5496
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": 18.020452379679142
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_PB/mat/A1_PB_step07.mat",
+      "experiment_id": 1,
+      "label": "A1_PB:A1_PB_step07",
+      "description": "A1_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.68932624338,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.246559,
+          "x_max": 9.27436,
+          "y_min": 1.37458,
+          "y_max": 26.5496
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": 22.232433833333335
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_PB/mat/A1_PB_step08.mat",
+      "experiment_id": 1,
+      "label": "A1_PB:A1_PB_step08",
+      "description": "A1_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.68932624338,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.246559,
+          "x_max": 9.27436,
+          "y_min": 1.37458,
+          "y_max": 26.5496
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": 25.63035605773956
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_PB/mat/A1_PB_step09.mat",
+      "experiment_id": 1,
+      "label": "A1_PB:A1_PB_step09",
+      "description": "A1_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.68932624338,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.246559,
+          "x_max": 9.27436,
+          "y_min": 1.37458,
+          "y_max": 26.5496
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": 30.169363922248795
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_PB/mat/A1_PB_step10.mat",
+      "experiment_id": 1,
+      "label": "A1_PB:A1_PB_step10",
+      "description": "A1_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.68932624338,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.246559,
+          "x_max": 9.27436,
+          "y_min": 1.37458,
+          "y_max": 26.5496
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": 34.64891124242424
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_PB/mat/A1_PB_step11.mat",
+      "experiment_id": 1,
+      "label": "A1_PB:A1_PB_step11",
+      "description": "A1_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.68932624338,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.246559,
+          "x_max": 9.27436,
+          "y_min": 1.37458,
+          "y_max": 26.5496
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": 38.249938341926736
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A2_PB/mat/A2_PB_step03.mat",
+      "experiment_id": 2,
+      "label": "A2_PB:A2_PB_step03",
+      "description": "A2_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 159.82961046344,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.165117,
+          "x_max": 8.20261,
+          "y_min": -20.2811,
+          "y_max": -1.18038
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -3.622474004201681
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A2_PB/mat/A2_PB_step04.mat",
+      "experiment_id": 2,
+      "label": "A2_PB:A2_PB_step04",
+      "description": "A2_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 159.82961046344,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.165117,
+          "x_max": 8.20261,
+          "y_min": -20.2811,
+          "y_max": -1.18038
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -8.659565997767855
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A2_PB/mat/A2_PB_step05.mat",
+      "experiment_id": 2,
+      "label": "A2_PB:A2_PB_step05",
+      "description": "A2_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 159.82961046344,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.165117,
+          "x_max": 8.20261,
+          "y_min": -20.2811,
+          "y_max": -1.18038
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -12.682754110874198
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A2_PB/mat/A2_PB_step06.mat",
+      "experiment_id": 2,
+      "label": "A2_PB:A2_PB_step06",
+      "description": "A2_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 159.82961046344,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.165117,
+          "x_max": 8.20261,
+          "y_min": -20.2811,
+          "y_max": -1.18038
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -16.733982857142852
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A2_PB/mat/A2_PB_step07.mat",
+      "experiment_id": 2,
+      "label": "A2_PB:A2_PB_step07",
+      "description": "A2_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 159.82961046344,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.165117,
+          "x_max": 8.20261,
+          "y_min": -20.2811,
+          "y_max": -1.18038
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -21.722098781385284
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A2_PB/mat/A2_PB_step08.mat",
+      "experiment_id": 2,
+      "label": "A2_PB:A2_PB_step08",
+      "description": "A2_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 159.82961046344,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.165117,
+          "x_max": 8.20261,
+          "y_min": -20.2811,
+          "y_max": -1.18038
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -26.116589739495794
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A2_PB/mat/A2_PB_step09.mat",
+      "experiment_id": 2,
+      "label": "A2_PB:A2_PB_step09",
+      "description": "A2_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 159.82961046344,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.165117,
+          "x_max": 8.20261,
+          "y_min": -20.2811,
+          "y_max": -1.18038
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -30.442082884920644
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A2_PB/mat/A2_PB_step10.mat",
+      "experiment_id": 2,
+      "label": "A2_PB:A2_PB_step10",
+      "description": "A2_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 159.82961046344,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.165117,
+          "x_max": 8.20261,
+          "y_min": -20.2811,
+          "y_max": -1.18038
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -34.62375555714286
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A2_PB/mat/A2_PB_step11.mat",
+      "experiment_id": 2,
+      "label": "A2_PB:A2_PB_step11",
+      "description": "A2_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 159.82961046344,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.165117,
+          "x_max": 8.20261,
+          "y_min": -20.2811,
+          "y_max": -1.18038
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -39.832094216898966
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A3_PB/mat/A3_PB_step03.mat",
+      "experiment_id": 3,
+      "label": "A3_PB:A3_PB_step03",
+      "description": "A3_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 115.81476883107399,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.067145,
+          "x_max": 4.39664,
+          "y_min": 1.32288,
+          "y_max": 27.2683
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -2.9054748333333293
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A3_PB/mat/A3_PB_step04.mat",
+      "experiment_id": 3,
+      "label": "A3_PB:A3_PB_step04",
+      "description": "A3_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 115.81476883107399,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.067145,
+          "x_max": 4.39664,
+          "y_min": 1.32288,
+          "y_max": 27.2683
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -5.461469097147946
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A3_PB/mat/A3_PB_step05.mat",
+      "experiment_id": 3,
+      "label": "A3_PB:A3_PB_step05",
+      "description": "A3_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 115.81476883107399,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.067145,
+          "x_max": 4.39664,
+          "y_min": 1.32288,
+          "y_max": 27.2683
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -8.3162254280303
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A3_PB/mat/A3_PB_step06.mat",
+      "experiment_id": 3,
+      "label": "A3_PB:A3_PB_step06",
+      "description": "A3_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 115.81476883107399,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.067145,
+          "x_max": 4.39664,
+          "y_min": 1.32288,
+          "y_max": 27.2683
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -11.240029275633042
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A3_PB/mat/A3_PB_step07.mat",
+      "experiment_id": 3,
+      "label": "A3_PB:A3_PB_step07",
+      "description": "A3_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 115.81476883107399,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.067145,
+          "x_max": 4.39664,
+          "y_min": 1.32288,
+          "y_max": 27.2683
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -14.222344362731782
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A3_PB/mat/A3_PB_step08.mat",
+      "experiment_id": 3,
+      "label": "A3_PB:A3_PB_step08",
+      "description": "A3_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 115.81476883107399,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.067145,
+          "x_max": 4.39664,
+          "y_min": 1.32288,
+          "y_max": 27.2683
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -17.012661441491854
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A3_PB/mat/A3_PB_step09.mat",
+      "experiment_id": 3,
+      "label": "A3_PB:A3_PB_step09",
+      "description": "A3_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 115.81476883107399,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.067145,
+          "x_max": 4.39664,
+          "y_min": 1.32288,
+          "y_max": 27.2683
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -18.947476414141406
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A3_PB/mat/A3_PB_step10.mat",
+      "experiment_id": 3,
+      "label": "A3_PB:A3_PB_step10",
+      "description": "A3_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 115.81476883107399,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.067145,
+          "x_max": 4.39664,
+          "y_min": 1.32288,
+          "y_max": 27.2683
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -22.4694911030303
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A3_PB/mat/A3_PB_step11.mat",
+      "experiment_id": 3,
+      "label": "A3_PB:A3_PB_step11",
+      "description": "A3_PB composite pure bending (A coupon, material frame 90 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 115.81476883107399,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.067145,
+          "x_max": 4.39664,
+          "y_min": 1.32288,
+          "y_max": 27.2683
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -24.115509561611557
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_PB/mat/B1_PB_step03.mat",
+      "experiment_id": 4,
+      "label": "B1_PB:B1_PB_step03",
+      "description": "B1_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.5010719841505,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007302,
+          "x_max": 8.07178,
+          "y_min": 1.14091,
+          "y_max": 30.7855
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -4.603076387525153
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_PB/mat/B1_PB_step04.mat",
+      "experiment_id": 4,
+      "label": "B1_PB:B1_PB_step04",
+      "description": "B1_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.5010719841505,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007302,
+          "x_max": 8.07178,
+          "y_min": 1.14091,
+          "y_max": 30.7855
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -9.003619682062967
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_PB/mat/B1_PB_step05.mat",
+      "experiment_id": 4,
+      "label": "B1_PB:B1_PB_step05",
+      "description": "B1_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.5010719841505,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007302,
+          "x_max": 8.07178,
+          "y_min": 1.14091,
+          "y_max": 30.7855
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -12.153210141896155
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_PB/mat/B1_PB_step06.mat",
+      "experiment_id": 4,
+      "label": "B1_PB:B1_PB_step06",
+      "description": "B1_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.5010719841505,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007302,
+          "x_max": 8.07178,
+          "y_min": 1.14091,
+          "y_max": 30.7855
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -15.707186042253525
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_PB/mat/B1_PB_step07.mat",
+      "experiment_id": 4,
+      "label": "B1_PB:B1_PB_step07",
+      "description": "B1_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.5010719841505,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007302,
+          "x_max": 8.07178,
+          "y_min": 1.14091,
+          "y_max": 30.7855
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -19.744677044668013
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_PB/mat/B1_PB_step08.mat",
+      "experiment_id": 4,
+      "label": "B1_PB:B1_PB_step08",
+      "description": "B1_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.5010719841505,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007302,
+          "x_max": 8.07178,
+          "y_min": 1.14091,
+          "y_max": 30.7855
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -19.845583742804653
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_PB/mat/B1_PB_step09.mat",
+      "experiment_id": 4,
+      "label": "B1_PB:B1_PB_step09",
+      "description": "B1_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.5010719841505,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007302,
+          "x_max": 8.07178,
+          "y_min": 1.14091,
+          "y_max": 30.7855
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -23.215560947866305
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_PB/mat/B1_PB_step10.mat",
+      "experiment_id": 4,
+      "label": "B1_PB:B1_PB_step10",
+      "description": "B1_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.5010719841505,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007302,
+          "x_max": 8.07178,
+          "y_min": 1.14091,
+          "y_max": 30.7855
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -27.814310831572765
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_PB/mat/B1_PB_step11.mat",
+      "experiment_id": 4,
+      "label": "B1_PB:B1_PB_step11",
+      "description": "B1_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 239.5010719841505,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007302,
+          "x_max": 8.07178,
+          "y_min": 1.14091,
+          "y_max": 30.7855
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -32.61669777500031
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B2_PB/mat/B2_PB_step03.mat",
+      "experiment_id": 5,
+      "label": "B2_PB:B2_PB_step03",
+      "description": "B2_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 163.24537508893852,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.00217,
+          "x_max": 8.72895,
+          "y_min": 0.993541,
+          "y_max": 19.6905
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -4.718867012360073
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B2_PB/mat/B2_PB_step04.mat",
+      "experiment_id": 5,
+      "label": "B2_PB:B2_PB_step04",
+      "description": "B2_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 163.24537508893852,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.00217,
+          "x_max": 8.72895,
+          "y_min": 0.993541,
+          "y_max": 19.6905
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -9.454188720486107
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B2_PB/mat/B2_PB_step05.mat",
+      "experiment_id": 5,
+      "label": "B2_PB:B2_PB_step05",
+      "description": "B2_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 163.24537508893852,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.00217,
+          "x_max": 8.72895,
+          "y_min": 0.993541,
+          "y_max": 19.6905
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -15.30331552872984
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B2_PB/mat/B2_PB_step06.mat",
+      "experiment_id": 5,
+      "label": "B2_PB:B2_PB_step06",
+      "description": "B2_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 163.24537508893852,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.00217,
+          "x_max": 8.72895,
+          "y_min": 0.993541,
+          "y_max": 19.6905
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -19.99396368750001
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B2_PB/mat/B2_PB_step07.mat",
+      "experiment_id": 5,
+      "label": "B2_PB:B2_PB_step07",
+      "description": "B2_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 163.24537508893852,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.00217,
+          "x_max": 8.72895,
+          "y_min": 0.993541,
+          "y_max": 19.6905
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -24.866858791193177
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B2_PB/mat/B2_PB_step08.mat",
+      "experiment_id": 5,
+      "label": "B2_PB:B2_PB_step08",
+      "description": "B2_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 163.24537508893852,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.00217,
+          "x_max": 8.72895,
+          "y_min": 0.993541,
+          "y_max": 19.6905
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -30.359446029664856
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B2_PB/mat/B2_PB_step09.mat",
+      "experiment_id": 5,
+      "label": "B2_PB:B2_PB_step09",
+      "description": "B2_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 163.24537508893852,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.00217,
+          "x_max": 8.72895,
+          "y_min": 0.993541,
+          "y_max": 19.6905
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -34.31892637056902
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B2_PB/mat/B2_PB_step10.mat",
+      "experiment_id": 5,
+      "label": "B2_PB:B2_PB_step10",
+      "description": "B2_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 163.24537508893852,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.00217,
+          "x_max": 8.72895,
+          "y_min": 0.993541,
+          "y_max": 19.6905
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -40.10315696072636
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B2_PB/mat/B2_PB_step11.mat",
+      "experiment_id": 5,
+      "label": "B2_PB:B2_PB_step11",
+      "description": "B2_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 163.24537508893852,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.00217,
+          "x_max": 8.72895,
+          "y_min": 0.993541,
+          "y_max": 19.6905
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -45.85890009178704
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B3_PB/mat/B3_PB_step03.mat",
+      "experiment_id": 6,
+      "label": "B3_PB:B3_PB_step03",
+      "description": "B3_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 111.01582591152001,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007566,
+          "x_max": 4.26768,
+          "y_min": 1.27988,
+          "y_max": 27.247
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -2.123731388738133
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B3_PB/mat/B3_PB_step04.mat",
+      "experiment_id": 6,
+      "label": "B3_PB:B3_PB_step04",
+      "description": "B3_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 111.01582591152001,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007566,
+          "x_max": 4.26768,
+          "y_min": 1.27988,
+          "y_max": 27.247
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -5.089682434192672
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B3_PB/mat/B3_PB_step05.mat",
+      "experiment_id": 6,
+      "label": "B3_PB:B3_PB_step05",
+      "description": "B3_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 111.01582591152001,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007566,
+          "x_max": 4.26768,
+          "y_min": 1.27988,
+          "y_max": 27.247
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -7.023231486140727
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B3_PB/mat/B3_PB_step06.mat",
+      "experiment_id": 6,
+      "label": "B3_PB:B3_PB_step06",
+      "description": "B3_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 111.01582591152001,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007566,
+          "x_max": 4.26768,
+          "y_min": 1.27988,
+          "y_max": 27.247
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -10.411853468283585
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B3_PB/mat/B3_PB_step07.mat",
+      "experiment_id": 6,
+      "label": "B3_PB:B3_PB_step07",
+      "description": "B3_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 111.01582591152001,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007566,
+          "x_max": 4.26768,
+          "y_min": 1.27988,
+          "y_max": 27.247
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -10.991778461704648
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B3_PB/mat/B3_PB_step08.mat",
+      "experiment_id": 6,
+      "label": "B3_PB:B3_PB_step08",
+      "description": "B3_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 111.01582591152001,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007566,
+          "x_max": 4.26768,
+          "y_min": 1.27988,
+          "y_max": 27.247
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -14.50248282813208
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B3_PB/mat/B3_PB_step09.mat",
+      "experiment_id": 6,
+      "label": "B3_PB:B3_PB_step09",
+      "description": "B3_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 111.01582591152001,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007566,
+          "x_max": 4.26768,
+          "y_min": 1.27988,
+          "y_max": 27.247
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -17.13363743559129
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B3_PB/mat/B3_PB_step10.mat",
+      "experiment_id": 6,
+      "label": "B3_PB:B3_PB_step10",
+      "description": "B3_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 111.01582591152001,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007566,
+          "x_max": 4.26768,
+          "y_min": 1.27988,
+          "y_max": 27.247
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -21.051698446224766
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B3_PB/mat/B3_PB_step11.mat",
+      "experiment_id": 6,
+      "label": "B3_PB:B3_PB_step11",
+      "description": "B3_PB composite pure bending (B coupon, material frame 0 deg from lab +X). Interior DIC window; complete encastre on the bottom cut; concentrated load-cell couple on the top cut (F top-component, N.mm).",
+      "sample_area_total": 111.01582591152001,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "manual",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.007566,
+          "x_max": 4.26768,
+          "y_min": 1.27988,
+          "y_max": 27.247
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "top    w*=0",
+            "dof": "W",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    dw*/dx=0",
+            "dof": "W_X",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "top",
+            "value": 0.0
+          },
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "edge": "bottom",
+            "value": 0.0
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "edge": "bottom",
+            "value": 0.0
+          }
+        ],
+        "linking": [],
+        "external": [
+          {
+            "label": "M_yy on top edge (load cell)",
+            "dof": "W_Y",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x",
+            "value": -23.28521583652682
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_Twist/mat/A1_Twist_step03.mat",
+      "experiment_id": 7,
+      "label": "A1_Twist:A1_Twist_step03",
+      "description": "A1_Twist edge twist (A coupon, material frame 90 deg from lab +X). Interior DIC window, sealed far end, rigid twist of the top cut; F is the total twisting couple [N.mm] from each .mat.",
+      "sample_area_total": 224.05337972862006,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.009091,
+          "x_max": 8.46446,
+          "y_min": 1.1432,
+          "y_max": 27.5847
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "top    dw*/dy=0",
+            "dof": "W_Y",
+            "value": 0.0,
+            "edge": "top"
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "value": 0.0,
+            "edge": "top"
+          }
+        ],
+        "linking": [
+          {
+            "label": "top dw*/dx tied (rigid twist of the loaded edge)",
+            "dof": "W_X",
+            "edge": "top",
+            "sortDirection": "x"
+          }
+        ],
+        "external": [
+          {
+            "label": "twisting couple on the loaded (top) cut",
+            "dof": "W_X",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/A1_Twist/mat/A1_Twist_step04.mat",
+      "experiment_id": 7,
+      "label": "A1_Twist:A1_Twist_step04",
+      "description": "A1_Twist edge twist (A coupon, material frame 90 deg from lab +X). Interior DIC window, sealed far end, rigid twist of the top cut; F is the total twisting couple [N.mm] from each .mat.",
+      "sample_area_total": 224.05337972862006,
+      "material_orientation_deg": 90.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.009091,
+          "x_max": 8.46446,
+          "y_min": 1.1432,
+          "y_max": 27.5847
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "top    dw*/dy=0",
+            "dof": "W_Y",
+            "value": 0.0,
+            "edge": "top"
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "value": 0.0,
+            "edge": "top"
+          }
+        ],
+        "linking": [
+          {
+            "label": "top dw*/dx tied (rigid twist of the loaded edge)",
+            "dof": "W_X",
+            "edge": "top",
+            "sortDirection": "x"
+          }
+        ],
+        "external": [
+          {
+            "label": "twisting couple on the loaded (top) cut",
+            "dof": "W_X",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_Twist/mat/B1_Twist_step03.mat",
+      "experiment_id": 8,
+      "label": "B1_Twist:B1_Twist_step03",
+      "description": "B1_Twist edge twist (B coupon, material frame 0 deg from lab +X). Interior DIC window, sealed far end, rigid twist of the top cut; F is the total twisting couple [N.mm] from each .mat.",
+      "sample_area_total": 230.76767098349998,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.2617,
+          "x_max": 8.43995,
+          "y_min": 1.06781,
+          "y_max": 27.5878
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "top    dw*/dy=0",
+            "dof": "W_Y",
+            "value": 0.0,
+            "edge": "top"
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "value": 0.0,
+            "edge": "top"
+          }
+        ],
+        "linking": [
+          {
+            "label": "top dw*/dx tied (rigid twist of the loaded edge)",
+            "dof": "W_X",
+            "edge": "top",
+            "sortDirection": "x"
+          }
+        ],
+        "external": [
+          {
+            "label": "twisting couple on the loaded (top) cut",
+            "dof": "W_X",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    },
+    {
+      "data_file": "../../../Samples_A_B/VFM_analysis/data/B1_Twist/mat/B1_Twist_step04.mat",
+      "experiment_id": 8,
+      "label": "B1_Twist:B1_Twist_step04",
+      "description": "B1_Twist edge twist (B coupon, material frame 0 deg from lab +X). Interior DIC window, sealed far end, rigid twist of the top cut; F is the total twisting couple [N.mm] from each .mat.",
+      "sample_area_total": 230.76767098349998,
+      "material_orientation_deg": 0.0,
+      "applied_load_source": "mat",
+      "mesh_settings": {
+        "number_of_elements_x": 2,
+        "number_of_elements_y": 2,
+        "bounds": {
+          "x_min": -0.2617,
+          "x_max": 8.43995,
+          "y_min": 1.06781,
+          "y_max": 27.5878
+        }
+      },
+      "boundary_conditions": {
+        "prescribed": [
+          {
+            "label": "bottom w*=0",
+            "dof": "W",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom dw*/dx=0",
+            "dof": "W_X",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom dw*/dy=0",
+            "dof": "W_Y",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "bottom d2w*/dxdy=0",
+            "dof": "W_XY",
+            "value": 0.0,
+            "edge": "bottom"
+          },
+          {
+            "label": "top    dw*/dy=0",
+            "dof": "W_Y",
+            "value": 0.0,
+            "edge": "top"
+          },
+          {
+            "label": "top    d2w*/dxdy=0",
+            "dof": "W_XY",
+            "value": 0.0,
+            "edge": "top"
+          }
+        ],
+        "linking": [
+          {
+            "label": "top dw*/dx tied (rigid twist of the loaded edge)",
+            "dof": "W_X",
+            "edge": "top",
+            "sortDirection": "x"
+          }
+        ],
+        "external": [
+          {
+            "label": "twisting couple on the loaded (top) cut",
+            "dof": "W_X",
+            "edge": "top",
+            "loadType": "concentrated",
+            "sortDirection": "x"
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -47,6 +47,7 @@ from vfm_mesh import (
     mesh_settings_from_node_points,
     prune_mesh_by_measurement_points,
     strain_displacement_batch,
+    subset_measurements_to_mapped_mesh,
 )
 from vfm_optimal_field import (
     OptimalFieldSolverOptions,
@@ -218,6 +219,25 @@ def main() -> int:
     assert mapped.element_ids.tolist() == [0, 1, 2, 3, 3, -1], \
         mapped.element_ids
     assert np.allclose(mapped.local_xy[:4], 0.0)
+    outside_meas = PointMeasurements(
+        points=np.asarray([
+            [0.5, 0.25],
+            [2.0, 0.25],
+            [-0.1, 0.0],
+        ]),
+        strains=np.ones((3, 3), dtype=float),
+        applied_force=None,
+        area_per_point=0.25,
+        data_bounds={"x_min": -0.1, "x_max": 2.0,
+                     "y_min": 0.0, "y_max": 0.25},
+        analysis_type="out_of_plane",
+    )
+    kept, kept_mapping = subset_measurements_to_mapped_mesh(
+        outside_meas, manual_mesh)
+    assert kept.points.shape[0] == 2, kept.points.shape
+    assert kept_mapping.n_unmapped == 0
+    assert np.allclose(kept.area_per_point, 0.25)
+    print("[smoke]   unmapped measurement points are dropped, not rejected.")
     try:
         mesh_settings_from_node_points(manual_points[:-1])
     except ValueError as exc:
@@ -1026,6 +1046,7 @@ def main() -> int:
             VfmProject,
             check_experiment_consistency,
             check_load_orientation,
+            project_to_cases,
         )
 
         guard_dir = Path(tmpdir) / "guards"
@@ -1116,6 +1137,19 @@ def main() -> int:
             "the orientation check must not fire on a biaxial coupon")
 
         print("[smoke]   project guards (missing EXTERNAL, swapped load) OK.")
+
+        #  Points past the virtual-mesh rectangle are dropped, not a hard
+        #  failure.  The DIC cloud can overhang the mesh; those locations
+        #  simply do not enter the virtual-work sums.
+        overhang = _guard_project("W_Y", 5.0e-4, -9.7e-3)
+        for test in overhang.tests:
+            test.mesh_settings["bounds"]["y_max"] = 8.0
+        overhang_cases, _ = project_to_cases(overhang)
+        assert overhang_cases, "overhanging points must not abort the project"
+        for case in overhang_cases:
+            assert case.measurements.points.shape[0] > 0
+            assert float(case.measurements.points[:, 1].max()) <= 8.0 + 1.0e-9
+        print("[smoke]   project drops out-of-mesh measurement points OK.")
 
     print("[smoke] all checks PASSED.")
     return 0

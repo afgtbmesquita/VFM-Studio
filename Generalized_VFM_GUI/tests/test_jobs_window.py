@@ -15,6 +15,7 @@ from vfmstudio.core.jobs import (
     project_for_identification,
     subtract_reference_measurements,
     validate_analysis_window,
+    validate_document,
 )
 
 
@@ -66,6 +67,59 @@ def test_project_for_identification_filters_steps(tmp_path):
     document.experiments[0].reference_step = 1
     project = project_for_identification(document)
     assert [test.label for test in project.tests] == ["step-02", "step-03", "step-01"]
+
+
+def test_project_for_identification_skips_excluded_experiments(tmp_path):
+    document = _document(tmp_path, n_steps=2)
+    other_mat = tmp_path / "other.mat"
+    other_mat.write_bytes(b"not-a-real-mat")
+    document.experiments.append(
+        ExperimentModel(
+            experiment_id=2,
+            name="other",
+            include_in_identification=False,
+            steps=[
+                LoadStepModel(data_file=other_mat, label="b-01"),
+                LoadStepModel(data_file=other_mat, label="b-02"),
+            ],
+        )
+    )
+    assert document.experiments[0].include_in_identification is True
+    project = project_for_identification(document)
+    assert [test.experiment_id for test in project.tests] == [1, 1]
+    assert [test.label for test in project.tests] == ["step-01", "step-02"]
+
+
+def test_validate_requires_an_included_experiment(tmp_path):
+    document = _document(tmp_path)
+    document.experiments[0].include_in_identification = False
+    report = validate_document(document)
+    assert any("included" in item.lower() for item in report.errors)
+
+
+def test_reference_subtraction_skips_experiments_not_loaded(tmp_path):
+    document = _document(tmp_path, n_steps=3)
+    document.experiments[0].reference_step = 1
+    document.experiments.append(
+        ExperimentModel(
+            experiment_id=2,
+            name="excluded",
+            reference_step=1,
+            include_in_identification=False,
+            steps=list(document.experiments[0].steps),
+        )
+    )
+    cases = [
+        _Case([[1.0, 1.0]], [10.0]),
+        _Case([[3.0, 5.0]], [30.0]),
+        _Case([[4.0, 6.0]], [40.0]),
+    ]
+    kept, exp_ids, steps = apply_reference_subtraction(
+        document, cases, [1, 1, 1], [0, 1, 2]
+    )
+    assert steps == [1, 2]
+    assert exp_ids == [1, 1]
+    assert np.allclose(kept[0].measurements.applied_force, [20.0])
 
 
 def test_subtract_reference_measurements():

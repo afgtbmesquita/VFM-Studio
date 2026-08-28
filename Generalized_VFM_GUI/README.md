@@ -7,6 +7,7 @@ by the untouched sibling solver in `../Generalized VFM/`.
 ```text
 python -m vfmstudio
 python -m vfmstudio --project "../Generalized VFM/projects/campaign.vfmproj.json"
+python -m vfmstudio --project "../Generalized VFM/projects/samples_ab_all.vfmproj.json"
 ```
 
 ## Layout

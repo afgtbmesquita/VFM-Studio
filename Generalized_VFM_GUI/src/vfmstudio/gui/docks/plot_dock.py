@@ -11,6 +11,12 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from vfmstudio.core.document import SessionDocument, parameter_math_label, parameter_unit_math
+from vfmstudio.core.parameter_space import (
+    is_full_combination,
+    selected_experiment_ids,
+    space_from_document,
+    theta_for_experiment_ids,
+)
 from vfmstudio.gui.results.plot_style import (
     INK_MUTED,
     INK_PRIMARY,
@@ -80,6 +86,13 @@ class PlotDock(QWidget):
         self._title.setStyleSheet(
             f"color: {INK_PRIMARY}; font-size: 12pt; font-family: 'Times New Roman', serif;"
         )
+        self._subtitle = QLabel("")
+        self._subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._subtitle.setWordWrap(True)
+        self._subtitle.setVisible(False)
+        self._subtitle.setStyleSheet(
+            f"color: {INK_MUTED}; font-size: 9pt; font-family: 'Times New Roman', serif;"
+        )
         self._figure = Figure(facecolor="#FFFFFF")
         self._canvas = FigureCanvas(self._figure)
         self._canvas.setSizePolicy(
@@ -89,10 +102,12 @@ class PlotDock(QWidget):
         layout.setContentsMargins(12, 8, 12, 10)
         layout.setSpacing(6)
         layout.addWidget(self._title)
+        layout.addWidget(self._subtitle)
         layout.addWidget(self._canvas, 1)
         self._result = None
         self._ident = None
         self._document: Optional[SessionDocument] = None
+        self._fit_names: list[str] = []
 
     def set_results(
         self,
@@ -104,11 +119,28 @@ class PlotDock(QWidget):
         self._ident = identifiability
         if document is not None:
             self._document = document
+        self._sync_fit_names()
         self.refresh()
+
+    def apply_combination(self, document: Optional[SessionDocument] = None) -> None:
+        if document is not None:
+            self._document = document
+        self._sync_fit_names()
+        self.refresh()
+
+    def _sync_fit_names(self) -> None:
+        document = self._document
+        if document is None:
+            self._fit_names = []
+            return
+        self._fit_names = [
+            experiment.name or f"Experiment {experiment.experiment_id}"
+            for experiment in document.experiments_in_identification()
+        ]
 
     def refresh(self) -> None:
         self._figure.clear()
-        self._plot_evolution()
+        self._plot_results()
         self._canvas.draw_idle()
 
     def _message(self, text: str) -> None:
@@ -120,11 +152,144 @@ class PlotDock(QWidget):
             color=INK_MUTED, fontsize=10, transform=axis.transAxes,
         )
 
-    def _plot_evolution(self) -> None:
+    def _set_fit_subtitle(self, extra: str = "") -> None:
+        names = [str(name).strip() for name in self._fit_names if str(name).strip()]
+        if not names and not extra:
+            self._subtitle.setText("")
+            self._subtitle.setVisible(False)
+            return
+        if not names:
+            text = extra
+        elif len(names) == 1:
+            text = f"Identification from {names[0]}"
+        else:
+            text = "Identification from " + ", ".join(names)
+        if extra:
+            text = f"{text}. {extra}" if names else extra
+        self._subtitle.setText(text)
+        self._subtitle.setVisible(True)
+
+    def _plot_results(self) -> None:
         result = self._result
         if result is None:
+            self._subtitle.setText("")
+            self._subtitle.setVisible(False)
             self._message("No identification result.")
             return
+        space = space_from_document(result, self._document)
+        ids = selected_experiment_ids(self._document)
+        theta = theta_for_experiment_ids(space, ids) if space is not None else None
+        if space is not None and ids and theta is None:
+            self._set_fit_subtitle(
+                "Last Identify did not include every ticked test."
+            )
+            self._message(
+                "Those tests were not in the last Identify."
+            )
+            return
+        if (
+            space is not None
+            and theta is not None
+            and not is_full_combination(space, ids)
+        ):
+            self._set_fit_subtitle(
+                "Frozen GLS at the virtual fields of the last Identify."
+            )
+            self._plot_combination(theta, space.theta_full, _labels_for(self._document, int(theta.size)))
+            return
+        self._set_fit_subtitle()
+        self._plot_evolution()
+
+    def _plot_combination(self, theta: np.ndarray, theta_full: np.ndarray, labels: Sequence[str]) -> None:
+        n = int(theta.size)
+        n_rows = max(1, (n + 1) // 2)
+        grid = self._figure.add_gridspec(
+            n_rows, 3,
+            width_ratios=[1.0, 1.0, 1.18],
+            left=0.10,
+            right=0.97,
+            top=0.90,
+            bottom=0.12,
+            wspace=0.58,
+            hspace=0.50,
+        )
+        panels = [
+            self._figure.add_subplot(grid[index // 2, index % 2])
+            for index in range(n)
+        ]
+        ax_shift = self._figure.add_subplot(grid[:, 2])
+        x = np.array([0.0, 1.0])
+        floor = 1.0e-12
+        for index, axis in enumerate(panels):
+            colour = SERIES_COLOUR[index % len(SERIES_COLOUR)]
+            identify = float(theta_full[index])
+            selected = float(theta[index])
+            _style_axis(axis)
+            axis.plot(
+                x,
+                [identify, selected],
+                color=colour,
+                linewidth=1.4,
+                zorder=2,
+            )
+            axis.scatter(
+                [0.0], [identify],
+                marker="o",
+                s=42,
+                facecolors="white",
+                edgecolors=colour,
+                linewidths=1.2,
+                zorder=3,
+            )
+            axis.scatter(
+                [1.0], [selected],
+                marker="*",
+                s=90,
+                facecolors=colour,
+                edgecolors="white",
+                linewidths=0.6,
+                zorder=4,
+            )
+            axis.axhline(
+                selected, color=INK_MUTED, linewidth=0.7,
+                linestyle=(0, (4, 3)), zorder=1,
+            )
+            axis.set_xticks([0.0, 1.0])
+            axis.set_xticklabels(["Identify", "Selected"])
+            axis.set_xlim(-0.28, 1.28)
+            _pad_limits(axis, np.array([identify, selected]))
+            axis.set_title(parameter_math_label(labels[index]), pad=8)
+            unit = parameter_unit_math(labels[index])
+            if unit:
+                axis.set_ylabel(unit, labelpad=8)
+            axis.annotate(
+                f"{selected:.2f}", xy=(1.0, selected),
+                xytext=(-4, 6), textcoords="offset points",
+                ha="right", va="bottom", fontsize=8, color=colour,
+                annotation_clip=True,
+            )
+
+        for index, label in enumerate(labels):
+            hat = max(abs(float(theta_full[index])), floor)
+            relative = abs(float(theta[index]) - float(theta_full[index])) / hat
+            ax_shift.bar(
+                index,
+                max(relative, floor),
+                color=SERIES_COLOUR[index % len(SERIES_COLOUR)],
+                width=0.62,
+                zorder=3,
+                label=parameter_math_label(label),
+            )
+        _style_axis(ax_shift)
+        ax_shift.set_yscale("log")
+        ax_shift.set_xticks(range(n))
+        ax_shift.set_xticklabels([parameter_math_label(name) for name in labels])
+        ax_shift.set_xlim(-0.7, n - 0.3)
+        ax_shift.set_ylabel(r"$|\theta_S-\hat{\theta}|\,/\,|\hat{\theta}|$", labelpad=10)
+        ax_shift.set_title("Shift from Identify", pad=8)
+
+    def _plot_evolution(self) -> None:
+        result = self._result
         iterations, values = _parameter_history(result, self._document)
         if iterations is None or values is None or values.size == 0:
             self._message("No iteration history on this result.")

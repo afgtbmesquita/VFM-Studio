@@ -77,6 +77,7 @@ from vfm_mesh import (
     build_mesh,
     map_points_to_mesh,
     prune_mesh_by_measurement_points,
+    subset_measurements_to_mapped_mesh,
 )
 from vfm_user_inputs import Bounds, MeshSettings
 
@@ -587,11 +588,14 @@ def build_cases(test: TestSpec,
 
         mapping = map_points_to_mesh(measurements.points, mesh_pkg)
         if mapping.n_unmapped:
-            raise SystemExit(
-                f"{path.name}: {mapping.n_unmapped} measurement points fall "
-                f"outside the virtual mesh.  Check MESH_SETTINGS['bounds'] in "
-                f"{test.bc_file.name}."
+            n_before = int(mapping.mapped_mask.size)
+            print(
+                f"  {path.name}: {mapping.n_unmapped} of {n_before} "
+                "measurement points fall outside the virtual mesh and will "
+                "be excluded from the identification."
             )
+            measurements, mapping = subset_measurements_to_mapped_mesh(
+                measurements, mesh_pkg, mapping)
 
         mesh_pkg, _ = prune_mesh_by_measurement_points(
             mesh_pkg, measurements.points)

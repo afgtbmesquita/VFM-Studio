@@ -569,6 +569,7 @@ def project_to_cases(project: VfmProject, verbose: bool = False):
         build_mesh,
         map_points_to_mesh,
         prune_mesh_by_measurement_points,
+        subset_measurements_to_mapped_mesh,
     )
     from vfm_user_inputs import Bounds, MeshSettings
 
@@ -602,10 +603,15 @@ def project_to_cases(project: VfmProject, verbose: bool = False):
                               analysis_type=project.analysis_type)
         mapping = map_points_to_mesh(measurements.points, mesh_pkg)
         if mapping.n_unmapped:
-            raise ValueError(
-                f"Test {index} ({test.data_file.name}): {mapping.n_unmapped} "
-                "measurement points fall outside the virtual mesh. The "
-                "project's mesh bounds do not cover this dataset.")
+            n_before = int(mapping.mapped_mask.size)
+            print(
+                f"[VFM-plate] Test {index} ({test.data_file.name}): "
+                f"{mapping.n_unmapped} of {n_before} measurement points "
+                "fall outside the virtual mesh and will be excluded from "
+                "the identification."
+            )
+            measurements, mapping = subset_measurements_to_mapped_mesh(
+                measurements, mesh_pkg, mapping)
         mesh_pkg, _ = prune_mesh_by_measurement_points(
             mesh_pkg, measurements.points)
 

@@ -11,7 +11,7 @@ result, not a nuisance.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, List, Optional, Sequence
 
 import numpy as np
 
@@ -56,6 +56,67 @@ def exact_shift(system: EstimatingSystem, dropped: str) -> np.ndarray:
     cluster = system.clusters[index]
     remaining = ee.sensitivity(system) - cluster.sensitivity
     return -np.linalg.solve(remaining, cluster.score(system.theta))
+
+
+@dataclass
+class ExperimentShift:
+    """Eq. (63) for one experiment inside a chosen subset of tests."""
+
+    name: str
+    experiment_id: int
+    shift: np.ndarray
+
+
+def _eq63_shift(remaining: np.ndarray, score: np.ndarray) -> np.ndarray:
+    remaining = ee.symmetrise(remaining)
+    score = np.asarray(score, dtype=float).reshape(-1)
+    try:
+        return -np.linalg.solve(remaining, score)
+    except np.linalg.LinAlgError:
+        values, vectors = np.linalg.eigh(remaining)
+        vmax = max(float(np.max(np.abs(values))), 1.0)
+        floor = 1.0e-12 * vmax
+        inverse = vectors @ np.diag(1.0 / np.maximum(values, floor)) @ vectors.T
+        inverse = 0.5 * (inverse + inverse.T)
+        return -inverse @ score
+
+
+def subset_deletion_shifts(
+    result,
+    included_ids: Sequence[int],
+) -> List[ExperimentShift]:
+    """Eq. (63) using only the ticked tests: A_S = sum_{i in S} A_i.
+
+    For each included experiment i,
+
+        θ̂_(-i) − θ̂ = −(A_S − A_i)^{-1} ψ_i(θ̂)
+
+    in the original parameter units.  Unticked tests are left out of A_S
+    and do not appear as series.
+    """
+    included = {int(eid) for eid in included_ids}
+    indices = [
+        i
+        for i, eid in enumerate(result.cluster_ids)
+        if int(eid) in included
+    ]
+    if len(indices) < 2:
+        return []
+    blocks = np.asarray(result.information.blocks, dtype=float)
+    scores = np.asarray(result.scores, dtype=float)
+    A_subset = ee.symmetrise(sum(blocks[i] for i in indices))
+    rows: List[ExperimentShift] = []
+    for i in indices:
+        rows.append(
+            ExperimentShift(
+                name=str(result.cluster_names[i]),
+                experiment_id=int(result.cluster_ids[i]),
+                shift=np.asarray(
+                    _eq63_shift(A_subset - blocks[i], scores[i]), dtype=float
+                ),
+            )
+        )
+    return rows
 
 
 def verdict(precision: float, influence: float) -> str:

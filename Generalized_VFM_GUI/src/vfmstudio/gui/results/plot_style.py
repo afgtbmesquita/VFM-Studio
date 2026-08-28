@@ -6,7 +6,20 @@ from typing import Optional, Sequence
 
 import numpy as np
 
-SERIES_COLOUR = ("#2a78d6", "#eb6834", "#1baf7a", "#4a3aa7", "#C59B2D", "#CC6677")
+SERIES_COLOUR = (
+    "#0072B2",
+    "#E69F00",
+    "#F0E442",
+    "#009E73",
+    "#D55E00",
+    "#000000",
+    "#CC79A7",
+    "#56B4E9",
+    "#2a78d6",
+    "#eb6834",
+    "#1baf7a",
+    "#4a3aa7",
+)
 SERIES_MARKER = ("o", "s", "^", "D", "v", "P")
 
 INK_PRIMARY = "#141413"
@@ -93,6 +106,57 @@ def style_heatmap_axis(axis) -> None:
 
 def experiment_colour(index: int) -> str:
     return SERIES_COLOUR[index % len(SERIES_COLOUR)]
+
+
+def place_legend_below(
+    figure,
+    handles,
+    labels,
+    *,
+    caption: str | None = None,
+    ncol: int | None = None,
+) -> None:
+    """Put a shared legend (and optional caption) under every panel.
+
+    Leaves enough bottom margin for wrapped legend rows so the handles
+    do not collide with x-labels.
+    """
+    n = max(len(handles), 1)
+    columns = ncol if ncol is not None else min(n, 4)
+    n_rows = int(np.ceil(n / max(columns, 1)))
+    caption_space = 0.11 if caption else 0.0
+    legend_space = 0.038 * n_rows + 0.036
+    bottom = min(0.46, 0.12 + legend_space + caption_space)
+    figure.subplots_adjust(
+        left=max(float(figure.subplotpars.left), 0.10),
+        right=min(float(figure.subplotpars.right), 0.98),
+        top=min(float(figure.subplotpars.top), 0.93),
+        bottom=bottom,
+    )
+    if handles:
+        figure.legend(
+            handles,
+            labels,
+            loc="lower center",
+            bbox_to_anchor=(0.5, 0.018 + caption_space),
+            ncol=columns,
+            fontsize=8,
+            frameon=False,
+            handlelength=1.6,
+            columnspacing=1.15,
+            handletextpad=0.45,
+            borderaxespad=0.0,
+        )
+    if caption:
+        figure.text(
+            0.5,
+            0.012,
+            caption,
+            ha="center",
+            va="bottom",
+            fontsize=7.2,
+            color=INK_MUTED,
+        )
 
 
 def empty_message(figure, text: str) -> None:

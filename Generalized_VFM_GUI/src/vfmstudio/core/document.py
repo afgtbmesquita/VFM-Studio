@@ -150,6 +150,7 @@ class ExperimentModel(BaseModel):
     analysis_end: Optional[int] = None
     reference_step: Optional[int] = None
     fit_data_to_system_axes: bool = False
+    include_in_identification: bool = True
 
     def resolved_analysis_start(self) -> int:
         n_steps = len(self.steps)
@@ -258,6 +259,14 @@ class SessionDocument(BaseModel):
             if experiment.experiment_id == experiment_id:
                 return experiment
         return None
+
+    def experiments_in_identification(self) -> List[ExperimentModel]:
+        """Experiments that enter FGLS (every load step of each, after the window)."""
+        return [
+            experiment
+            for experiment in self.experiments
+            if experiment.include_in_identification
+        ]
 
     def next_experiment_id(self) -> int:
         if not self.experiments:

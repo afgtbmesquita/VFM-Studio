@@ -85,6 +85,50 @@ def test_document_to_vfm_and_back(tmp_path):
     assert restored.experiments[0].included_step_indices() == [0, 1, 2]
 
 
+def test_samples_ab_all_json_round_trip():
+    from vfmstudio.core.paths import samples_ab_all_project_path
+    from vfmstudio.io.vfmproj_json import load_vfmproj
+
+    path = samples_ab_all_project_path()
+    if not path.is_file():
+        return
+    document = load_vfmproj(path)
+    assert len(document.experiments) == 8
+    assert [item.name for item in document.experiments] == [
+        "A1_PB",
+        "A2_PB",
+        "A3_PB",
+        "B1_PB",
+        "B2_PB",
+        "B3_PB",
+        "A1_Twist",
+        "B1_Twist",
+    ]
+    n_steps = sum(len(experiment.steps) for experiment in document.experiments)
+    assert n_steps == 58
+    for experiment in document.experiments:
+        assert len(experiment.external) == 1
+        assert str(experiment.external[0].edge).lower() == "top"
+        assert not any(
+            str(entry.edge).lower() == "bottom" for entry in experiment.external
+        )
+        bottom_dofs = {
+            entry.dof
+            for entry in experiment.prescribed
+            if str(entry.edge).lower() == "bottom"
+        }
+        assert {"W", "W_X", "W_Y", "W_XY"} <= bottom_dofs
+        for step in experiment.steps:
+            assert Path(step.data_file).is_file(), step.data_file
+    assert document.experiments[0].material_orientation_deg == 90.0
+    assert document.experiments[3].material_orientation_deg == 0.0
+    assert document.experiments[0].applied_load_source == "manual"
+    assert document.experiments[0].steps[0].external_values
+    assert document.experiments[0].steps[0].external_values[0] is not None
+    assert document.experiments[6].applied_load_source == "mat"
+    assert len(document.experiments[6].linking) == 1
+
+
 def test_campaign_json_round_trip():
     from vfmstudio.core.paths import campaign_project_path
     from vfmstudio.io.vfmproj_json import load_vfmproj
@@ -165,6 +209,7 @@ def test_vfmproj_analysis_sidecar(tmp_path):
     document.experiments[0].analysis_end = 3
     document.experiments[0].reference_step = 1
     document.experiments[0].fit_data_to_system_axes = True
+    document.experiments[0].include_in_identification = False
     out = tmp_path / "session.vfmproj.json"
     save_vfmproj(document, out)
     payload = out.read_text(encoding="utf-8")
@@ -175,6 +220,7 @@ def test_vfmproj_analysis_sidecar(tmp_path):
     assert restored.experiments[0].analysis_end == 3
     assert restored.experiments[0].reference_step == 1
     assert restored.experiments[0].fit_data_to_system_axes is True
+    assert restored.experiments[0].include_in_identification is False
     assert restored.experiments[0].included_step_indices() == [1, 2]
 
 
@@ -185,11 +231,13 @@ def test_hdf5_keeps_analysis_window(tmp_path):
     document.experiments[0].analysis_start = 1
     document.experiments[0].analysis_end = 2
     document.experiments[0].reference_step = 1
+    document.experiments[0].include_in_identification = False
     out = tmp_path / "session.vfm"
     save_vfm(document, out)
     restored = load_vfm(out)
     assert restored.experiments[0].analysis_end == 2
     assert restored.experiments[0].reference_step == 1
+    assert restored.experiments[0].include_in_identification is False
 
 
 def test_detected_bounds_replace_unit_square():

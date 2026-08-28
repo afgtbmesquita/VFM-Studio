@@ -88,3 +88,17 @@ def test_step_coefficient_plots_draw():
         figure = Figure()
         drawer(figure, series, labels, theta)
         assert figure.axes
+        if figure.legends:
+            assert figure.subplotpars.bottom >= 0.16
+
+
+def test_hidden_experiment_is_omitted():
+    from matplotlib.figure import Figure
+
+    series, labels, theta = collect_experiment_steps(_result())
+    drawn = [item for item in series if item.experiment_id == 1]
+    figure = Figure()
+    plot_coefficients_vs_step(figure, drawn, labels, theta, colors={1: "#0072B2"})
+    _, handle_labels = figure.axes[0].get_legend_handles_labels()
+    assert "Longitudinal" in handle_labels
+    assert "Transverse" not in handle_labels

@@ -813,8 +813,9 @@ def subset_measurements_to_mapped_mesh(
     """Return measurements restricted to points mapped into the active mesh.
 
     Points outside the mesh rectangle or landing in pruned grid cells
-    (``element_grid_index == -1``) are dropped so downstream diagnostics
-    match the virtual-field solver assembly.
+    (``element_grid_index == -1``) are dropped so they do not enter the
+    virtual-work sums.  ``area_per_point`` is left unchanged: the remaining
+    points keep their original quadrature weight.
     """
     if mapping is None:
         mapping = map_points_to_mesh(measurements.points, mesh_pkg)

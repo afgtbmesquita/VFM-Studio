@@ -4,6 +4,8 @@ from vfmstudio.gui.results.coefficients import CoefficientPanel
 from vfmstudio.gui.results.convergence import ConvergencePanel
 from vfmstudio.gui.results.experiment_check import ExperimentCheckPanel
 from vfmstudio.gui.results.identifiability import IdentifiabilityPanel
+from vfmstudio.gui.results.identifiability_strength import IdentifiabilityStrengthPanel
+from vfmstudio.gui.results.parameter_space import ParameterSpacePanel
 from vfmstudio.gui.results.uncertainty import (
     CovariancePanel,
     ExperimentUncertaintyPanel,
@@ -21,9 +23,11 @@ __all__ = [
     "ExperimentCheckPanel",
     "ExperimentUncertaintyPanel",
     "IdentifiabilityPanel",
+    "IdentifiabilityStrengthPanel",
     "InformationGeometryPanel",
     "LeaveOneOutPanel",
     "MatricesPanel",
+    "ParameterSpacePanel",
     "UncertaintyLanding",
     "VirtualFieldPanel",
 ]

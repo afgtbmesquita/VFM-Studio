@@ -207,3 +207,258 @@ def test_information_exists_when_sandwich_is_refused():
     assert info.n_clusters == 3
     assert info.min_clusters_for_sandwich == 5
     assert info.shares.shape == (3, 4)
+
+
+def test_identifiability_strength_uncoupled_is_one():
+    from vfmstudio.core.uncertainty import identifiability_strength
+
+    A = np.diag([2.0, 5.0, 8.0])
+    theta = np.array([10.0, 20.0, 40.0])
+    metrics = identifiability_strength(A, theta, ["D11", "D22", "D12"])
+    assert np.allclose(metrics.coupling_quality, 1.0)
+    assert np.allclose(metrics.scales, np.abs(theta))
+    assert np.allclose(metrics.working_strength, np.abs(theta) ** 2 * np.diag(A))
+    assert np.all(np.isnan(metrics.information_gain))
+
+
+def test_identifiability_strength_near_zero_uses_characteristic_scale():
+    from vfmstudio.core.uncertainty import identifiability_strength
+
+    A = np.eye(3)
+    theta = np.array([100.0, 80.0, 1.0e-12])
+    metrics = identifiability_strength(A, theta, ["D11", "D22", "D16"])
+    assert metrics.scales[2] == pytest.approx(90.0)
+    assert metrics.scales[2] > 1.0
+
+
+def test_coupling_quality_is_scale_invariant():
+    from vfmstudio.core.uncertainty import identifiability_strength
+
+    rng = np.random.default_rng(11)
+    root = rng.normal(size=(3, 3))
+    A = root @ root.T + np.eye(3)
+    theta = np.array([12.0, 7.0, 3.0])
+    labels = ["D11", "D22", "D12"]
+    first = identifiability_strength(A, theta, labels)
+    scaled = identifiability_strength(4.0 * A, theta, labels)
+    assert np.allclose(first.coupling_quality, scaled.coupling_quality)
+
+
+def test_information_gain_is_zero_when_baseline_is_all():
+    from vfmstudio.core.uncertainty import identifiability_strength
+
+    A = np.diag([2.0, 5.0, 8.0, 3.0])
+    theta = np.array([10.0, 20.0, 4.0, 8.0])
+    labels = ["D11", "D22", "D12", "D66"]
+    metrics = identifiability_strength(A, theta, labels, A_baseline=A)
+    assert np.allclose(metrics.information_gain, 0.0, atol=1e-12)
+
+
+def test_information_gain_grows_when_an_informative_block_is_added():
+    from vfmstudio.core.uncertainty import identifiability_strength
+
+    A_bend = np.diag([10.0, 8.0, 5.0, 1.0e-18])
+    A_twist = np.diag([0.2, 0.2, 0.1, 40.0])
+    A_all = A_bend + A_twist
+    theta = np.array([100.0, 80.0, 30.0, 20.0])
+    labels = ["D11", "D22", "D12", "D66"]
+    metrics = identifiability_strength(A_all, theta, labels, A_baseline=A_bend)
+    assert np.all(metrics.information_gain > 0.0)
+    assert metrics.information_gain[3] > metrics.information_gain[0]
+    assert metrics.information_gain[3] > 1.0
+
+
+def test_assemble_sensitivity_sums_selected_blocks():
+    from types import SimpleNamespace
+
+    from vfmstudio.core.uncertainty import assemble_sensitivity
+
+    rows = [
+        SimpleNamespace(experiment_id=1, sensitivity=np.diag([1.0, 2.0])),
+        SimpleNamespace(experiment_id=2, sensitivity=np.diag([10.0, 0.0])),
+        SimpleNamespace(experiment_id=3, sensitivity=np.diag([0.0, 7.0])),
+    ]
+    baseline = assemble_sensitivity(rows, [1, 2], n_parameters=2)
+    assert np.allclose(baseline, np.diag([11.0, 2.0]))
+
+
+def test_default_baseline_unticks_twist():
+    from vfmstudio.core.uncertainty import default_baseline_flags
+
+    flags = default_baseline_flags(
+        ["Specimen A1 Pure Bending", "Specimen B1 Twist"],
+        [1, 2],
+    )
+    assert flags[1] is True
+    assert flags[2] is False
+
+
+def test_deletion_influence_tracks_the_parameter_that_shifts():
+    from types import SimpleNamespace
+
+    from vfmstudio.core.uncertainty import identifiability_strength
+
+    A = np.diag([2.0, 5.0, 8.0])
+    theta = np.array([10.0, 20.0, 40.0])
+    deletions = [
+        SimpleNamespace(dropped="bending A", delta_fixed=np.array([0.1, 0.2, 8.0])),
+        SimpleNamespace(dropped="twist", delta_fixed=np.array([0.05, 0.1, 0.4])),
+    ]
+    metrics = identifiability_strength(
+        A, theta, ["D11", "D22", "D12"], deletions=deletions
+    )
+    assert metrics.deletion_influence[2] == pytest.approx(8.0 / 40.0)
+    assert metrics.deletion_influence[0] == pytest.approx(0.1 / 10.0)
+    assert metrics.pulling_experiment[2] == "bending A"
+
+
+def test_robustness_verdict_table():
+    from vfmstudio.core.uncertainty.information import (
+        G_HIGH,
+        R_HIGH,
+        robustness_verdict,
+    )
+
+    assert robustness_verdict(G_HIGH + 1.0, R_HIGH / 2.0) == "excellent"
+    assert robustness_verdict(G_HIGH + 1.0, R_HIGH + 0.1) == "conflicting"
+    assert robustness_verdict(0.0, R_HIGH / 2.0) == "redundant"
+    assert robustness_verdict(0.0, R_HIGH + 0.1) == "problematic"
+
+
+def test_conflicting_d12_is_high_gain_and_high_influence():
+    from types import SimpleNamespace
+
+    from vfmstudio.core.uncertainty import identifiability_strength
+
+    A_bend = np.diag([10.0, 8.0, 1.0e-18])
+    A_all = A_bend + np.diag([0.2, 0.2, 40.0])
+    theta = np.array([100.0, 80.0, 20.0])
+    labels = ["D11", "D22", "D12"]
+    deletions = [
+        SimpleNamespace(dropped="bending", delta_fixed=np.array([0.2, 0.3, 6.0])),
+        SimpleNamespace(dropped="other", delta_fixed=np.array([0.1, 0.1, 0.2])),
+    ]
+    metrics = identifiability_strength(
+        A_all, theta, labels, A_baseline=A_bend, deletions=deletions
+    )
+    assert metrics.information_gain[2] > 1.0
+    assert metrics.deletion_influence[2] == pytest.approx(6.0 / 20.0)
+    assert metrics.verdicts[2] == "conflicting"
+    assert metrics.verdicts[0] == "redundant"
+
+
+def test_subset_deletion_shifts_is_eq63_in_original_units():
+    from types import SimpleNamespace
+
+    from vfmstudio.core.uncertainty import subset_deletion_shifts
+
+    result = SimpleNamespace(
+        cluster_ids=[1, 2, 3],
+        cluster_names=["bend A", "bend B", "twist"],
+        scores=np.array([[2.0, 0.0], [0.0, 3.0], [1.0, 1.0]]),
+        information=SimpleNamespace(
+            blocks=np.stack(
+                [
+                    np.diag([4.0, 1.0]),
+                    np.diag([1.0, 4.0]),
+                    np.diag([2.0, 2.0]),
+                ]
+            )
+        ),
+    )
+    bending = subset_deletion_shifts(result, [1, 2])
+    assert [row.name for row in bending] == ["bend A", "bend B"]
+    assert np.allclose(bending[0].shift, [-2.0, 0.0])
+    assert np.allclose(bending[1].shift, [0.0, -3.0])
+    all_tests = subset_deletion_shifts(result, [1, 2, 3])
+    assert len(all_tests) == 3
+    assert not np.allclose(all_tests[0].shift, bending[0].shift)
+    assert subset_deletion_shifts(result, [1]) == []
+
+
+def test_identifiability_strength_plot_is_two_panels():
+    from matplotlib.figure import Figure
+
+    from vfmstudio.core.uncertainty import ExperimentShift, identifiability_strength
+    from vfmstudio.gui.results.identifiability_strength import (
+        plot_identifiability_strength,
+    )
+
+    A_bend = np.diag([2.0, 5.0, 8.0, 1.0e-18])
+    A_all = A_bend + np.diag([0.1, 0.1, 0.1, 12.0])
+    theta = np.array([10.0, 20.0, 4.0, 8.0])
+    labels = ["D11", "D22", "D12", "D66"]
+    metrics = identifiability_strength(A_all, theta, labels, A_baseline=A_bend)
+    shifts = [
+        ExperimentShift("bend A", 1, np.array([0.2, 0.4, 1.2, 0.05])),
+        ExperimentShift("bend B", 2, np.array([-0.1, 0.2, -0.8, 0.01])),
+    ]
+    figure = Figure()
+    plot_identifiability_strength(figure, labels, metrics, shifts, theta=theta)
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+    FigureCanvasAgg(figure).draw()
+    panels = [ax for ax in figure.axes if ax.axison]
+    assert len(panels) == 2
+    x0 = [ax.get_position().x0 for ax in panels]
+    assert x0[1] > x0[0]
+    widths = [ax.get_position().width for ax in panels]
+    assert min(widths) > 0.25
+    assert "Δθ" in panels[0].get_ylabel()
+    assert r"$G_k$" in panels[1].get_ylabel()
+
+    relative = Figure()
+    plot_identifiability_strength(
+        relative, labels, metrics, shifts, theta=theta, relative=True
+    )
+    FigureCanvasAgg(relative).draw()
+    rel_panels = [ax for ax in relative.axes if ax.axison]
+    assert "Δθ / |θ̂|" in rel_panels[0].get_ylabel()
+
+
+def test_scaled_deletion_shifts_divide_by_abs_theta():
+    from vfmstudio.core.uncertainty import ExperimentShift
+    from vfmstudio.gui.results.identifiability_strength import scaled_deletion_shifts
+
+    shifts = [ExperimentShift("bend A", 1, np.array([2.0, -4.0]))]
+    theta = np.array([10.0, 20.0])
+    raw = scaled_deletion_shifts(shifts, theta, relative=False)
+    relative = scaled_deletion_shifts(shifts, theta, relative=True)
+    assert np.allclose(raw[0], [2.0, -4.0])
+    assert np.allclose(relative[0], [0.2, -0.2])
+
+
+def test_deletion_shifts_are_a_single_row():
+    from matplotlib.figure import Figure
+
+    from vfmstudio.gui.results.uncertainty_plots import plot_deletion_shifts
+
+    system, _ = _random_system(4, 4, 3, seed=12)
+    reports, designs, observations = [], [], []
+    for cluster in system.clusters:
+        reports.append(
+            SimpleNamespace(
+                experiment_id=cluster.experiment_id,
+                label=cluster.name,
+                n_steps=cluster.n_steps,
+                covariance=cluster.covariance,
+            )
+        )
+        designs.append(cluster.design)
+        observations.append(cluster.observation)
+    result = SimpleNamespace(
+        experiments=reports,
+        case_K_matrices=designs,
+        case_U_vectors=observations,
+        final_parameters=system.theta,
+        parameter_covariance=system.covariance_work,
+        constitutive_model=SimpleNamespace(parameter_labels=system.labels),
+    )
+    payload = analyse(result, labels=system.labels, kind="CR2")
+    figure = Figure()
+    plot_deletion_shifts(figure, payload)
+    panels = [ax for ax in figure.axes if ax.get_visible() and ax.axison]
+    assert len(panels) == 4
+    y0 = [ax.get_position().y0 for ax in panels]
+    assert max(y0) - min(y0) < 0.05
+    assert figure.legends

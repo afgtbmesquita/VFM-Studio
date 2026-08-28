@@ -29,6 +29,10 @@ def campaign_project_path() -> Path:
     return default_core_path() / "projects" / "campaign.vfmproj.json"
 
 
+def samples_ab_all_project_path() -> Path:
+    return default_core_path() / "projects" / "samples_ab_all.vfmproj.json"
+
+
 def _looks_like_core(path: Path) -> bool:
     return path.is_dir() and (path / "vfm_project.py").is_file()
 

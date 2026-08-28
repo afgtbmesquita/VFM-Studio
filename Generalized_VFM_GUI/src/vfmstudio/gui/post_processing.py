@@ -10,6 +10,8 @@ from vfmstudio.core.document import SessionDocument
 from vfmstudio.gui.docks.plot_dock import PlotDock
 from vfmstudio.gui.results import IdentifiabilityPanel
 from vfmstudio.gui.results.experiment_check import ExperimentCheckPanel
+from vfmstudio.gui.results.identifiability_strength import IdentifiabilityStrengthPanel
+from vfmstudio.gui.results.parameter_space import ParameterSpacePanel
 from vfmstudio.gui.results.uncertainty import (
     CovariancePanel,
     ExperimentUncertaintyPanel,
@@ -25,8 +27,10 @@ class PostProcessingWorkspace(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         self.plots = PlotDock()
+        self.parameter_space = ParameterSpacePanel()
         self.experiment_check = ExperimentCheckPanel()
         self.ident_panel = IdentifiabilityPanel()
+        self.ident_strength = IdentifiabilityStrengthPanel()
         self.vf_panel = VirtualFieldTiledView()
         self.uq_landing = UncertaintyLanding()
         self.uq_cov = CovariancePanel()
@@ -43,8 +47,10 @@ class PostProcessingWorkspace(QWidget):
         self._pages: dict[str, int] = {}
         for widget, kinds in (
             (self.plots, ("post_processing", "post_plots")),
+            (self.parameter_space, ("post_parameter_space",)),
             (self.experiment_check, ("post_experiment_check",)),
             (self.ident_panel, ("post_identifiability",)),
+            (self.ident_strength, ("post_identifiability_strength",)),
             (self.vf_panel, ("post_virtual_fields",)),
             (self.uq_landing, ("post_uncertainty",)),
             (self.uq_cov, ("post_uncertainty_cov",)),
@@ -70,8 +76,10 @@ class PostProcessingWorkspace(QWidget):
         uncertainty: Any = None,
     ) -> None:
         self.plots.set_results(result, identifiability, document)
+        self.parameter_space.update_from(document, result)
         self.experiment_check.update_from(document, result)
         self.ident_panel.update_from(identifiability)
+        self.ident_strength.update_from(document, uncertainty)
         self.vf_panel.update_from(document, result, warp_scale=warp_scale)
         self.uq_cov.update_from(document, uncertainty)
         self.uq_experiments.update_from(document, uncertainty)

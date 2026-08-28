@@ -74,7 +74,14 @@ def validate_document(document: SessionDocument) -> JobReport:
     if not document.experiments:
         report.errors.append("Project has no experiments.")
         return report
-    for experiment in document.experiments:
+    included = document.experiments_in_identification()
+    if not included:
+        report.errors.append(
+            "No experiments are included in the identification. "
+            "Tick at least one test under Coefficient Evolution → Properties."
+        )
+        return report
+    for experiment in included:
         label = _experiment_label(experiment)
         if not experiment.steps:
             report.errors.append(f"{label}: no load steps.")
@@ -122,7 +129,7 @@ def project_for_identification(document: SessionDocument):
     project = document_to_vfm_project(document)
     grouped = tests_by_experiment(project)
     kept = []
-    for experiment in document.experiments:
+    for experiment in document.experiments_in_identification():
         tests = grouped.get(int(experiment.experiment_id), [])
         for index in analysis_load_indices(experiment):
             if 0 <= index < len(tests):
@@ -176,8 +183,11 @@ def apply_reference_subtraction(
     for case, exp_id, step_index in zip(cases, experiment_ids, step_indices):
         by_experiment.setdefault(int(exp_id), []).append((case, step_index))
 
+    loaded_ids = {int(exp_id) for exp_id in experiment_ids}
     reference_by_exp: dict = {}
     for experiment in document.experiments:
+        if int(experiment.experiment_id) not in loaded_ids:
+            continue
         if experiment.reference_step is None:
             continue
         reference = int(experiment.reference_step) - 1
@@ -242,7 +252,7 @@ def apply_axes_alignment(
 
 def _step_indices_for_project(document: SessionDocument) -> List[int]:
     indices: List[int] = []
-    for experiment in document.experiments:
+    for experiment in document.experiments_in_identification():
         indices.extend(analysis_load_indices(experiment))
     return indices
 
@@ -252,11 +262,12 @@ def run_identification(document: SessionDocument, verbose: bool = True) -> Any:
     if report.errors:
         raise ValueError("\n".join(report.errors))
     project = project_for_identification(document)
+    included = document.experiments_in_identification()
     needs_reference = any(
-        experiment.reference_step is not None for experiment in document.experiments
+        experiment.reference_step is not None for experiment in included
     )
     needs_alignment = any(
-        experiment.fit_data_to_system_axes for experiment in document.experiments
+        experiment.fit_data_to_system_axes for experiment in included
     )
     if not needs_reference and not needs_alignment:
         return bridge.run_project(project, verbose=verbose)
@@ -300,11 +311,11 @@ def run_identifiability(document: SessionDocument, result: Any) -> Any:
             )
         needs_reference = any(
             experiment.reference_step is not None
-            for experiment in document.experiments
+            for experiment in document.experiments_in_identification()
         )
         experiment_ids = built[1] if isinstance(built, tuple) else [
             experiment.experiment_id
-            for experiment in document.experiments
+            for experiment in document.experiments_in_identification()
             for _ in analysis_load_indices(experiment)
         ]
         apply_axes_alignment(document, cases, experiment_ids)

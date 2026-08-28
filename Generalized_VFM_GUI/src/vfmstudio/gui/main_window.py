@@ -19,7 +19,8 @@ from vfmstudio.core.document import ExperimentModel, MeshModel
 from vfmstudio.core.fields import sync_mesh_bounds_from_file
 from vfmstudio.core.jobs import validate_document
 from vfmstudio.core.mesh_convert import mesh_quads, mesh_xyz
-from vfmstudio.core.paths import campaign_project_path
+from vfmstudio.core.parameter_space import selected_experiment_ids
+from vfmstudio.core.paths import campaign_project_path, samples_ab_all_project_path
 from vfmstudio.gui.actions import ActionRegistry
 from vfmstudio.gui.dialogs import (
     AddBcDialog,
@@ -151,6 +152,12 @@ class MainWindow(QMainWindow):
         )
         self.actions.add("open_campaign", "Open campaign example", self.open_campaign, menu=file_menu)
         self.actions.add(
+            "open_samples_ab",
+            "Open Samples A/B (all)",
+            self.open_samples_ab,
+            menu=file_menu,
+        )
+        self.actions.add(
             "save", "Save", self.save_project, QKeySequence.StandardKey.Save, menu=file_menu
         )
         self.actions.add("save_as", "Save as…", self.save_project_as, menu=file_menu)
@@ -270,6 +277,18 @@ class MainWindow(QMainWindow):
             self.open_project_path(path)
         else:
             QMessageBox.warning(self, "VFM Studio", f"Campaign project not found:\n{path}")
+
+    def open_samples_ab(self) -> None:
+        path = samples_ab_all_project_path()
+        if path.is_file():
+            self.open_project_path(path)
+        else:
+            QMessageBox.warning(
+                self,
+                "VFM Studio",
+                f"Samples A/B project not found:\n{path}\n\n"
+                "Rebuild with Samples_A_B/VFM_analysis/make_gui_project.py",
+            )
 
     def open_project_path(self, path: Path) -> None:
         try:
@@ -501,6 +520,16 @@ class MainWindow(QMainWindow):
 
     def _on_view_option_changed(self) -> None:
         self.viewport.refresh(self.session)
+        self.post.experiment_check.apply_display(
+            visible=self.session.experiment_check_visible,
+            colors=self.session.experiment_check_colors,
+        )
+        self.post.ident_strength.apply_baseline(
+            self.session.identifiability_baseline,
+            shift_scale=self.session.identifiability_shift_scale,
+        )
+        self._apply_combination_view()
+        self._update_title()
         self._update_status()
 
     def _sync_field_combo(self) -> None:
@@ -523,6 +552,15 @@ class MainWindow(QMainWindow):
             warp_scale=self.session.warp_scale,
             uncertainty=self.session.uncertainty,
         )
+        self.post.experiment_check.apply_display(
+            visible=self.session.experiment_check_visible,
+            colors=self.session.experiment_check_colors,
+        )
+        self.post.ident_strength.apply_baseline(
+            self.session.identifiability_baseline,
+            shift_scale=self.session.identifiability_shift_scale,
+        )
+        self._apply_combination_view()
         self._apply_selection()
         self._update_title()
         self._update_status()
@@ -570,6 +608,18 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Consistency", "\n".join(report.warnings[:12]))
         else:
             QMessageBox.information(self, "Consistency", "No GLS consistency problems.")
+
+    def _apply_combination_view(self) -> None:
+        ids = selected_experiment_ids(self.session.document)
+        self.post.plots.apply_combination(self.session.document)
+        self.post.parameter_space.set_selected_ids(ids)
+        self.post.parameter_space.set_groups(self.session.parameter_space_groups)
+        self.post.parameter_space.apply_axes(
+            self.session.parameter_space_left_x,
+            self.session.parameter_space_left_y,
+            self.session.parameter_space_right_x,
+            self.session.parameter_space_right_y,
+        )
 
     def run_identification(self) -> None:
         report = validate_document(self.session.document)

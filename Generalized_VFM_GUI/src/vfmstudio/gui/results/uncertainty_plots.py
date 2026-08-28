@@ -17,7 +17,9 @@ from vfmstudio.gui.results.plot_style import (
     draw_matrix,
     empty_message,
     experiment_colour,
+    pad_limits,
     parameter_tick_labels,
+    place_legend_below,
     style_axis,
     style_heatmap_axis,
 )
@@ -328,9 +330,18 @@ def plot_deletion_shifts(figure, result: UncertaintyResult) -> None:
         return
     names = [row.dropped for row in rows]
     n = result.n_parameters
-    panels, _ = _panel_grid(figure, n)
+    axes = figure.subplots(1, n) if n > 1 else [figure.add_subplot(111)]
+    axes = list(np.atleast_1d(axes))
+    figure.subplots_adjust(
+        left=0.12,
+        right=0.99,
+        top=0.82,
+        bottom=0.30,
+        wspace=0.18,
+    )
     y = np.arange(len(names), dtype=float)
-    for index, axis in enumerate(panels):
+    colors = [experiment_colour(i) for i in range(len(names))]
+    for index, axis in enumerate(axes):
         style_axis(axis, grid="x")
         full = float(result.theta[index])
         work = float(result.sigma_work[index])
@@ -339,9 +350,15 @@ def plot_deletion_shifts(figure, result: UncertaintyResult) -> None:
             axis.axvspan(full - robust, full + robust, color=ROBUST, alpha=0.16, zorder=1)
         axis.axvspan(full - work, full + work, color=WORK, alpha=0.22, zorder=2)
         axis.axvline(full, color=INK_PRIMARY, linewidth=1.0, zorder=3)
-        fixed = np.array([row.theta_deleted_fixed[index] for row in rows])
+        fixed = np.array([row.theta_deleted_fixed[index] for row in rows], dtype=float)
         axis.scatter(
-            fixed, y, s=22, marker="x", color=INK_MUTED, zorder=4, linewidth=0.9
+            fixed,
+            y,
+            s=22,
+            marker="x",
+            color=INK_MUTED,
+            zorder=4,
+            linewidths=0.9,
         )
         refit = np.array(
             [
@@ -349,25 +366,75 @@ def plot_deletion_shifts(figure, result: UncertaintyResult) -> None:
                 if row.theta_deleted_refit is not None
                 else np.nan
                 for row in rows
-            ]
+            ],
+            dtype=float,
         )
-        if np.isfinite(refit).any():
+        ok = np.isfinite(refit)
+        if ok.any():
             axis.scatter(
-                refit,
-                y,
-                s=30,
-                color=[experiment_colour(i) for i in range(len(names))],
-                edgecolor="white",
-                linewidth=0.5,
+                refit[ok],
+                y[ok],
+                s=36,
+                color=[colors[i] for i in np.flatnonzero(ok)],
+                edgecolors="white",
+                linewidths=0.55,
                 zorder=5,
             )
+        samples = [full, full - work, full + work, *fixed]
+        if np.isfinite(robust):
+            samples.extend([full - robust, full + robust])
+        if np.isfinite(refit).any():
+            samples.extend(refit[np.isfinite(refit)].tolist())
+        pad_limits(axis, np.asarray(samples, dtype=float), which="x", fraction=0.18)
         axis.set_yticks(y)
-        axis.set_yticklabels(names if index % 2 == 0 else [], fontsize=7)
-        axis.set_title(parameter_math_label(result.labels[index]), pad=8)
+        axis.set_yticklabels(names if index == 0 else [], fontsize=7.5)
+        axis.set_title(parameter_math_label(result.labels[index]), pad=6)
         unit = parameter_unit_math(result.labels[index])
         if unit:
             axis.set_xlabel(unit, labelpad=4)
-    figure.tight_layout(pad=1.2)
+        if index > 0:
+            axis.tick_params(labelleft=False)
+    figure.suptitle(
+        r"Leave-one-coupon-out $\hat\theta_{(-i)}$ (notes eq. 60, 63)",
+        fontsize=10,
+        y=0.98,
+        color=INK_PRIMARY,
+    )
+    from matplotlib.lines import Line2D
+
+    handles = [
+        Line2D(
+            [],
+            [],
+            marker="o",
+            linestyle="",
+            markersize=6,
+            markerfacecolor=WORK,
+            markeredgecolor="white",
+            label=r"full FGLS refit ($\Gamma$ and virtual fields re-estimated)",
+        ),
+        Line2D(
+            [],
+            [],
+            marker="x",
+            linestyle="",
+            markersize=6,
+            color=INK_MUTED,
+            label=r"fixed-weight prediction, eq. (63)",
+        ),
+        Line2D([], [], color=WORK, linewidth=6, alpha=0.35, label=r"$\pm\sigma$ eq. (35)"),
+        Line2D([], [], color=ROBUST, linewidth=6, alpha=0.30, label=r"$\pm\sigma$ eq. (34)"),
+    ]
+    place_legend_below(
+        figure,
+        handles,
+        [item.get_label() for item in handles],
+        caption=(
+            "Deletion shifts that leave the blue band but sit inside the green one "
+            "are precisely what the working covariance was under-reporting."
+        ),
+        ncol=2,
+    )
 
 
 def _deletion_grid(result: UncertaintyResult, attr: str) -> np.ndarray:

@@ -24,6 +24,7 @@ from vfmstudio.gui.results.plot_style import (
     empty_message,
     experiment_colour,
     pad_limits,
+    place_legend_below,
     style_axis,
 )
 from vfmstudio.gui.results.table_style import (
@@ -40,6 +41,7 @@ class ExperimentStepSeries:
     experiment_id: int
     step_labels: List[str]
     values: np.ndarray  # (T, p)
+    series_index: int = 0
 
 
 def _as_step_matrix(raw: Any, n_par: int) -> Optional[np.ndarray]:
@@ -126,6 +128,7 @@ def collect_experiment_steps(
                 experiment_id=experiment_id,
                 step_labels=_step_labels(report, int(values.shape[0]), document),
                 values=values,
+                series_index=len(series),
             )
         )
     return series, labels, theta
@@ -137,7 +140,7 @@ def _parameter_grid(figure, n: int):
     if n == 1:
         return [figure.add_subplot(111)], n_rows, n_cols
     axes = figure.subplots(n_rows, n_cols)
-    figure.subplots_adjust(left=0.10, right=0.97, top=0.86, bottom=0.12, wspace=0.42, hspace=0.48)
+    figure.subplots_adjust(left=0.10, right=0.97, top=0.92, bottom=0.22, wspace=0.42, hspace=0.48)
     flat = list(np.ravel(axes))
     for extra in flat[n:]:
         extra.set_visible(False)
@@ -155,9 +158,26 @@ def _style_step_axis(axis, n_steps: int) -> None:
     axis.set_xlim(0.6, n_steps + 0.4)
 
 
-def _draw_series(axis, rec: ExperimentStepSeries, index: int, column: int) -> None:
-    colour = experiment_colour(index)
-    marker = SERIES_MARKER[index % len(SERIES_MARKER)]
+def _colour_for(
+    rec: ExperimentStepSeries,
+    colors: Optional[dict[int, str]] = None,
+) -> str:
+    if colors:
+        chosen = colors.get(rec.experiment_id)
+        if chosen:
+            return str(chosen)
+    return experiment_colour(rec.series_index)
+
+
+def _draw_series(
+    axis,
+    rec: ExperimentStepSeries,
+    column: int,
+    *,
+    color: Optional[str] = None,
+) -> None:
+    colour = color or experiment_colour(rec.series_index)
+    marker = SERIES_MARKER[rec.series_index % len(SERIES_MARKER)]
     x = _step_axis(rec.values)
     axis.plot(
         x,
@@ -178,6 +198,8 @@ def plot_coefficients_vs_step(
     series: Sequence[ExperimentStepSeries],
     labels: Sequence[str],
     theta: np.ndarray,
+    *,
+    colors: Optional[dict[int, str]] = None,
 ) -> None:
     n = len(labels)
     panels, n_rows, _ = _parameter_grid(figure, n)
@@ -193,8 +215,10 @@ def plot_coefficients_vs_step(
                 linestyle=(0, (4, 3)),
                 zorder=2,
             )
-        for index, rec in enumerate(series):
-            _draw_series(axis, rec, index, column)
+        for rec in series:
+            _draw_series(
+                axis, rec, column, color=_colour_for(rec, colors)
+            )
         samples = [rec.values[:, column] for rec in series]
         if np.isfinite(hat):
             samples.append(np.array([hat]))
@@ -231,17 +255,7 @@ def plot_coefficients_vs_step(
         )
     )
     handle_labels.append(r"pooled FGLS  $\hat\theta$")
-    figure.legend(
-        handles,
-        handle_labels,
-        loc="upper center",
-        ncol=min(len(handles), 4),
-        fontsize=8,
-        frameon=False,
-        bbox_to_anchor=(0.5, 0.98),
-        handlelength=1.6,
-        columnspacing=1.1,
-    )
+    place_legend_below(figure, handles, handle_labels)
 
 
 def plot_by_experiment(
@@ -249,23 +263,26 @@ def plot_by_experiment(
     series: Sequence[ExperimentStepSeries],
     labels: Sequence[str],
     theta: np.ndarray,
+    *,
+    colors: Optional[dict[int, str]] = None,
 ) -> None:
     n_exp = len(series)
     n_par = len(labels)
     if n_exp == 1:
-        plot_coefficients_vs_step(figure, series, labels, theta)
+        plot_coefficients_vs_step(figure, series, labels, theta, colors=colors)
         return
     axes = figure.subplots(n_exp, n_par, squeeze=False)
     figure.subplots_adjust(
         left=0.14,
         right=0.98,
-        top=0.90,
-        bottom=0.08,
+        top=0.92,
+        bottom=0.22,
         wspace=0.28,
         hspace=0.22,
     )
     for row, rec in enumerate(series):
         n_steps = int(rec.values.shape[0])
+        colour = _colour_for(rec, colors)
         for column in range(n_par):
             axis = axes[row, column]
             _style_step_axis(axis, n_steps)
@@ -278,7 +295,7 @@ def plot_by_experiment(
                     linestyle=(0, (4, 3)),
                     zorder=2,
                 )
-            _draw_series(axis, rec, row, column)
+            _draw_series(axis, rec, column, color=colour)
             samples = [rec.values[:, column]]
             if np.isfinite(hat):
                 samples.append(np.array([hat]))
@@ -299,6 +316,21 @@ def plot_by_experiment(
                 axis.set_xlabel("")
             if row != n_exp - 1:
                 axis.tick_params(labelbottom=False)
+    handles, handle_labels = axes[0, 0].get_legend_handles_labels()
+    from matplotlib.lines import Line2D
+
+    handles.append(
+        Line2D(
+            [],
+            [],
+            color=INK_MUTED,
+            linestyle=(0, (4, 3)),
+            linewidth=1.05,
+            label=r"pooled FGLS  $\hat\theta$",
+        )
+    )
+    handle_labels.append(r"pooled FGLS  $\hat\theta$")
+    place_legend_below(figure, handles, handle_labels)
 
 
 def plot_deviation(
@@ -306,6 +338,8 @@ def plot_deviation(
     series: Sequence[ExperimentStepSeries],
     labels: Sequence[str],
     theta: np.ndarray,
+    *,
+    colors: Optional[dict[int, str]] = None,
 ) -> None:
     n = len(labels)
     panels, n_rows, _ = _parameter_grid(figure, n)
@@ -317,11 +351,11 @@ def plot_deviation(
         hat = float(theta[column]) if column < theta.size else float("nan")
         scale = max(abs(hat), floor)
         all_rel = []
-        for index, rec in enumerate(series):
+        for rec in series:
             relative = 100.0 * (rec.values[:, column] - hat) / scale
             all_rel.append(relative)
-            colour = experiment_colour(index)
-            marker = SERIES_MARKER[index % len(SERIES_MARKER)]
+            colour = _colour_for(rec, colors)
+            marker = SERIES_MARKER[rec.series_index % len(SERIES_MARKER)]
             axis.plot(
                 _step_axis(rec.values),
                 relative,
@@ -340,17 +374,7 @@ def plot_deviation(
         if column // 2 == n_rows - 1 or n <= 2:
             axis.set_xlabel("Load step", labelpad=6)
     handles, handle_labels = panels[0].get_legend_handles_labels()
-    figure.legend(
-        handles,
-        handle_labels,
-        loc="upper center",
-        ncol=min(max(len(handle_labels), 1), 4),
-        fontsize=8,
-        frameon=False,
-        bbox_to_anchor=(0.5, 0.98),
-        handlelength=1.6,
-        columnspacing=1.1,
-    )
+    place_legend_below(figure, handles, handle_labels)
 
 
 class ExperimentCheckPanel(PlotResultsPage):
@@ -369,6 +393,8 @@ class ExperimentCheckPanel(PlotResultsPage):
         self._series: List[ExperimentStepSeries] = []
         self._labels: List[str] = []
         self._theta = np.zeros(0)
+        self._visible: dict[int, bool] = {}
+        self._colors: dict[int, str] = {}
 
     def update_from(self, document: SessionDocument, result: Any) -> None:
         self._document = document
@@ -379,8 +405,34 @@ class ExperimentCheckPanel(PlotResultsPage):
             self._series, self._labels, self._theta = collect_experiment_steps(
                 result, document
             )
+        self._ensure_style_defaults()
         self._fill_table()
         self.refresh_plot()
+
+    def apply_display(
+        self,
+        *,
+        visible: Optional[dict[int, bool]] = None,
+        colors: Optional[dict[int, str]] = None,
+    ) -> None:
+        if visible is not None:
+            self._visible.update({int(k): bool(v) for k, v in visible.items()})
+        if colors is not None:
+            self._colors.update({int(k): str(v) for k, v in colors.items() if v})
+        self._ensure_style_defaults()
+        self.refresh_plot()
+
+    def _ensure_style_defaults(self) -> None:
+        for rec in self._series:
+            self._visible.setdefault(rec.experiment_id, True)
+            self._colors.setdefault(rec.experiment_id, experiment_colour(rec.series_index))
+
+    def _drawn_series(self) -> List[ExperimentStepSeries]:
+        return [
+            rec
+            for rec in self._series
+            if self._visible.get(rec.experiment_id, True)
+        ]
 
     def _fill_table(self) -> None:
         if self._result is None:
@@ -434,17 +486,25 @@ class ExperimentCheckPanel(PlotResultsPage):
             empty_message(self._figure, "Run Identify to fill this analysis.")
         elif not self._series:
             empty_message(self._figure, "No per-load-step estimates on this result.")
+        elif not self._drawn_series():
+            empty_message(self._figure, "No experiments selected. Turn a test on in Properties.")
         else:
             self._draw()
         self._canvas.draw_idle()
 
     def _draw(self) -> None:
         mode = self._mode.currentText()
+        series = self._drawn_series()
+        colors = dict(self._colors)
         if mode.startswith("One panel"):
-            plot_by_experiment(self._figure, self._series, self._labels, self._theta)
+            plot_by_experiment(
+                self._figure, series, self._labels, self._theta, colors=colors
+            )
         elif mode.startswith("Deviation"):
-            plot_deviation(self._figure, self._series, self._labels, self._theta)
+            plot_deviation(
+                self._figure, series, self._labels, self._theta, colors=colors
+            )
         else:
             plot_coefficients_vs_step(
-                self._figure, self._series, self._labels, self._theta
+                self._figure, series, self._labels, self._theta, colors=colors
             )
