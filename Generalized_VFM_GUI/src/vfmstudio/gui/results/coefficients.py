@@ -1,45 +1,35 @@
-"""Identified coefficients with eq. (20) σ and Birge-scaled σ."""
+"""Identified coefficients — point estimates and working σ only."""
 
 from __future__ import annotations
 
 from typing import Any
 
 import numpy as np
-from PySide6.QtWidgets import (
-    QHeaderView,
-    QLabel,
-    QTableWidget,
-    QTableWidgetItem,
-    QVBoxLayout,
-    QWidget,
-)
 
 from vfmstudio.core import bridge
-from vfmstudio.core.document import SessionDocument
+from vfmstudio.core.document import SessionDocument, parameter_unit_plain
 from vfmstudio.core.jobs import reduced_chi_square
+from vfmstudio.gui.results.table_style import (
+    ResultsPage,
+    number_item,
+    style_column_widths,
+    text_item,
+)
 
 
-def _item(text) -> QTableWidgetItem:
-    return QTableWidgetItem(str(text))
-
-
-class CoefficientPanel(QWidget):
+class CoefficientPanel(ResultsPage):
     def __init__(self, parent=None) -> None:
-        super().__init__(parent)
-        self._banner = QLabel()
-        self._banner.setWordWrap(True)
-        self._table = QTableWidget(0, 5)
+        super().__init__("Identified coefficients", parent)
+        self._table.setColumnCount(4)
         self._table.setHorizontalHeaderLabels(
-            ["Parameter", "Value", "σ (eq. 20)", "σ × Birge", "σ / |θ|"]
+            ["Parameter", "Value", "σ (working, eq. 20)", "σ / |θ|"]
         )
-        self._table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        layout = QVBoxLayout(self)
-        layout.addWidget(self._banner)
-        layout.addWidget(self._table)
+        style_column_widths(self._table)
+        self.set_banner("Run Identify to fill this table.")
 
     def update_from(self, document: SessionDocument, result: Any) -> None:
         if result is None:
-            self._banner.setText("No identification result.")
+            self.set_banner("No identification result.")
             self._table.setRowCount(0)
             return
         labels = document.material.labels()
@@ -50,25 +40,32 @@ class CoefficientPanel(QWidget):
             if cov is not None:
                 std = np.sqrt(np.clip(np.diag(np.asarray(cov, dtype=float)), 0.0, None))
         chi = reduced_chi_square(result)
-        birge = chi["birge"] if chi else 1.0
         if chi and chi["reduced"] > 2.0:
-            self._banner.setText(
-                f"Noise model rejected: χ²/dof = {chi['reduced']:.1f} "
-                f"(Birge {birge:.2f}). Eq. (20) is variance under the model, "
-                "not a statement of accuracy. Quote the Birge-scaled column."
+            self.set_banner(
+                f"Noise model rejected: χ²/dof = {chi['reduced']:.1f}. "
+                "Working σ is not the experimental covariance of θ̂ — "
+                "see Post Processing → Uncertainty quantification → Cov(θ).",
+                role="warn",
             )
-            self._banner.setProperty("role", "warn")
         elif chi:
-            self._banner.setText(f"χ²/dof = {chi['reduced']:.2f}")
+            self.set_banner(
+                f"χ²/dof = {chi['reduced']:.2f}. Working σ (eq. 20) is a "
+                "repeatability statement under the noise model. Robust Cov(θ) "
+                "lives under Uncertainty quantification."
+            )
         else:
-            self._banner.setText("Identification complete.")
+            self.set_banner(
+                "Point estimates. Robust Cov(θ) lives under Uncertainty quantification."
+            )
         self._table.setRowCount(len(theta))
         for i, value in enumerate(theta):
             sigma = float(std[i]) if std is not None and i < len(std) else float("nan")
-            scaled = sigma * birge
-            rel = abs(scaled / value) if value else float("nan")
-            self._table.setItem(i, 0, _item(labels[i] if i < len(labels) else f"θ{i+1}"))
-            self._table.setItem(i, 1, _item(f"{value:.6g}"))
-            self._table.setItem(i, 2, _item(f"{sigma:.4g}"))
-            self._table.setItem(i, 3, _item(f"{scaled:.4g}"))
-            self._table.setItem(i, 4, _item(f"{rel:.3g}"))
+            rel = abs(sigma / value) if value else float("nan")
+            name = labels[i] if i < len(labels) else f"P{i + 1}"
+            unit = parameter_unit_plain(name)
+            label = f"{name} ({unit})" if unit else name
+            self._table.setItem(i, 0, text_item(label, bold=True))
+            self._table.setItem(i, 1, number_item(value))
+            self._table.setItem(i, 2, number_item(sigma, digits=4))
+            self._table.setItem(i, 3, number_item(rel, digits=3))
+        style_column_widths(self._table)

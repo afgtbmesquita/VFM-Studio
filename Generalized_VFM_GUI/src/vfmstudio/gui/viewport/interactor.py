@@ -211,40 +211,70 @@ class ViewportWidget(QWidget):
         session.status_n_points = n_points
         self._scene_key = key
 
-    def show_virtual_field(self, session: AppSession, parameter_index: int = 0) -> None:
-        if self._plotter is None or session.result is None:
-            return
-        experiment = session.selected_experiment()
-        if experiment is None:
-            return
+    def show_virtual_field(self, session: AppSession, parameter_index: int = 0) -> str | None:
+        """Warp the mesh by the stored optimal virtual field. Returns an error string or None."""
+        if session.result is None:
+            return "Run Identify first. Optimal virtual fields are computed with FGLS."
         fields = getattr(session.result, "optimal_field_results", None) or []
         if not fields:
-            return
+            return "No virtual fields on this result. Re-run Identify."
+        if self._plotter is None or self._pv is None:
+            return "3D viewport is not available in this session."
+        field = fields[min(max(parameter_index, 0), len(fields) - 1)]
+        u = np.asarray(getattr(field, "nodal_variables_k"), dtype=float).ravel()
+        experiment, mesh_pkg = self._mesh_for_virtual_field(session, u)
+        if experiment is None or mesh_pkg is None:
+            return (
+                f"No experiment mesh matches the stored virtual field "
+                f"({u.size} DOFs)."
+            )
         try:
-            mesh_pkg = self._build_mesh(session.document, experiment)
             post = bridge.vfm_virtual_field_post()
-            field = fields[min(parameter_index, len(fields) - 1)]
-            u = getattr(field, "nodal_variables_k")
             nodal = getattr(post, "nodal_field", None)
             if nodal is None:
-                return
-            w = np.asarray(nodal(mesh_pkg, u, "W"), dtype=float)
+                return "Virtual-field post-processor is missing nodal_field."
+            dof = _virtual_dof_label(mesh_pkg)
+            w = np.asarray(nodal(mesh_pkg, u, dof), dtype=float)
             grid = overlays.unstructured_quad_grid(
                 self._pv, mesh_pkg, z=w * float(session.warp_scale)
             )
-            grid["w*"] = w
+            name = f"{dof.lower()}*"
+            grid[name] = w
             self._plotter.clear()
-            self._plotter.add_mesh(grid, scalars="w*", cmap="coolwarm", show_edges=True)
+            self._plotter.add_mesh(grid, scalars=name, cmap="coolwarm", show_edges=True)
             overlays.add_material_axes(self._plotter, experiment, mesh_pkg)
             self._plotter.reset_camera()
             self._scene_key = None
             self._mesh_key = None
             self._camera_key = None
-            self._mesh_pkg = None
+            self._mesh_pkg = mesh_pkg
             self._last_dic_xyz = None
             self._xy_axes_on = False
-        except Exception:
-            return
+        except Exception as exc:
+            return str(exc)
+        return None
+
+    def _mesh_for_virtual_field(self, session: AppSession, u: np.ndarray):
+        ordered = []
+        seen = set()
+        selected = session.selected_experiment()
+        if selected is not None:
+            ordered.append(selected)
+            seen.add(selected.experiment_id)
+        for experiment in session.document.experiments:
+            if experiment.experiment_id in seen:
+                continue
+            seen.add(experiment.experiment_id)
+            ordered.append(experiment)
+        n_dof = int(np.asarray(u).size)
+        for experiment in ordered:
+            try:
+                mesh_pkg = self._build_mesh(session.document, experiment)
+            except Exception:
+                continue
+            if int(getattr(mesh_pkg, "n_dofs", -1)) == n_dof:
+                return experiment, mesh_pkg
+        return None, None
 
     def _sync_xy_axes(self, session: AppSession) -> None:
         overlays.remove_xy_axes(self._plotter)
@@ -342,6 +372,13 @@ class ViewportWidget(QWidget):
 
     def _build_mesh(self, document: SessionDocument, experiment: ExperimentModel):
         return mesh_convert.build_experiment_mesh(document, experiment)
+
+
+def _virtual_dof_label(mesh_pkg) -> str:
+    analysis = str(getattr(mesh_pkg, "analysis_type", "out_of_plane")).lower()
+    if analysis in {"in_plane", "inplane"}:
+        return "U"
+    return "W"
 
 
 def _step_data_path(session: AppSession) -> Path | None:

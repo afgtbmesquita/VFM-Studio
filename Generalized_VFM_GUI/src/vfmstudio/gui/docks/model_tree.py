@@ -1,4 +1,4 @@
-"""Model tree dock — experiments / mesh / BCs / load steps."""
+"""Model tree dock — experiments / mesh / BCs / load steps / post processing."""
 
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ _CATEGORY_KINDS = {
     "bc_group",
     "steps",
     "solver",
+    "post_processing",
 }
 
 _KIND_ICONS = {
@@ -39,7 +40,36 @@ _KIND_ICONS = {
     "steps": "step",
     "step": "step",
     "solver": "solver",
+    "post_processing": "post",
+    "post_plots": "post",
+    "post_experiment_check": "post",
+    "post_identifiability": "post",
+    "post_virtual_fields": "post",
+    "post_uncertainty": "post",
+    "post_uncertainty_cov": "post",
+    "post_uncertainty_experiments": "post",
+    "post_uncertainty_ab": "post",
+    "post_uncertainty_info": "post",
+    "post_uncertainty_loo": "post",
 }
+
+_POST_CHILDREN = (
+    ("Coefficient Evolution", "post_plots", ()),
+    ("Individual Experiment check", "post_experiment_check", ()),
+    ("Identifiability", "post_identifiability", ()),
+    ("Virtual fields", "post_virtual_fields", ()),
+    (
+        "Uncertainty quantification",
+        "post_uncertainty",
+        (
+            ("Cov(θ)", "post_uncertainty_cov"),
+            ("Experiment uncertainty", "post_uncertainty_experiments"),
+            ("Matrices A and B", "post_uncertainty_ab"),
+            ("Information geometry", "post_uncertainty_info"),
+            ("Leave-one-out", "post_uncertainty_loo"),
+        ),
+    ),
+)
 
 
 def _font(bold: bool) -> QFont:
@@ -75,6 +105,36 @@ def _item(parent, text, kind, exp=None, step=None, bc_kind=None, bc_index=None, 
     if glyph:
         node.setIcon(0, icon(glyph))
     return node
+
+
+def _selection_from_node(node: QTreeWidgetItem) -> Selection:
+    return Selection(
+        kind=str(node.data(0, ROLE_KIND) or "project"),
+        experiment_id=node.data(0, ROLE_EXP),
+        step_index=node.data(0, ROLE_STEP),
+        bc_kind=node.data(0, ROLE_BC_KIND),
+        bc_index=node.data(0, ROLE_BC_INDEX),
+    )
+
+
+def _node_matches(node: QTreeWidgetItem, selection: Selection) -> bool:
+    current = _selection_from_node(node)
+    if current.kind != selection.kind:
+        return False
+    if current.kind in {"bc", "bc_group"}:
+        return (
+            current.experiment_id == selection.experiment_id
+            and current.bc_kind == selection.bc_kind
+            and current.bc_index == selection.bc_index
+        )
+    if current.kind in {"step"}:
+        return (
+            current.experiment_id == selection.experiment_id
+            and current.step_index == selection.step_index
+        )
+    if current.kind in {"experiment", "mesh", "bcs", "steps"}:
+        return current.experiment_id == selection.experiment_id
+    return True
 
 
 class ModelTreeDock(QWidget):
@@ -145,19 +205,44 @@ class ModelTreeDock(QWidget):
             exp_item.setExpanded(True)
         exp_root.setExpanded(True)
         _item(self.tree, "Solver", "solver")
+        post_root = _item(self.tree, "Post Processing", "post_processing")
+        for label, kind, children in _POST_CHILDREN:
+            node = _item(post_root, label, kind)
+            for child_label, child_kind in children:
+                _item(node, child_label, child_kind)
+            if children:
+                node.setExpanded(True)
+        post_root.setExpanded(True)
         self.tree.blockSignals(False)
+        self.select(session.selection)
+
+    def select(self, selection: Selection) -> None:
+        match = self._find_item(selection)
+        self.tree.blockSignals(True)
+        if match is not None:
+            self.tree.setCurrentItem(match)
+        else:
+            self.tree.clearSelection()
+        self.tree.blockSignals(False)
+
+    def _find_item(self, selection: Selection):
+        def walk(node: QTreeWidgetItem):
+            if _node_matches(node, selection):
+                return node
+            for index in range(node.childCount()):
+                found = walk(node.child(index))
+                if found is not None:
+                    return found
+            return None
+
+        for index in range(self.tree.topLevelItemCount()):
+            found = walk(self.tree.topLevelItem(index))
+            if found is not None:
+                return found
+        return None
 
     def _emit_selection(self) -> None:
         items = self.tree.selectedItems()
         if not items:
             return
-        node = items[0]
-        self.selection_changed.emit(
-            Selection(
-                kind=str(node.data(0, ROLE_KIND) or "project"),
-                experiment_id=node.data(0, ROLE_EXP),
-                step_index=node.data(0, ROLE_STEP),
-                bc_kind=node.data(0, ROLE_BC_KIND),
-                bc_index=node.data(0, ROLE_BC_INDEX),
-            )
-        )
+        self.selection_changed.emit(_selection_from_node(items[0]))

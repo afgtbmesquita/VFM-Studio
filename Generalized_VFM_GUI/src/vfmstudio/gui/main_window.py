@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QMainWindow,
     QMessageBox,
-    QTabWidget,
+    QStackedWidget,
     QToolBar,
 )
 
@@ -31,18 +31,17 @@ from vfmstudio.gui.dialogs import (
 from vfmstudio.gui.dialogs.import_mat import load_steps_from_paths
 from vfmstudio.gui.docks.message_log import MessageLogDock
 from vfmstudio.gui.docks.model_tree import ModelTreeDock
-from vfmstudio.gui.docks.plot_dock import PlotDock
 from vfmstudio.gui.docks.property_editor import PropertyEditorDock
-from vfmstudio.gui.results import (
-    CoefficientPanel,
-    ConvergencePanel,
-    IdentifiabilityPanel,
-    VirtualFieldPanel,
-)
-from vfmstudio.gui.session import AppSession, Selection
+from vfmstudio.gui.post_processing import PostProcessingWorkspace
+from vfmstudio.gui.session import AppSession, Selection, is_post_kind
 from vfmstudio.gui.viewport.interactor import ViewportWidget
 from vfmstudio.gui.widgets import DisplayModeCombo, FieldCombo
-from vfmstudio.gui.workers import IdentifiabilityRunnable, IdentifyRunnable
+from vfmstudio.gui.workers import (
+    IdentifiabilityRunnable,
+    IdentifyRunnable,
+    LoocvRefitRunnable,
+    UncertaintyRunnable,
+)
 from vfmstudio.io import load_any, save_any
 from vfmstudio.io.export_vtk import export_mesh_vtk
 from vfmstudio.resources import icon
@@ -59,30 +58,19 @@ class MainWindow(QMainWindow):
         self.actions = ActionRegistry(self)
 
         self.viewport = ViewportWidget(self)
-        self.setCentralWidget(self.viewport)
+        self.post = PostProcessingWorkspace(self)
+        self._central = QStackedWidget()
+        self._central.addWidget(self.viewport)
+        self._central.addWidget(self.post)
+        self.setCentralWidget(self._central)
 
         self.tree = ModelTreeDock()
         self.props = PropertyEditorDock()
         self.log = MessageLogDock()
-        self.plots = PlotDock()
-        self.coeff = CoefficientPanel()
-        self.conv = ConvergencePanel()
-        self.ident_panel = IdentifiabilityPanel()
-        self.vf_panel = VirtualFieldPanel()
-
-        results = QTabWidget()
-        results.addTab(self.coeff, "Coefficients")
-        results.addTab(self.conv, "Convergence")
-        results.addTab(self.ident_panel, "Identifiability")
-        results.addTab(self.vf_panel, "Virtual fields")
 
         self.dock_model = self._add_dock("Model", self.tree, Qt.DockWidgetArea.LeftDockWidgetArea)
         self.dock_props = self._add_dock(
             "Properties", self.props, Qt.DockWidgetArea.RightDockWidgetArea
-        )
-        self.dock_plots = self._add_dock("Plots", self.plots, Qt.DockWidgetArea.BottomDockWidgetArea)
-        self.dock_results = self._add_dock(
-            "Results", results, Qt.DockWidgetArea.BottomDockWidgetArea
         )
         self.dock_log = self._add_dock("Log", self.log, Qt.DockWidgetArea.BottomDockWidgetArea)
         self.dock_model.setMinimumWidth(280)
@@ -91,10 +79,7 @@ class MainWindow(QMainWindow):
         self.dock_props.setMaximumWidth(360)
         self.resizeDocks([self.dock_model], [320], Qt.Orientation.Horizontal)
         self.setDockNestingEnabled(True)
-        self.tabifyDockWidget(self.dock_plots, self.dock_results)
-        self.tabifyDockWidget(self.dock_plots, self.dock_log)
-        self.dock_plots.raise_()
-        self.resizeDocks([self.dock_plots], [200], Qt.Orientation.Vertical)
+        self.resizeDocks([self.dock_log], [140], Qt.Orientation.Vertical)
 
         self.tree.selection_changed.connect(self._on_tree_selection)
         self.props.document_changed.connect(self._on_document_edited)
@@ -102,6 +87,8 @@ class MainWindow(QMainWindow):
         self.props.request_add_bc.connect(self._add_bc)
         self.props.request_add_step.connect(self._add_step)
         self.props.request_visualize_steps.connect(self._show_step_load_plot)
+        self.props.request_uncertainty.connect(self.run_uncertainty)
+        self.props.request_loo_refit.connect(self.run_loo_refit)
 
         self._build_menus()
         self._build_toolbar()
@@ -176,8 +163,6 @@ class MainWindow(QMainWindow):
         view_menu = self.menuBar().addMenu("&View")
         view_menu.addAction(self.dock_model.toggleViewAction())
         view_menu.addAction(self.dock_props.toggleViewAction())
-        view_menu.addAction(self.dock_plots.toggleViewAction())
-        view_menu.addAction(self.dock_results.toggleViewAction())
         view_menu.addAction(self.dock_log.toggleViewAction())
         view_menu.addSeparator()
         self.actions.add(
@@ -225,6 +210,12 @@ class MainWindow(QMainWindow):
             "run", "Run FGLS", self.run_identification, QKeySequence("F5"), menu=identify
         )
         self.actions.add("ident", "Identifiability", self.run_identifiability, menu=identify)
+        self.actions.add(
+            "uncertainty",
+            "Uncertainty quantification",
+            self.run_uncertainty,
+            menu=identify,
+        )
         self.actions.add("check2", "Check consistency", self.check_consistency, menu=identify)
 
         results = self.menuBar().addMenu("&Results")
@@ -457,14 +448,30 @@ class MainWindow(QMainWindow):
 
     def _on_document_edited(self) -> None:
         self.tree.rebuild(self.session)
-        self.viewport.refresh(self.session)
+        self._apply_selection()
         self._update_title()
         self._update_status()
 
     def _on_tree_selection(self, selection: Selection) -> None:
         self.session.selection = selection
+        self._apply_selection()
+
+    def _apply_selection(self) -> None:
+        selection = self.session.selection
         self.props.show_selection(self.session, selection)
-        self.viewport.refresh(self.session)
+        post = is_post_kind(selection.kind)
+        if hasattr(self, "field_combo"):
+            self.field_combo.setEnabled(not post)
+        if hasattr(self, "display_combo"):
+            self.display_combo.setEnabled(not post)
+        if post:
+            if self.viewport.load_plot_visible():
+                self.viewport.hide_load_plot()
+            self.post.show_kind(selection.kind)
+            self._central.setCurrentWidget(self.post)
+        else:
+            self._central.setCurrentWidget(self.viewport)
+            self.viewport.refresh(self.session)
         self._update_status()
 
     def _show_step_load_plot(self) -> None:
@@ -474,6 +481,7 @@ class MainWindow(QMainWindow):
                 self, "Load data", "Select an experiment with load steps first."
             )
             return
+        self._central.setCurrentWidget(self.viewport)
         self.viewport.show_load_plot(self.session)
 
     def _on_field_changed(self, _index: int = 0) -> None:
@@ -508,13 +516,14 @@ class MainWindow(QMainWindow):
 
     def _refresh_all(self) -> None:
         self.tree.rebuild(self.session)
-        self.props.show_selection(self.session, self.session.selection)
-        self.viewport.refresh(self.session)
-        self.plots.set_results(self.session.result, self.session.identifiability)
-        self.coeff.update_from(self.session.document, self.session.result)
-        self.conv.update_from(self.session.result)
-        self.ident_panel.update_from(self.session.identifiability)
-        self.vf_panel.update_from(self.session.result)
+        self.post.set_results(
+            self.session.document,
+            self.session.result,
+            self.session.identifiability,
+            warp_scale=self.session.warp_scale,
+            uncertainty=self.session.uncertainty,
+        )
+        self._apply_selection()
         self._update_title()
         self._update_status()
 
@@ -575,7 +584,9 @@ class MainWindow(QMainWindow):
                 QMessageBox.StandardButton.Yes
             ):
                 return
-        worker = IdentifyRunnable(self.session.document)
+        worker = IdentifyRunnable(
+            self.session.document, kind=self.session.uncertainty_kind
+        )
         worker.signals.log.connect(self.log.log)
         worker.signals.failed.connect(self._on_job_failed)
         worker.signals.finished.connect(self._on_identify_finished)
@@ -584,9 +595,27 @@ class MainWindow(QMainWindow):
         self.log.log("Queued FGLS identification.")
         self.pool.start(worker)
 
-    def _on_identify_finished(self, result) -> None:
+    def _on_identify_finished(self, payload) -> None:
+        ident = None
+        uq = None
+        if isinstance(payload, tuple):
+            if len(payload) >= 3:
+                result, ident, uq = payload[0], payload[1], payload[2]
+            else:
+                result, ident = payload[0], payload[1]
+        else:
+            result = payload
         self.session.result = result
-        self.log.log("Identification finished.")
+        if ident is not None:
+            self.session.identifiability = ident
+        self.session.uncertainty = uq
+        n_fields = len(getattr(result, "optimal_field_results", None) or [])
+        self.session.selection = Selection(kind="post_plots")
+        self.log.log(
+            f"Identification finished ({n_fields} optimal virtual field(s) stored)."
+        )
+        if uq is None:
+            self.log.log("Uncertainty quantification was not computed.")
         self.statusBar().showMessage("Identification finished")
         self._refresh_all()
 
@@ -603,8 +632,56 @@ class MainWindow(QMainWindow):
 
     def _on_ident_finished(self, diagnostics) -> None:
         self.session.identifiability = diagnostics
+        self.session.selection = Selection(kind="post_identifiability")
         self.log.log("Identifiability finished.")
         self._refresh_all()
+
+    def run_uncertainty(self) -> None:
+        if self.session.result is None:
+            QMessageBox.information(
+                self, "Uncertainty quantification", "Run identification first."
+            )
+            return
+        worker = UncertaintyRunnable(
+            self.session.document,
+            self.session.result,
+            kind=self.session.uncertainty_kind,
+        )
+        worker.signals.log.connect(self.log.log)
+        worker.signals.failed.connect(self._on_job_failed)
+        worker.signals.finished.connect(self._on_uncertainty_finished)
+        self._jobs.append(worker)
+        self.statusBar().showMessage("Computing uncertainty…")
+        self.pool.start(worker)
+
+    def _on_uncertainty_finished(self, payload) -> None:
+        self.session.uncertainty = payload
+        kind = self.session.selection.kind
+        if not str(kind).startswith("post_uncertainty"):
+            self.session.selection = Selection(kind="post_uncertainty_cov")
+        self.log.log("Uncertainty quantification finished.")
+        self.statusBar().showMessage("Uncertainty quantification finished")
+        self._refresh_all()
+
+    def run_loo_refit(self) -> None:
+        if self.session.uncertainty is None:
+            QMessageBox.information(
+                self,
+                "Leave-one-out refit",
+                "Compute uncertainty quantification first.",
+            )
+            return
+        worker = LoocvRefitRunnable(
+            self.session.document,
+            self.session.uncertainty,
+            kind=self.session.uncertainty_kind,
+        )
+        worker.signals.log.connect(self.log.log)
+        worker.signals.failed.connect(self._on_job_failed)
+        worker.signals.finished.connect(self._on_uncertainty_finished)
+        self._jobs.append(worker)
+        self.statusBar().showMessage("Leave-one-out FGLS refits…")
+        self.pool.start(worker)
 
     def _on_job_failed(self, message: str) -> None:
         self.log.log(f"FAILED: {message}")
@@ -612,7 +689,18 @@ class MainWindow(QMainWindow):
         QMessageBox.critical(self, "Job failed", message)
 
     def show_virtual_field(self) -> None:
-        self.viewport.show_virtual_field(self.session, 0)
+        self.session.selection = Selection(kind="post_virtual_fields")
+        self.tree.select(self.session.selection)
+        self._apply_selection()
+        if self.session.result is None or not getattr(
+            self.session.result, "optimal_field_results", None
+        ):
+            QMessageBox.information(
+                self,
+                "Virtual fields",
+                "Run Identify first. Optimal virtual fields are computed "
+                "together with FGLS.",
+            )
 
     def export_vtk(self) -> None:
         experiment = self.session.selected_experiment()

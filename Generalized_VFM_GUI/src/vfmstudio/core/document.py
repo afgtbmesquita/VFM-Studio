@@ -199,6 +199,32 @@ class MaterialModel(BaseModel):
             return [f"P{i + 1}" for i in range(len(self.initial_parameters))]
 
 
+def parameter_math_label(label: str) -> str:
+    """'D11' -> '$D_{11}$'."""
+    raw = str(label).strip()
+    if len(raw) >= 2 and raw[0].isalpha() and raw[1:].isdigit():
+        return f"${raw[0]}_{{{raw[1:]}}}$"
+    return raw
+
+
+def parameter_unit_plain(label: str) -> str:
+    """A_ij in N/mm (membrane); D_ij in N·mm (bending)."""
+    key = str(label).strip().upper()
+    if key.startswith("A"):
+        return "N/mm"
+    if key.startswith("D"):
+        return "N·mm"
+    return ""
+
+
+def parameter_unit_math(label: str) -> str:
+    """Matplotlib axis unit: A in N/mm, D in N·mm."""
+    plain = parameter_unit_plain(label)
+    if plain == "N·mm":
+        return r"N$\cdot$mm"
+    return plain
+
+
 class SolverModel(BaseModel):
     model_config = ConfigDict(extra="ignore")
     max_iterations: int = 40

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import QPlainTextEdit
 
 
@@ -10,7 +11,11 @@ class MessageLogDock(QPlainTextEdit):
         super().__init__(parent)
         self.setReadOnly(True)
         self.setMaximumBlockCount(4000)
-        self.appendPlainText("VFM Studio ready.")
+        self.log("VFM Studio ready.")
 
     def log(self, text: str) -> None:
         self.appendPlainText(text)
+        self.moveCursor(QTextCursor.MoveOperation.End)
+        self.ensureCursorVisible()
+        bar = self.verticalScrollBar()
+        bar.setValue(bar.maximum())

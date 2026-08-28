@@ -9,6 +9,14 @@ from typing import Any, Optional
 from vfmstudio.core.document import SessionDocument, empty_document
 
 
+def is_post_kind(kind: str) -> bool:
+    return str(kind).startswith("post_")
+
+
+def is_uncertainty_kind(kind: str) -> bool:
+    return str(kind).startswith("post_uncertainty")
+
+
 @dataclass
 class Selection:
     kind: str = "project"
@@ -24,6 +32,8 @@ class AppSession:
     dirty: bool = False
     result: Any = None
     identifiability: Any = None
+    uncertainty: Any = None
+    uncertainty_kind: str = "CR2"
     selection: Selection = field(default_factory=Selection)
     current_scalar: str = "kappa_yy"
     display_mode: str = "contour"

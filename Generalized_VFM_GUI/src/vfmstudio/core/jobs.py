@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -338,3 +338,50 @@ def reduced_chi_square(result: Any) -> Optional[dict]:
         }
     except Exception:
         return None
+
+
+def _experiment_names(document: SessionDocument) -> dict[int, str]:
+    return {
+        int(experiment.experiment_id): (
+            experiment.name or f"Experiment {experiment.experiment_id}"
+        )
+        for experiment in document.experiments
+    }
+
+
+def run_uncertainty(document: SessionDocument, result: Any, kind: str = "CR2"):
+    """Sandwich covariance, experiment scores, and fixed-weight leave-one-out."""
+    from vfmstudio.core.uncertainty import analyse
+
+    return analyse(
+        result,
+        labels=document.material.labels(),
+        experiment_names=_experiment_names(document),
+        kind=kind,
+    )
+
+
+def run_loo_refits(
+    document: SessionDocument,
+    uncertainty,
+    *,
+    kind: Optional[str] = None,
+    log: Optional[Callable[[str], None]] = None,
+):
+    """Re-run FGLS without each experiment and attach those θ_(-i)."""
+    from vfmstudio.core.uncertainty import attach_refits
+
+    def refit_fn(experiment_id: int, name: str):
+        if log is not None:
+            log(f"Refitting FGLS without {name}…")
+        clone = document.model_copy(deep=True)
+        clone.experiments = [
+            experiment
+            for experiment in clone.experiments
+            if int(experiment.experiment_id) != int(experiment_id)
+        ]
+        if not clone.experiments:
+            raise ValueError("Need at least one remaining experiment to refit.")
+        return run_identification(clone, verbose=False)
+
+    return attach_refits(uncertainty, refit_fn, kind=kind)

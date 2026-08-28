@@ -10,6 +10,9 @@ from vfmstudio.core.document import (
     document_from_vfm_project,
     document_to_vfm_project,
     empty_document,
+    parameter_math_label,
+    parameter_unit_math,
+    parameter_unit_plain,
 )
 
 
@@ -55,6 +58,15 @@ def test_empty_document_defaults():
     document = empty_document()
     assert document.material.material_type == "orthotropic"
     assert document.solver.weighting == "gls"
+
+
+def test_parameter_math_and_units():
+    assert parameter_math_label("D11") == r"$D_{11}$"
+    assert parameter_math_label("A12") == r"$A_{12}$"
+    assert parameter_unit_plain("D22") == "N·mm"
+    assert parameter_unit_plain("A11") == "N/mm"
+    assert parameter_unit_math("D11") == r"N$\cdot$mm"
+    assert parameter_unit_math("A66") == "N/mm"
 
 
 def test_document_to_vfm_and_back(tmp_path):

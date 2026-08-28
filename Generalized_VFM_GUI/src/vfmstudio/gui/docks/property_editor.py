@@ -25,8 +25,9 @@ from PySide6.QtWidgets import (
 
 from vfmstudio.core import mesh_convert
 from vfmstudio.core.fields import sync_mesh_bounds_from_file
+from vfmstudio.core.jobs import reduced_chi_square
 from vfmstudio.core.step_series import step_display_label
-from vfmstudio.gui.session import AppSession, Selection
+from vfmstudio.gui.session import AppSession, Selection, is_post_kind, is_uncertainty_kind
 
 
 def _block_set_text(widget: QLineEdit, text: str) -> None:
@@ -59,6 +60,8 @@ class PropertyEditorDock(QWidget):
     request_add_bc = Signal(int, str)
     request_add_step = Signal(int)
     request_visualize_steps = Signal()
+    request_uncertainty = Signal()
+    request_loo_refit = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -259,12 +262,10 @@ class PropertyEditorDock(QWidget):
         self._analysis_header = QLabel("Analysis")
         self._analysis_header.setStyleSheet("font-weight: 600; padding-top: 8px;")
         step.addRow(self._analysis_header)
-        self._analysis_start = QSpinBox()
-        self._analysis_start.setRange(1, 1)
-        self._analysis_start.valueChanged.connect(self._on_analysis_start)
-        self._analysis_end = QSpinBox()
-        self._analysis_end.setRange(1, 1)
-        self._analysis_end.valueChanged.connect(self._on_analysis_end)
+        self._analysis_start = QComboBox()
+        self._analysis_start.currentIndexChanged.connect(self._on_analysis_start)
+        self._analysis_end = QComboBox()
+        self._analysis_end.currentIndexChanged.connect(self._on_analysis_end)
         self._analysis_reference = QComboBox()
         self._analysis_reference.currentIndexChanged.connect(self._on_analysis_reference)
         step.addRow("Start step", self._analysis_start)
@@ -277,7 +278,31 @@ class PropertyEditorDock(QWidget):
         empty = self._add_page("empty")
         empty.addRow(QLabel("No experiment selected."))
 
+        post = self._add_page("post_processing")
+        self._post_status = QLabel("No identification result.")
+        self._post_status.setWordWrap(True)
+        post.addRow(self._post_status)
+
+        uq = self._add_page("uncertainty")
+        self._uq_status = QLabel("No uncertainty analysis.")
+        self._uq_status.setWordWrap(True)
+        uq.addRow(self._uq_status)
+        self._uq_kind = QComboBox()
+        self._uq_kind.addItems(["CR2", "CR3", "CR0"])
+        self._uq_kind.currentTextChanged.connect(self._on_uq_kind)
+        uq.addRow("Sandwich correction", self._uq_kind)
+        self._uq_recompute = QPushButton("Recompute")
+        self._uq_recompute.clicked.connect(self.request_uncertainty.emit)
+        uq.addRow(self._uq_recompute)
+        self._uq_refit = QPushButton("Refit FGLS on deletion")
+        self._uq_refit.clicked.connect(self.request_loo_refit.emit)
+        uq.addRow(self._uq_refit)
+
     def _page_name(self, kind: str) -> str:
+        if is_uncertainty_kind(kind):
+            return "uncertainty"
+        if is_post_kind(kind):
+            return "post_processing"
         if kind in {"project", "experiments"}:
             return "project"
         if kind in {"experiment", "bcs", "bc_group"}:
@@ -314,10 +339,22 @@ class PropertyEditorDock(QWidget):
             "step": "Load step",
             "steps": "Load steps",
             "empty": "Properties",
+            "post_processing": "Post Processing",
+            "post_plots": "Coefficient Evolution",
+            "post_experiment_check": "Individual Experiment check",
+            "post_identifiability": "Identifiability",
+            "post_virtual_fields": "Virtual fields",
+            "post_uncertainty": "Uncertainty quantification",
+            "post_uncertainty_cov": "Cov(θ)",
+            "post_uncertainty_experiments": "Experiment uncertainty",
+            "post_uncertainty_ab": "Matrices A and B",
+            "post_uncertainty_info": "Information geometry",
+            "post_uncertainty_loo": "Leave-one-out",
+            "uncertainty": "Uncertainty quantification",
         }
         if page_name == "experiment" and session.document.experiment_by_id(selection.experiment_id or 0) is None:
             page_name = "empty"
-        title_key = selection.kind if selection.kind == "steps" else page_name
+        title_key = selection.kind if selection.kind in titles else page_name
         self._title.setText(titles.get(title_key, "Properties"))
         self._fill_page(page_name, session, selection)
         self._stack.setCurrentWidget(self._pages[page_name])
@@ -338,6 +375,60 @@ class PropertyEditorDock(QWidget):
             self._fill_bc(session, selection)
         elif page_name == "step":
             self._fill_step(session, selection)
+        elif page_name == "post_processing":
+            self._fill_post_processing(session)
+        elif page_name == "uncertainty":
+            self._fill_uncertainty(session, selection)
+
+    def _fill_post_processing(self, session: AppSession) -> None:
+        if session.result is None:
+            self._post_status.setText("No identification result.")
+            return
+        chi = reduced_chi_square(session.result)
+        if chi:
+            self._post_status.setText(
+                f"χ²/dof = {chi['reduced']:.2f}  (Birge {chi['birge']:.2f})"
+            )
+        else:
+            self._post_status.setText("Identification complete.")
+
+    def _fill_uncertainty(self, session: AppSession, selection: Selection) -> None:
+        _block_set_combo(self._uq_kind, session.uncertainty_kind)
+        self._uq_refit.setEnabled(selection.kind == "post_uncertainty_loo")
+        uq = session.uncertainty
+        if session.result is None:
+            self._uq_status.setText("Run Identify first.")
+            return
+        if uq is None:
+            self._uq_status.setText("No uncertainty analysis yet. Click Recompute.")
+            return
+        chi = uq.chi2.get("reduced")
+        chi_text = f"{chi:.1f}" if chi is not None and chi == chi else "—"
+        need = uq.n_parameters + 1
+        posed = (
+            "yes — quote sandwich σ"
+            if uq.well_posed
+            else f"no — M < {need}, read Information geometry"
+        )
+        cond = uq.information.condition
+        cond_text = f"{cond:.3g}" if cond == cond and cond != float("inf") else "∞"
+        self._uq_status.setText(
+            f"M = {uq.n_clusters} experiments\n"
+            f"p = {uq.n_parameters} parameters (need M ≥ {need})\n"
+            f"rank(B) ≤ {uq.rank_bound}\n"
+            f"cond(A) = {cond_text}\n"
+            f"χ²/dof = {chi_text}\n"
+            f"Robust well-posed: {posed}"
+        )
+
+    def _on_uq_kind(self, text: str) -> None:
+        if self._session is None:
+            return
+        kind = str(text or "CR2")
+        if kind == self._session.uncertainty_kind:
+            return
+        self._session.uncertainty_kind = kind
+        self.request_uncertainty.emit()
 
     def _fill_material(self, session: AppSession) -> None:
         material = session.document.material
@@ -443,21 +534,25 @@ class PropertyEditorDock(QWidget):
         self._analysis_reference.setEnabled(has_steps)
         self._visualize_steps.setEnabled(has_steps)
         if not has_steps:
+            for combo in (
+                self._analysis_start,
+                self._analysis_end,
+                self._analysis_reference,
+            ):
+                combo.blockSignals(True)
+                combo.clear()
+                combo.blockSignals(False)
             return
-        self._analysis_start.blockSignals(True)
-        self._analysis_end.blockSignals(True)
-        self._analysis_start.setRange(1, n_steps)
-        self._analysis_end.setRange(1, n_steps)
-        self._analysis_start.setValue(experiment.resolved_analysis_start())
-        self._analysis_end.setValue(experiment.resolved_analysis_end())
-        self._analysis_start.blockSignals(False)
-        self._analysis_end.blockSignals(False)
+        start_value = experiment.resolved_analysis_start()
+        end_value = experiment.resolved_analysis_end()
+        self._fill_step_index_combo(self._analysis_start, experiment.steps, start_value)
+        self._fill_step_index_combo(self._analysis_end, experiment.steps, end_value)
         self._analysis_reference.blockSignals(True)
         self._analysis_reference.clear()
         self._analysis_reference.addItem("None", None)
         for index, item in enumerate(experiment.steps):
             self._analysis_reference.addItem(
-                f"{index + 1}: {step_display_label(item)}",
+                self._step_choice_label(index, item),
                 index + 1,
             )
         reference = experiment.reference_step
@@ -467,6 +562,19 @@ class PropertyEditorDock(QWidget):
             match = self._analysis_reference.findData(int(reference))
             self._analysis_reference.setCurrentIndex(match if match >= 0 else 0)
         self._analysis_reference.blockSignals(False)
+
+    @staticmethod
+    def _step_choice_label(index: int, step) -> str:
+        return f"{index + 1}: {step_display_label(step)}"
+
+    def _fill_step_index_combo(self, combo: QComboBox, steps, selected: int) -> None:
+        combo.blockSignals(True)
+        combo.clear()
+        for index, item in enumerate(steps):
+            combo.addItem(self._step_choice_label(index, item), index + 1)
+        match = combo.findData(int(selected))
+        combo.setCurrentIndex(match if match >= 0 else 0)
+        combo.blockSignals(False)
 
     def _current_experiment(self):
         if self._session is None:
@@ -770,16 +878,22 @@ class PropertyEditorDock(QWidget):
         step.external_values = values
         self._notify()
 
-    def _on_analysis_start(self, value: int) -> None:
+    def _on_analysis_start(self, _index: int = 0) -> None:
         experiment = self._current_experiment()
         if experiment is None:
+            return
+        value = self._analysis_start.currentData()
+        if value is None:
             return
         experiment.analysis_start = int(value)
         self._notify()
 
-    def _on_analysis_end(self, value: int) -> None:
+    def _on_analysis_end(self, _index: int = 0) -> None:
         experiment = self._current_experiment()
         if experiment is None:
+            return
+        value = self._analysis_end.currentData()
+        if value is None:
             return
         experiment.analysis_end = int(value)
         self._notify()

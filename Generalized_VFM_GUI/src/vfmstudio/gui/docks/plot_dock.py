@@ -1,150 +1,208 @@
-"""PyQtGraph plot dock: histories, SVD, information / covariance heatmaps."""
+"""Publication-style coefficient-evolution post-processing plot."""
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional, Sequence
 
 import numpy as np
-from PySide6.QtWidgets import QComboBox, QStackedWidget, QVBoxLayout, QWidget
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
-import pyqtgraph as pg
+from vfmstudio.core.document import SessionDocument, parameter_math_label, parameter_unit_math
+from vfmstudio.gui.results.plot_style import (
+    INK_MUTED,
+    INK_PRIMARY,
+    SERIES_COLOUR,
+    SERIES_MARKER,
+    apply_matplotlib_style,
+    pad_limits as _pad_limits,
+    style_axis as _style_axis,
+)
 
-from vfmstudio.core.jobs import reduced_chi_square
+
+def _parameter_history(result: Any, document: Optional[SessionDocument]):
+    diagnostics = getattr(result, "iteration_diagnostics", None) or []
+    if diagnostics:
+        iterations = np.array([int(d.iteration) for d in diagnostics], dtype=int)
+        values = np.vstack([np.asarray(d.parameters, dtype=float) for d in diagnostics])
+    else:
+        history = getattr(result, "history", None) or []
+        if not history:
+            theta = getattr(result, "final_parameters", None)
+            if theta is None:
+                return None, None
+            iterations = np.array([0], dtype=int)
+            values = np.asarray(theta, dtype=float).reshape(1, -1)
+            return iterations, values
+        iterations = np.array(
+            [int(getattr(row, "iteration", i)) for i, row in enumerate(history)],
+            dtype=int,
+        )
+        values = np.vstack(
+            [
+                np.asarray(
+                    getattr(row, "parameters_after", getattr(row, "parameters")),
+                    dtype=float,
+                )
+                for row in history
+            ]
+        )
+    initial = getattr(result, "initial_parameters", None)
+    if initial is None and document is not None:
+        initial = document.material.initial_parameters
+    if initial is not None and (iterations.size == 0 or int(iterations[0]) != 0):
+        start = np.asarray(initial, dtype=float).reshape(1, -1)
+        if start.shape[1] == values.shape[1]:
+            iterations = np.concatenate(([0], iterations))
+            values = np.vstack([start, values])
+    return iterations, values
+
+
+def _labels_for(document: Optional[SessionDocument], n: int) -> list[str]:
+    labels: Sequence[str] = ()
+    if document is not None:
+        labels = document.material.labels()
+    names = list(labels)
+    while len(names) < n:
+        names.append(f"P{len(names) + 1}")
+    return names[:n]
 
 
 class PlotDock(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
-        pg.setConfigOptions(antialias=True, background="#FFFFFF", foreground="#222222")
-        self._mode = QComboBox()
-        self._mode.addItems(
-            [
-                "θ evolution",
-                "Singular values",
-                "Information matrix H",
-                "Parameter covariance",
-                "Correlation",
-            ]
+        apply_matplotlib_style()
+        self._title = QLabel("Coefficient evolution through the FGLS loop")
+        self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._title.setWordWrap(True)
+        self._title.setStyleSheet(
+            f"color: {INK_PRIMARY}; font-size: 12pt; font-family: 'Times New Roman', serif;"
         )
-        self._mode.currentTextChanged.connect(lambda _: self.refresh())
-        self._plot = pg.PlotWidget()
-        self._image_plot = pg.PlotWidget()
-        self._image_item = pg.ImageItem()
-        self._image_plot.addItem(self._image_item)
-        self._image_plot.getPlotItem().hideAxis("left")
-        self._image_plot.getPlotItem().hideAxis("bottom")
-        self._stack = QStackedWidget()
-        self._stack.addWidget(self._plot)
-        self._stack.addWidget(self._image_plot)
+        self._figure = Figure(facecolor="#FFFFFF")
+        self._canvas = FigureCanvas(self._figure)
+        self._canvas.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.addWidget(self._mode)
-        layout.addWidget(self._stack)
+        layout.setContentsMargins(12, 8, 12, 10)
+        layout.setSpacing(6)
+        layout.addWidget(self._title)
+        layout.addWidget(self._canvas, 1)
         self._result = None
         self._ident = None
+        self._document: Optional[SessionDocument] = None
 
-    def set_results(self, result: Any, identifiability: Any = None) -> None:
+    def set_results(
+        self,
+        result: Any,
+        identifiability: Any = None,
+        document: Optional[SessionDocument] = None,
+    ) -> None:
         self._result = result
         self._ident = identifiability
+        if document is not None:
+            self._document = document
         self.refresh()
 
     def refresh(self) -> None:
-        mode = self._mode.currentText()
-        if mode == "θ evolution":
-            self._show_plot()
-            self._plot_evolution()
-        elif mode == "Singular values":
-            self._show_plot()
-            self._plot_svd()
-        else:
-            self._show_image()
-            self._plot_matrix(mode)
+        self._figure.clear()
+        self._plot_evolution()
+        self._canvas.draw_idle()
 
-    def _show_plot(self) -> None:
-        self._stack.setCurrentWidget(self._plot)
-
-    def _show_image(self) -> None:
-        self._stack.setCurrentWidget(self._image_plot)
+    def _message(self, text: str) -> None:
+        axis = self._figure.add_subplot(111)
+        axis.set_facecolor("#FFFFFF")
+        axis.axis("off")
+        axis.text(
+            0.5, 0.5, text, ha="center", va="center",
+            color=INK_MUTED, fontsize=10, transform=axis.transAxes,
+        )
 
     def _plot_evolution(self) -> None:
-        self._plot.clear()
-        self._plot.setLogMode(x=False, y=False)
         result = self._result
         if result is None:
+            self._message("No identification result.")
             return
-        diagnostics = getattr(result, "iteration_diagnostics", None) or []
-        if not diagnostics:
-            history = getattr(result, "history", None) or []
-            if not history:
-                return
-            xs = [getattr(row, "iteration", i) for i, row in enumerate(history)]
-            params = np.vstack(
-                [np.asarray(getattr(row, "parameters_after", getattr(row, "parameters"))) for row in history]
-            )
-        else:
-            xs = [d.iteration for d in diagnostics]
-            params = np.vstack([np.asarray(d.parameters) for d in diagnostics])
-        colors = ["#2a78d6", "#eb6834", "#1baf7a", "#4a3aa7", "#E8A444", "#E06C75"]
-        for col in range(params.shape[1]):
-            self._plot.plot(
-                xs, params[:, col],
-                pen=pg.mkPen(colors[col % len(colors)], width=2),
-                symbol="o",
-                symbolSize=6,
-                name=f"θ{col+1}",
-            )
-        self._plot.setLabel("bottom", "iteration")
-        self._plot.setLabel("left", "parameter")
-        chi = reduced_chi_square(result)
-        if chi:
-            self._plot.setTitle(f"χ²/dof = {chi['reduced']:.2f}  (Birge {chi['birge']:.2f})")
-
-    def _plot_svd(self) -> None:
-        self._plot.clear()
-        ident = self._ident
-        if ident is None:
+        iterations, values = _parameter_history(result, self._document)
+        if iterations is None or values is None or values.size == 0:
+            self._message("No iteration history on this result.")
             return
-        aggregate = getattr(ident, "aggregate", None)
-        if aggregate is None:
-            return
-        values = np.asarray(getattr(aggregate, "singular_values"), dtype=float)
-        self._plot.plot(
-            np.arange(1, values.size + 1),
-            values,
-            pen=pg.mkPen("#4A90D9", width=2),
-            symbol="s",
-            symbolSize=8,
+        n = int(values.shape[1])
+        labels = _labels_for(self._document, n)
+        n_rows = max(1, (n + 1) // 2)
+        grid = self._figure.add_gridspec(
+            n_rows, 3,
+            width_ratios=[1.0, 1.0, 1.18],
+            left=0.10,
+            right=0.97,
+            top=0.90,
+            bottom=0.12,
+            wspace=0.58,
+            hspace=0.50,
         )
-        self._plot.setLabel("bottom", "mode")
-        self._plot.setLabel("left", "σ")
-        self._plot.setLogMode(y=True)
+        panels = [
+            self._figure.add_subplot(grid[index // 2, index % 2])
+            for index in range(n)
+        ]
+        ax_rate = self._figure.add_subplot(grid[:, 2])
+        last_iter = float(iterations[-1])
 
-    def _plot_matrix(self, mode: str) -> None:
-        ident = self._ident
-        result = self._result
-        matrix = None
-        if mode.startswith("Information") and ident is not None:
-            aggregate = getattr(ident, "aggregate", None)
-            if aggregate is not None:
-                matrix = np.asarray(getattr(aggregate, "H"), dtype=float)
-        elif mode.startswith("Parameter") and result is not None:
-            matrix = np.asarray(
-                getattr(result, "parameter_covariance", None), dtype=float
+        for index, axis in enumerate(panels):
+            colour = SERIES_COLOUR[index % len(SERIES_COLOUR)]
+            marker = SERIES_MARKER[index % len(SERIES_MARKER)]
+            series = values[:, index]
+            final = float(series[-1])
+            _style_axis(axis)
+            axis.axhline(
+                final, color=INK_MUTED, linewidth=0.7,
+                linestyle=(0, (4, 3)), zorder=1,
             )
-        elif mode.startswith("Correlation"):
-            source = None
-            if ident is not None:
-                source = getattr(getattr(ident, "aggregate", None), "correlation", None)
-            if source is None and result is not None:
-                cov = getattr(result, "parameter_covariance", None)
-                if cov is not None:
-                    cov = np.asarray(cov, dtype=float)
-                    std = np.sqrt(np.clip(np.diag(cov), 0.0, None))
-                    with np.errstate(divide="ignore", invalid="ignore"):
-                        source = cov / np.outer(std, std)
-            if source is not None:
-                matrix = np.asarray(source, dtype=float)
-        if matrix is None or matrix.size == 0:
-            self._image_item.setImage(np.zeros((1, 1)))
-            return
-        self._image_item.setImage(np.asarray(matrix).T, autoLevels=True)
+            axis.plot(
+                iterations, series, color=colour, marker=marker,
+                markeredgecolor="white", markeredgewidth=0.6,
+                linewidth=1.4, markersize=5.0, zorder=3,
+            )
+            axis.set_xlim(-0.28, last_iter + 0.28)
+            axis.set_xticks(iterations)
+            _pad_limits(axis, series)
+            axis.set_title(parameter_math_label(labels[index]), pad=8)
+            unit = parameter_unit_math(labels[index])
+            if unit:
+                axis.set_ylabel(unit, labelpad=8)
+            if index // 2 == n_rows - 1:
+                axis.set_xlabel("FGLS iteration", labelpad=8)
+            axis.annotate(
+                f"{final:.2f}", xy=(iterations[-1], final),
+                xytext=(-4, 6), textcoords="offset points",
+                ha="right", va="bottom", fontsize=8, color=colour,
+                annotation_clip=True,
+            )
+
+        floor = 1.0e-12
+        for index, label in enumerate(labels):
+            hat = max(abs(float(values[-1, index])), floor)
+            relative = np.abs(values[:, index] - values[-1, index]) / hat
+            x = iterations[:-1] if iterations.size > 1 else iterations
+            y = np.maximum(relative[:-1] if iterations.size > 1 else relative, floor)
+            ax_rate.plot(
+                x, y,
+                color=SERIES_COLOUR[index % len(SERIES_COLOUR)],
+                marker=SERIES_MARKER[index % len(SERIES_MARKER)],
+                markeredgecolor="white", markeredgewidth=0.6,
+                linewidth=1.4, markersize=5.0,
+                label=parameter_math_label(label), zorder=3,
+            )
+        _style_axis(ax_rate)
+        ax_rate.set_yscale("log")
+        if iterations.size > 1:
+            ax_rate.set_xticks(iterations[:-1])
+            ax_rate.set_xlim(-0.28, float(iterations[-2]) + 0.28)
+        ax_rate.set_xlabel("FGLS iteration", labelpad=8)
+        ax_rate.set_ylabel(r"$|\theta_k-\hat{\theta}|\,/\,|\hat{\theta}|$", labelpad=10)
+        ax_rate.set_title("Convergence", pad=8)
+        ax_rate.legend(
+            ncol=2, loc="upper right", fontsize=8,
+            borderaxespad=0.8, handlelength=1.5, columnspacing=1.0,
+        )
