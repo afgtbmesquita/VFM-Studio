@@ -133,8 +133,11 @@ def test_theta_lookup_by_experiment_ids():
     mask = mask_for_experiment_ids(space, ids[:2])
     assert mask is not None
     assert np.allclose(subset, space.theta[space.index_of_mask(mask)], atol=1.0e-12)
-    assert theta_for_experiment_ids(space, [ids[0], 99]) is None
+    ignored = theta_for_experiment_ids(space, [ids[0], 99])
+    assert ignored is not None
+    assert np.allclose(ignored, theta_for_experiment_ids(space, ids[:1]), atol=1.0e-12)
     assert mask_for_experiment_ids(space, []) is None
+    assert mask_for_experiment_ids(space, [99]) is None
     assert is_full_combination(space, ids[:2]) is False
 
 

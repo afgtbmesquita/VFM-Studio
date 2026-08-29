@@ -140,8 +140,12 @@ class PlotDock(QWidget):
 
     def refresh(self) -> None:
         self._figure.clear()
-        self._plot_results()
-        self._canvas.draw_idle()
+        try:
+            self._plot_results()
+        except Exception as exc:
+            self._figure.clear()
+            self._message(f"Could not apply that combination.\n{exc}")
+        self._canvas.draw()
 
     def _message(self, text: str) -> None:
         axis = self._figure.add_subplot(111)
@@ -178,8 +182,24 @@ class PlotDock(QWidget):
             return
         space = space_from_document(result, self._document)
         ids = selected_experiment_ids(self._document)
+        if not ids:
+            self._set_fit_subtitle("No tests selected.")
+            self._message("Tick at least one test to show a combination.")
+            return
         theta = theta_for_experiment_ids(space, ids) if space is not None else None
-        if space is not None and ids and theta is None:
+        if space is None:
+            self._set_fit_subtitle()
+            n_ticked = len(ids)
+            n_all = len(self._document.experiments) if self._document else n_ticked
+            if n_ticked < n_all:
+                self._message(
+                    "This identification has no per-test GLS blocks, so a "
+                    "subset cannot be applied. Run Identify again."
+                )
+                return
+            self._plot_evolution()
+            return
+        if theta is None:
             self._set_fit_subtitle(
                 "Last Identify did not include every ticked test."
             )
@@ -187,15 +207,13 @@ class PlotDock(QWidget):
                 "Those tests were not in the last Identify."
             )
             return
-        if (
-            space is not None
-            and theta is not None
-            and not is_full_combination(space, ids)
-        ):
+        if not is_full_combination(space, ids):
             self._set_fit_subtitle(
                 "Frozen GLS at the virtual fields of the last Identify."
             )
-            self._plot_combination(theta, space.theta_full, _labels_for(self._document, int(theta.size)))
+            self._plot_combination(
+                theta, space.theta_full, _labels_for(self._document, int(theta.size))
+            )
             return
         self._set_fit_subtitle()
         self._plot_evolution()

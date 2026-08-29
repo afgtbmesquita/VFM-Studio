@@ -37,6 +37,7 @@ from vfmstudio.core.parameter_space import (
 from vfmstudio.core.step_series import step_display_label
 from vfmstudio.core.uncertainty import default_baseline_flags
 from vfmstudio.gui.results.experiment_check import collect_experiment_steps
+from vfmstudio.gui.results.plot_export import has_exportable_plot
 from vfmstudio.gui.results.plot_style import experiment_colour
 from vfmstudio.gui.results.table_style import format_number
 from vfmstudio.gui.session import AppSession, Selection, is_post_kind, is_uncertainty_kind
@@ -84,6 +85,7 @@ class PropertyEditorDock(QWidget):
     request_visualize_steps = Signal()
     request_uncertainty = Signal()
     request_loo_refit = Signal()
+    request_export_plot = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -104,6 +106,7 @@ class PropertyEditorDock(QWidget):
         layout.addWidget(self._stack)
         layout.addStretch(1)
         self._pages: dict[str, QWidget] = {}
+        self._export_buttons: list[QPushButton] = []
         self._build_pages()
 
     def _add_page(self, name: str) -> QFormLayout:
@@ -112,6 +115,16 @@ class PropertyEditorDock(QWidget):
         self._pages[name] = page
         self._stack.addWidget(page)
         return form
+
+    def _add_export_button(self, form: QFormLayout) -> QPushButton:
+        button = QPushButton("Export")
+        button.setToolTip(
+            "Save the current plot as PDF (vector, Type-42 fonts) or PNG (600 dpi)."
+        )
+        button.clicked.connect(self.request_export_plot.emit)
+        form.addRow(button)
+        self._export_buttons.append(button)
+        return button
 
     def _build_pages(self) -> None:
         project = self._add_page("project")
@@ -304,6 +317,7 @@ class PropertyEditorDock(QWidget):
         self._post_status = QLabel("No identification result.")
         self._post_status.setWordWrap(True)
         post.addRow(self._post_status)
+        self._post_export = self._add_export_button(post)
 
         experiment_check = self._add_page("post_experiment_check")
         self._exp_check_status = QLabel("No identification result.")
@@ -319,6 +333,7 @@ class PropertyEditorDock(QWidget):
         self._exp_check_layout.setSpacing(4)
         self._exp_check_scroll.setWidget(self._exp_check_host)
         experiment_check.addRow(self._exp_check_scroll)
+        self._exp_check_export = self._add_export_button(experiment_check)
 
         ident_strength = self._add_page("post_identifiability_strength")
         self._ident_strength_status = QLabel(
@@ -342,6 +357,7 @@ class PropertyEditorDock(QWidget):
         self._ident_base_layout.setSpacing(4)
         self._ident_base_scroll.setWidget(self._ident_base_host)
         ident_strength.addRow(self._ident_base_scroll)
+        self._ident_strength_export = self._add_export_button(ident_strength)
 
         plots = self._add_page("post_plots")
         self._fit_tests_status = QLabel(
@@ -370,6 +386,7 @@ class PropertyEditorDock(QWidget):
         fit_row.addWidget(self._fit_tests_all)
         fit_row.addWidget(self._fit_tests_none)
         plots.addRow(fit_buttons)
+        self._plots_export = self._add_export_button(plots)
 
         parameter_space = self._add_page("post_parameter_space")
         self._ps_status = QLabel(
@@ -415,6 +432,7 @@ class PropertyEditorDock(QWidget):
         self._ps_add_group = QPushButton("Add group")
         self._ps_add_group.clicked.connect(self._on_ps_add_group)
         parameter_space.addRow(self._ps_add_group)
+        self._ps_export = self._add_export_button(parameter_space)
         self._ps_group_stat_labels: list[QLabel] = []
 
         uq = self._add_page("uncertainty")
@@ -431,6 +449,7 @@ class PropertyEditorDock(QWidget):
         self._uq_refit = QPushButton("Refit FGLS on deletion")
         self._uq_refit.clicked.connect(self.request_loo_refit.emit)
         uq.addRow(self._uq_refit)
+        self._uq_export = self._add_export_button(uq)
 
     def _page_name(self, kind: str) -> str:
         if is_uncertainty_kind(kind):
@@ -501,8 +520,16 @@ class PropertyEditorDock(QWidget):
         title_key = selection.kind if selection.kind in titles else page_name
         self._title.setText(titles.get(title_key, "Properties"))
         self._fill_page(page_name, session, selection)
+        self._sync_export_buttons(selection.kind)
         self._stack.setCurrentWidget(self._pages[page_name])
         self._shown_key = key
+
+    def _sync_export_buttons(self, kind: str) -> None:
+        show = has_exportable_plot(kind)
+        if hasattr(self, "_post_export"):
+            self._post_export.setVisible(show)
+        if hasattr(self, "_uq_export"):
+            self._uq_export.setVisible(show)
 
     def _fill_page(self, page_name: str, session: AppSession, selection: Selection) -> None:
         if page_name == "project":

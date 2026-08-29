@@ -22,6 +22,20 @@ from vfmstudio.gui.results.uncertainty import (
 )
 from vfmstudio.gui.virtual_fields_view import VirtualFieldTiledView
 
+_KIND_FIGURE_WIDGET = {
+    "post_processing": "plots",
+    "post_plots": "plots",
+    "post_parameter_space": "parameter_space",
+    "post_experiment_check": "experiment_check",
+    "post_identifiability_strength": "ident_strength",
+    "post_virtual_fields": "vf_panel",
+    "post_uncertainty_cov": "uq_cov",
+    "post_uncertainty_experiments": "uq_experiments",
+    "post_uncertainty_ab": "uq_ab",
+    "post_uncertainty_info": "uq_info",
+    "post_uncertainty_loo": "uq_loo",
+}
+
 
 class PostProcessingWorkspace(QWidget):
     def __init__(self, parent=None) -> None:
@@ -66,6 +80,14 @@ class PostProcessingWorkspace(QWidget):
 
     def show_kind(self, kind: str) -> None:
         self._stack.setCurrentIndex(self._pages.get(kind, 0))
+
+    def figure_for_kind(self, kind: str):
+        """Matplotlib figure for the post-processing page, or None."""
+        attr = _KIND_FIGURE_WIDGET.get(str(kind))
+        if attr is None:
+            return None
+        widget = getattr(self, attr, None)
+        return getattr(widget, "_figure", None)
 
     def set_results(
         self,

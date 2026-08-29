@@ -40,6 +40,10 @@ MPL_RCPARAMS = {
     "legend.frameon": False,
     "axes.linewidth": 0.6,
     "text.usetex": False,
+    # Type 42 = embedded TrueType. Type 3 (the default) rasterizes poorly
+    # when a journal or Illustrator opens the PDF.
+    "pdf.fonttype": 42,
+    "ps.fonttype": 42,
 }
 
 

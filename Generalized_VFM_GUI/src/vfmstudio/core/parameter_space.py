@@ -132,18 +132,19 @@ def mask_for_experiment_ids(
     space: ParameterSpaceResult,
     experiment_ids: Sequence[int],
 ) -> Optional[int]:
-    """Bitmask for this set of tests, or None if it is not a stored subset."""
+    """Bitmask for the ticked tests that were in the last Identify.
+
+    Tests that were not in Identify are ignored, so unchecking still applies
+    the overlapping subset instead of failing the whole lookup.
+    """
     wanted = {int(experiment_id) for experiment_id in experiment_ids}
     if not wanted:
         return None
     mask = 0
-    seen: set[int] = set()
     for index, experiment_id in enumerate(space.experiment_ids):
-        key = int(experiment_id)
-        if key in wanted:
+        if int(experiment_id) in wanted:
             mask |= 1 << index
-            seen.add(key)
-    if seen != wanted or mask == 0:
+    if mask == 0:
         return None
     return int(mask)
 
@@ -339,9 +340,12 @@ def compute_parameter_space(
         return from_system(source)
     try:
         system = system_from_result(
-            source, labels=labels, experiment_names=experiment_names
+            source,
+            labels=labels,
+            experiment_names=experiment_names,
+            verify=False,
         )
-    except (UncertaintyError, TypeError, ValueError):
+    except (UncertaintyError, TypeError, ValueError, np.linalg.LinAlgError):
         return None
     return from_system(system)
 

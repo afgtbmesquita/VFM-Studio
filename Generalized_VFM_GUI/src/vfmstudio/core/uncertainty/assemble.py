@@ -183,6 +183,8 @@ def _build_clusters(
     observations: Sequence[Any],
     labels: Sequence[str],
     experiment_names: Optional[Mapping[int, str]],
+    *,
+    strict: bool = True,
 ) -> List[Cluster]:
     names: dict[int, str] = dict(experiment_names or {})
     taken: set[str] = set()
@@ -191,14 +193,18 @@ def _build_clusters(
         zip(reports, designs, observations)
     ):
         if design is None or observation is None:
-            raise UncertaintyError(
-                "Identification result is missing a per-experiment design or observation."
-            )
+            if strict:
+                raise UncertaintyError(
+                    "Identification result is missing a per-experiment design or observation."
+                )
+            continue
         covariance = getattr(report, "covariance", None)
         if covariance is None:
-            raise UncertaintyError(
-                "Identification result is missing a per-experiment covariance C_i."
-            )
+            if strict:
+                raise UncertaintyError(
+                    "Identification result is missing a per-experiment covariance C_i."
+                )
+            continue
         design = np.asarray(design, dtype=float)
         observation = np.asarray(observation, dtype=float)
         covariance = np.asarray(covariance, dtype=float)
@@ -285,6 +291,7 @@ def system_from_result(
     *,
     labels: Optional[Sequence[str]] = None,
     experiment_names: Optional[Mapping[int, str]] = None,
+    verify: bool = True,
 ) -> EstimatingSystem:
     """Repack a GlsIdentificationResult into (H_i, f_i, C_i) clusters."""
     reports = list(getattr(result, "experiments", None) or [])
@@ -299,23 +306,34 @@ def system_from_result(
         raise UncertaintyError(
             "Per-experiment design, observation and report lists are misaligned."
         )
-    if getattr(result, "parameter_covariance", None) is None:
+    covariance_work = getattr(result, "parameter_covariance", None)
+    if covariance_work is None and verify:
         raise UncertaintyError("Identification result is missing the eq. (20) covariance.")
 
     used_labels = _labels_for(result, labels)
     theta = np.asarray(result.final_parameters, dtype=float)
     clusters = _build_clusters(
-        reports, designs, observations, used_labels, experiment_names
+        reports,
+        designs,
+        observations,
+        used_labels,
+        experiment_names,
+        strict=verify,
     )
+    if covariance_work is None:
+        stacked = np.vstack([cluster.whitened_design for cluster in clusters])
+        bread = stacked.T @ stacked
+        covariance_work = np.linalg.pinv(bread)
     system = EstimatingSystem(
         labels=used_labels,
         theta=theta,
         clusters=clusters,
-        covariance_work=np.asarray(result.parameter_covariance, dtype=float),
+        covariance_work=np.asarray(covariance_work, dtype=float),
         chi2=_chi2_from_clusters(clusters, theta, len(used_labels)),
         result=result,
     )
-    _verify(system)
+    if verify:
+        _verify(system)
     return system
 
 

@@ -91,29 +91,42 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     assert not hasattr(window.props, "request_identify")
     assert hasattr(window.post.plots, "apply_combination")
     assert not hasattr(window.post, "coeff")
+    assert window.props._plots_export.text() == "Export"
+    assert not window.props._plots_export.isHidden()
+    assert window.post.figure_for_kind("post_plots") is window.post.plots._figure
     window._on_tree_selection(Selection(kind="post_parameter_space"))
     assert window.post._stack.currentWidget() is window.post.parameter_space
     assert window.props._title.text() == "Parameter space"
     assert hasattr(window.props, "_ps_left_x")
     assert hasattr(window.props, "_ps_right_y")
+    assert window.props._ps_export.text() == "Export"
     window._on_tree_selection(Selection(kind="post_experiment_check"))
     assert window.post._stack.currentWidget() is window.post.experiment_check
     assert window.props._title.text() == "Individual Experiment check"
     assert hasattr(window.props, "_exp_check_status")
+    assert window.props._exp_check_export.text() == "Export"
+    window._on_tree_selection(Selection(kind="post_identifiability"))
+    assert window.props._title.text() == "Identifiability"
+    assert window.props._post_export.isHidden()
+    assert window.post.figure_for_kind("post_identifiability") is None
     window._on_tree_selection(Selection(kind="post_identifiability_strength"))
     assert window.post._stack.currentWidget() is window.post.ident_strength
     assert window.props._title.text() == "Identifiability strength"
     assert hasattr(window.props, "_ident_base_scroll")
     assert hasattr(window.props, "_ident_shift_scale")
+    assert window.props._ident_strength_export.text() == "Export"
     window._on_tree_selection(Selection(kind="post_virtual_fields"))
     assert window._central.currentWidget() is window.post
     assert window.post._stack.currentWidget() is window.post.vf_panel
     assert window.props._title.text() == "Virtual fields"
+    assert not window.props._post_export.isHidden()
+    assert window.post.figure_for_kind("post_virtual_fields") is window.post.vf_panel._figure
     window._on_tree_selection(Selection(kind="post_uncertainty"))
     assert window._central.currentWidget() is window.post
     assert window.post._stack.currentWidget() is window.post.uq_landing
     assert window.props._title.text() == "Uncertainty quantification"
     assert "M ≥ p + 1" in window.post.uq_landing._verdict.text()
+    assert window.props._uq_export.isHidden()
     assert [window.post.uq_info._mode.itemText(i) for i in range(window.post.uq_info._mode.count())] == [
         "cond(A − Aᵢ)",
         "Share of A",
@@ -123,6 +136,7 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     window._on_tree_selection(Selection(kind="post_uncertainty_cov"))
     assert window.post._stack.currentWidget() is window.post.uq_cov
     assert window.props._title.text() == "Cov(θ)"
+    assert not window.props._uq_export.isHidden()
     window._on_tree_selection(Selection(kind="post_uncertainty_experiments"))
     assert window.post._stack.currentWidget() is window.post.uq_experiments
     assert window.props._title.text() == "Experiment uncertainty"
@@ -135,6 +149,7 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     window._on_tree_selection(Selection(kind="post_uncertainty_loo"))
     assert window.post._stack.currentWidget() is window.post.uq_loo
     assert window.props._title.text() == "Leave-one-out"
+    assert window.props._uq_export.text() == "Export"
     assert hasattr(window.props, "_uq_kind")
     assert [window.props._uq_kind.itemText(i) for i in range(window.props._uq_kind.count())] == [
         "CR2",
@@ -348,6 +363,59 @@ def test_coefficient_evolution_applies_frozen_combination(qapp):
     dock.close()
 
 
+def test_unchecking_tests_updates_coefficient_evolution_plot(qapp):
+    import numpy as np
+    from PySide6.QtWidgets import QCheckBox
+
+    from vfmstudio.core.document import ExperimentModel
+    from vfmstudio.core.uncertainty import system_from_blocks
+    from vfmstudio.gui.docks.plot_dock import PlotDock
+    from vfmstudio.gui.docks.property_editor import PropertyEditorDock
+    from vfmstudio.gui.session import AppSession
+
+    rng = np.random.default_rng(8)
+    theta = rng.normal(size=4)
+    designs, observations, covariances, names = [], [], [], []
+    for index in range(3):
+        design = np.eye(4) + 0.05 * rng.normal(size=(4, 4))
+        covariance = np.eye(4)
+        observation = design @ theta + 0.1 * rng.normal(size=4)
+        designs.append(design)
+        observations.append(observation)
+        covariances.append(covariance)
+        names.append(f"E{index + 1}")
+    system = system_from_blocks(
+        designs, observations, covariances, theta, ["D11", "D12", "D22", "D66"], names
+    )
+    session = AppSession()
+    session.document.experiments = [
+        ExperimentModel(experiment_id=1, name="A1_PB"),
+        ExperimentModel(experiment_id=2, name="B1_PB"),
+        ExperimentModel(experiment_id=3, name="A1_Twist"),
+    ]
+    session.result = system
+    plots = PlotDock()
+    plots.set_results(system, document=session.document)
+    props = PropertyEditorDock()
+    props.view_changed.connect(lambda: plots.apply_combination(session.document))
+    props.show_selection(session, Selection(kind="post_plots"))
+    assert "Frozen GLS" not in plots._subtitle.text()
+    checks = [
+        props._fit_tests_layout.itemAt(index).widget()
+        for index in range(props._fit_tests_layout.count())
+        if isinstance(props._fit_tests_layout.itemAt(index).widget(), QCheckBox)
+    ]
+    assert len(checks) == 3
+    checks[-1].setChecked(False)
+    assert session.document.experiments[2].include_in_identification is False
+    assert "Frozen GLS" in plots._subtitle.text()
+    assert any(
+        "Shift from Identify" in axis.get_title() for axis in plots._figure.axes
+    )
+    plots.close()
+    props.close()
+
+
 def test_parameter_space_properties_choose_axes(qapp):
     from vfmstudio.gui.docks.property_editor import PropertyEditorDock
     from vfmstudio.gui.session import AppSession
@@ -458,3 +526,27 @@ def test_parameter_space_panel_draws_two_plots(qapp):
     panel.refresh()
     assert int(np.sum(panel._assigned == 0)) == 4
     panel.close()
+
+
+def test_export_post_plot_writes_pdf_and_png(qapp, tmp_path, monkeypatch):
+    window = MainWindow()
+    window._on_tree_selection(Selection(kind="post_plots"))
+    pdf = tmp_path / "coefficient_evolution.pdf"
+    png = tmp_path / "coefficient_evolution.png"
+
+    monkeypatch.setattr(
+        "vfmstudio.gui.main_window.QFileDialog.getSaveFileName",
+        lambda *args, **kwargs: (str(pdf), "PDF (*.pdf)"),
+    )
+    window.export_post_plot()
+    assert pdf.is_file()
+    assert pdf.read_bytes()[:4] == b"%PDF"
+
+    monkeypatch.setattr(
+        "vfmstudio.gui.main_window.QFileDialog.getSaveFileName",
+        lambda *args, **kwargs: (str(png), "PNG (*.png)"),
+    )
+    window.export_post_plot()
+    assert png.is_file()
+    assert png.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    window.close()

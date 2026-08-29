@@ -34,6 +34,12 @@ from vfmstudio.gui.docks.message_log import MessageLogDock
 from vfmstudio.gui.docks.model_tree import ModelTreeDock
 from vfmstudio.gui.docks.property_editor import PropertyEditorDock
 from vfmstudio.gui.post_processing import PostProcessingWorkspace
+from vfmstudio.gui.results.plot_export import (
+    FILE_FILTER,
+    default_export_stem,
+    resolve_export_path,
+    save_figure,
+)
 from vfmstudio.gui.session import AppSession, Selection, is_post_kind
 from vfmstudio.gui.viewport.interactor import ViewportWidget
 from vfmstudio.gui.widgets import DisplayModeCombo, FieldCombo
@@ -90,6 +96,7 @@ class MainWindow(QMainWindow):
         self.props.request_visualize_steps.connect(self._show_step_load_plot)
         self.props.request_uncertainty.connect(self.run_uncertainty)
         self.props.request_loo_refit.connect(self.run_loo_refit)
+        self.props.request_export_plot.connect(self.export_post_plot)
 
         self._build_menus()
         self._build_toolbar()
@@ -519,7 +526,11 @@ class MainWindow(QMainWindow):
         self.viewport.refresh(self.session)
 
     def _on_view_option_changed(self) -> None:
-        self.viewport.refresh(self.session)
+        self._apply_combination_view()
+        try:
+            self.viewport.refresh(self.session)
+        except Exception:
+            pass
         self.post.experiment_check.apply_display(
             visible=self.session.experiment_check_visible,
             colors=self.session.experiment_check_colors,
@@ -528,7 +539,6 @@ class MainWindow(QMainWindow):
             self.session.identifiability_baseline,
             shift_scale=self.session.identifiability_shift_scale,
         )
-        self._apply_combination_view()
         self._update_title()
         self._update_status()
 
@@ -766,6 +776,30 @@ class MainWindow(QMainWindow):
             self.log.log(f"Wrote {chosen}")
         except Exception as exc:
             QMessageBox.critical(self, "Export failed", str(exc))
+
+    def export_post_plot(self) -> None:
+        kind = self.session.selection.kind
+        figure = self.post.figure_for_kind(kind)
+        if figure is None:
+            QMessageBox.information(self, "Export", "This page has no plot to export.")
+            return
+        stem = default_export_stem(kind)
+        start = f"{stem}.pdf"
+        if self.session.path is not None:
+            start = str(self.session.path.parent / f"{stem}.pdf")
+        chosen, selected = QFileDialog.getSaveFileName(
+            self, "Export plot", start, FILE_FILTER
+        )
+        if not chosen:
+            return
+        path = resolve_export_path(chosen, selected)
+        try:
+            save_figure(figure, path)
+        except Exception as exc:
+            QMessageBox.critical(self, "Export failed", str(exc))
+            return
+        self.log.log(f"Wrote {path}")
+        self.statusBar().showMessage(f"Exported {path.name}", 4000)
 
     def _about(self) -> None:
         QMessageBox.information(
