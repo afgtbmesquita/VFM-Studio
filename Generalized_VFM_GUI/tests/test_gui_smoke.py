@@ -33,8 +33,12 @@ def _child_labels(item) -> list[str]:
 
 
 def test_main_window_constructs(qapp):
+    from vfmstudio.resources import app_icon
+
     window = MainWindow()
-    assert "VFM Studio" in window.windowTitle()
+    assert "LamXtract" in window.windowTitle()
+    assert not window.windowIcon().isNull()
+    assert not app_icon().isNull()
     assert hasattr(window.props, "request_visualize_steps")
     assert window.viewport.load_plot_visible() is False
     assert hasattr(window.viewport, "_load_plot")
@@ -49,6 +53,10 @@ def test_main_window_constructs(qapp):
     assert xy_axes.isCheckable()
     assert xy_axes.isChecked() is False
     assert hasattr(window.props, "_exp_fit_axes")
+    assert hasattr(window.props, "_exp_show_deformed")
+    assert hasattr(window.props, "_exp_deform_slider")
+    assert hasattr(window.props, "_exp_deform_spin")
+    assert hasattr(window.props, "deformation_scale_changed")
     assert hasattr(window.props, "view_changed")
     assert hasattr(window.props, "_mesh_show_counts")
     assert window.props._mesh_show_counts.isChecked() is False
@@ -526,6 +534,117 @@ def test_parameter_space_panel_draws_two_plots(qapp):
     panel.refresh()
     assert int(np.sum(panel._assigned == 0)) == 4
     panel.close()
+
+
+def test_delete_bc_from_tree(qapp):
+    from PySide6.QtCore import Qt
+
+    from vfmstudio.core.document import BoundaryEntry, ExperimentModel, LoadStepModel
+
+    window = MainWindow()
+    experiment = ExperimentModel(
+        experiment_id=1,
+        name="exp",
+        prescribed=[
+            BoundaryEntry(label="fix W", dof="W", edge="bottom"),
+            BoundaryEntry(label="fix RX", dof="W_X", edge="bottom"),
+        ],
+        linking=[BoundaryEntry(label="link", dof="W", edge="top")],
+        external=[
+            BoundaryEntry.model_validate(
+                {
+                    "label": "M1",
+                    "dof": "W_Y",
+                    "edge": "top",
+                    "loadType": "distributed",
+                }
+            ),
+            BoundaryEntry.model_validate(
+                {
+                    "label": "M2",
+                    "dof": "W_Y",
+                    "edge": "bottom",
+                    "loadType": "distributed",
+                }
+            ),
+        ],
+        steps=[LoadStepModel(data_file="a.mat", label="s1", external_values=[10.0, 20.0])],
+    )
+    window.session.document.experiments = [experiment]
+    window._refresh_all()
+    assert window.tree.tree.contextMenuPolicy() == Qt.ContextMenuPolicy.CustomContextMenu
+    assert hasattr(window.tree, "request_delete_bc")
+    assert hasattr(window.props, "request_delete_bc")
+    assert window.actions.get("delete_bc").isEnabled() is False
+
+    window.session.selection = Selection(
+        kind="bc", experiment_id=1, bc_kind="prescribed", bc_index=0
+    )
+    window._apply_selection()
+    assert window.actions.get("delete_bc").isEnabled() is True
+    assert window.props._bc_delete.text() == "Delete this BC"
+
+    window.tree.request_delete_bc.emit(1, "prescribed", 0)
+    assert [entry.label for entry in experiment.prescribed] == ["fix RX"]
+    node = window.tree._find_item(
+        Selection(kind="bc", experiment_id=1, bc_kind="linking", bc_index=0)
+    )
+    assert node is not None
+    window.tree._emit_delete(node)
+    assert experiment.linking == []
+    window._delete_bc(1, "external", 0)
+    assert [entry.label for entry in experiment.external] == ["M2"]
+    assert experiment.steps[0].external_values == [20.0]
+    assert window.session.selection.kind == "bc_group"
+    assert window.session.selection.bc_kind == "external"
+    assert window.actions.get("delete_bc").isEnabled() is False
+    window.session.dirty = False
+    window.close()
+
+
+def test_add_prescribed_linking_and_external_bcs(qapp, monkeypatch):
+    from vfmstudio.core.document import BoundaryEntry, ExperimentModel
+
+    window = MainWindow()
+    experiment = ExperimentModel(experiment_id=1, name="exp")
+    window.session.document.experiments = [experiment]
+    window._refresh_all()
+    assert list(window.props._add_bc_buttons) == ["prescribed", "linking", "external"]
+    assert [button.text() for button in window.props._add_bc_buttons.values()] == [
+        "Add prescribed BC…",
+        "Add linking BC…",
+        "Add external BC…",
+    ]
+    assert hasattr(window.tree, "request_add_bc")
+    window._on_tree_selection(Selection(kind="bcs", experiment_id=1))
+    assert window.props._title.text() == "Boundary conditions"
+
+    class FakeDialog:
+        def __init__(self, parent=None, kind="prescribed"):
+            self.kind = kind
+
+        def entry(self):
+            return BoundaryEntry(label=f"{self.kind} bc", dof="W", edge="top")
+
+    monkeypatch.setattr("vfmstudio.gui.main_window.AddBcDialog", FakeDialog)
+    monkeypatch.setattr(window, "_exec_dialog", lambda dialog, name: 1)
+
+    window.props.request_add_bc.emit(1, "prescribed")
+    assert [entry.label for entry in experiment.prescribed] == ["prescribed bc"]
+    bcs_node = window.tree._find_item(Selection(kind="bcs", experiment_id=1))
+    assert bcs_node is not None
+    window.tree._emit_add(bcs_node, "linking")
+    assert [entry.label for entry in experiment.linking] == ["linking bc"]
+    group = window.tree._find_item(
+        Selection(kind="bc_group", experiment_id=1, bc_kind="external")
+    )
+    assert group is not None
+    window.tree._emit_add(group, "external")
+    assert [entry.label for entry in experiment.external] == ["external bc"]
+    assert window.session.selection.kind == "bc"
+    assert window.session.selection.bc_kind == "external"
+    window.session.dirty = False
+    window.close()
 
 
 def test_export_post_plot_writes_pdf_and_png(qapp, tmp_path, monkeypatch):

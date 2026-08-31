@@ -151,6 +151,19 @@ class ExperimentModel(BaseModel):
     reference_step: Optional[int] = None
     fit_data_to_system_axes: bool = False
     include_in_identification: bool = True
+    show_deformed_configuration: bool = False
+    deformation_scale: float = 1.0
+
+    @field_validator("deformation_scale", mode="before")
+    @classmethod
+    def _clamp_deformation_scale(cls, value: Any) -> float:
+        try:
+            scale = float(value)
+        except (TypeError, ValueError):
+            return 1.0
+        if scale != scale:  # NaN
+            return 1.0
+        return min(50.0, max(0.0, scale))
 
     def resolved_analysis_start(self) -> int:
         n_steps = len(self.steps)
@@ -183,6 +196,30 @@ class ExperimentModel(BaseModel):
             return window
         reference = int(self.reference_step) - 1
         return [index for index in window if index != reference]
+
+    def boundary_entries(self, kind: str) -> List[BoundaryEntry]:
+        if kind not in {"prescribed", "linking", "external"}:
+            raise KeyError(kind)
+        return getattr(self, kind)
+
+    def remove_boundary_entry(self, kind: str, index: int) -> Optional[BoundaryEntry]:
+        """Drop one prescribed, linking, or external BC.
+
+        External groups are indexed in parallel with each load step's
+        ``external_values``; those slots are removed so remaining loads stay
+        attached to the right group.
+        """
+        entries = self.boundary_entries(kind)
+        if index < 0 or index >= len(entries):
+            return None
+        removed = entries.pop(index)
+        if kind == "external":
+            for step in self.steps:
+                values = list(step.external_values)
+                if index < len(values):
+                    values.pop(index)
+                    step.external_values = values
+        return removed
 
 
 class MaterialModel(BaseModel):

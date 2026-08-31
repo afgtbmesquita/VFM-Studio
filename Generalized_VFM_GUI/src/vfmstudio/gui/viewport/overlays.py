@@ -7,7 +7,7 @@ from typing import Any, Optional
 import numpy as np
 
 from vfmstudio.core import mesh_convert
-from vfmstudio.core.fields import field_math_title
+from vfmstudio.core.fields import conjugate_moment_plain, field_math_title
 from vfmstudio.core.document import ExperimentModel
 from vfmstudio.gui.session import Selection
 
@@ -18,6 +18,11 @@ BC_COLORS = {
     "external": "#1baf7a",
 }
 HIGHLIGHT = "#F5C518"
+PRESCRIBED_CONE_SCALE = 0.5
+_ISO_SHEAR_X = 0.45
+_ISO_SHEAR_Y = 0.20
+_ARC_THETA_EPS = 0.12
+_ARC_SAMPLES = 36
 
 _EDGE_INWARD = {
     "left": np.array([1.0, 0.0, 0.0]),
@@ -126,6 +131,8 @@ def add_field_contour(
     pts: np.ndarray,
     values: np.ndarray,
     scalar_name: str,
+    *,
+    deformed: bool = False,
 ) -> None:
     xyz = np.asarray(pts, dtype=float)
     scalars = np.asarray(values, dtype=float).ravel()
@@ -150,18 +157,121 @@ def add_field_contour(
         scalars=scalar_name,
         cmap="RdBu_r",
         show_edges=False,
-        lighting=False,
+        lighting=bool(deformed),
+        smooth_shading=bool(deformed),
         name="contour",
         show_scalar_bar=False,
     )
+    if deformed:
+        kwargs.update(ambient=0.40, diffuse=0.60, specular=0.18, specular_power=12)
     if clim is not None:
         kwargs["clim"] = clim
     try:
         plotter.add_mesh(surf, **kwargs)
     except TypeError:
         kwargs.pop("lighting", None)
+        kwargs.pop("smooth_shading", None)
+        kwargs.pop("ambient", None)
+        kwargs.pop("diffuse", None)
+        kwargs.pop("specular", None)
+        kwargs.pop("specular_power", None)
         plotter.add_mesh(surf, **kwargs)
     _add_styled_scalar_bar(plotter, field_math_title(scalar_name))
+    return surf
+
+
+def set_mesh_points(mesh, pts: np.ndarray) -> bool:
+    """Replace point coordinates on an existing PolyData / grid (no retessellation)."""
+    if mesh is None:
+        return False
+    xyz = np.asarray(pts, dtype=float)
+    try:
+        n = int(mesh.n_points)
+    except Exception:
+        return False
+    if xyz.ndim != 2 or xyz.shape[0] < n or xyz.shape[1] < 3:
+        return False
+    try:
+        mesh.points = xyz[:n, :3]
+    except Exception:
+        return False
+    return True
+
+
+def add_viewport_caption(plotter, text: str) -> None:
+    """Plain corner annotation — text only, no billboard or frame."""
+    if plotter is None:
+        return
+    try:
+        plotter.remove_actor("view_caption")
+    except Exception:
+        pass
+    body = str(text or "").strip()
+    if not body:
+        return
+    kwargs = dict(
+        position="lower_right",
+        font_size=9,
+        color="#1a1a1a",
+        name="view_caption",
+        shadow=False,
+    )
+    actor = None
+    try:
+        actor = plotter.add_text(body, font="arial", **kwargs)
+    except TypeError:
+        try:
+            actor = plotter.add_text(body, **kwargs)
+        except TypeError:
+            kwargs.pop("shadow", None)
+            kwargs.pop("name", None)
+            try:
+                actor = plotter.add_text(body, **kwargs)
+            except Exception:
+                return
+    _clear_text_backdrop(actor)
+
+
+def _clear_text_backdrop(actor) -> None:
+    """Strip VTK text frames/fills so the caption is letters only."""
+    if actor is None:
+        return
+    props = []
+    getter = getattr(actor, "GetTextProperty", None)
+    if callable(getter):
+        try:
+            props.append(getter())
+        except Exception:
+            pass
+    inner = getattr(actor, "GetTextActor", None)
+    if callable(inner):
+        try:
+            text_actor = inner()
+            get_prop = getattr(text_actor, "GetTextProperty", None)
+            if callable(get_prop):
+                props.append(get_prop())
+        except Exception:
+            pass
+    for prop in props:
+        if prop is None:
+            continue
+        for method in ("FrameOff", "ShadowOff"):
+            fn = getattr(prop, method, None)
+            if callable(fn):
+                try:
+                    fn()
+                except Exception:
+                    pass
+        for method, value in (
+            ("SetBackgroundOpacity", 0.0),
+            ("SetFrame", 0),
+        ):
+            fn = getattr(prop, method, None)
+            if callable(fn):
+                try:
+                    fn(value)
+                except Exception:
+                    pass
 
 
 def add_dic_points(
@@ -171,7 +281,7 @@ def add_dic_points(
     color: str = "#B8B8B8",
     values: Optional[np.ndarray] = None,
     scalar_name: str = "field",
-) -> None:
+):
     cloud = pv.PolyData(np.asarray(pts, dtype=float))
     kwargs = dict(
         point_size=8,
@@ -195,6 +305,7 @@ def add_dic_points(
     except TypeError:
         kwargs.pop("lighting", None)
         plotter.add_mesh(cloud, **kwargs)
+    return cloud
 
 
 def _unit(vector) -> np.ndarray:
@@ -239,6 +350,175 @@ def dof_direction(dof: str) -> np.ndarray:
 def is_angular_dof(dof: str) -> bool:
     key = str(dof or "").strip().upper().replace(" ", "_")
     return key in _ANGULAR_DOFS
+
+
+def _dof_key(dof: str) -> str:
+    return str(dof or "").strip().upper().replace(" ", "_")
+
+
+def moment_plane_normal(dof: str, edge: Optional[str] = None) -> np.ndarray:
+    """In-plane axis ``n`` spanning the Kirchhoff moment-arc plane with +Z.
+
+    The arc lives in the plane of the rotation the traction produces, not in
+    a DOF-named plane.  ``W_X`` is ``∂w/∂x`` (rotation about Y → Z–X): that
+    is ``M_xx`` on left/right and the twisting ``M_xy`` on top/bottom.
+    ``W_Y`` is the Z–Y arc: ``M_yy`` on top/bottom, ``M_xy`` on left/right.
+    ``W_XY`` follows the edge tangent (top/bottom → X, left/right → Y).
+    """
+    key = _dof_key(dof)
+    side = str(edge or "").strip().lower()
+    if key == "W_X":
+        return np.array([1.0, 0.0, 0.0])
+    if key == "W_Y":
+        return np.array([0.0, 1.0, 0.0])
+    if key == "W_XY":
+        if side in ("left", "right"):
+            return np.array([0.0, 1.0, 0.0])
+        return np.array([1.0, 0.0, 0.0])
+    axis = dof_direction(key)
+    planar = np.array([axis[0], axis[1], 0.0])
+    if float(np.linalg.norm(planar)) <= 1.0e-15:
+        return np.array([1.0, 0.0, 0.0])
+    return _unit(planar)
+
+
+def _as_xyz(point, z: float = 0.0) -> np.ndarray:
+    point = np.asarray(point, dtype=float).reshape(-1)
+    if point.size >= 3:
+        return point[:3].copy()
+    return np.array(
+        [
+            point[0] if point.size > 0 else 0.0,
+            point[1] if point.size > 1 else 0.0,
+            z,
+        ]
+    )
+
+
+def moment_label_anchor(
+    origin,
+    plane_axis,
+    radius: float,
+    specimen_center=None,
+) -> np.ndarray:
+    """Place the EVW label above the arc crest, out of the moment plane.
+
+    The previous offset was ``origin + 0.85 R * inward``. On a top-edge
+    ``M_yy`` glyph the inward is −Y, which lies in the Z–Y arc plane, so the
+    green text sat on the green tube. From a camera looking along Y the same
+    inward offset also projects a top-edge ``M_xy`` label onto the Z–X arc.
+    """
+    origin = _as_xyz(origin)
+    planar = _as_xyz(plane_axis)
+    planar[2] = 0.0
+    n = (
+        _unit(planar)
+        if float(np.linalg.norm(planar)) > 1.0e-15
+        else np.array([1.0, 0.0, 0.0])
+    )
+    z_hat = np.array([0.0, 0.0, 1.0])
+    sideways = np.cross(z_hat, n)
+    if float(np.linalg.norm(sideways)) <= 1.0e-15:
+        sideways = np.array([1.0, 0.0, 0.0])
+    else:
+        sideways = _unit(sideways)
+    if specimen_center is not None:
+        to_center = _as_xyz(specimen_center) - origin
+        to_center[2] = 0.0
+        if float(np.dot(sideways, to_center)) < 0.0:
+            sideways = -sideways
+    radius = float(radius)
+    return origin + 1.28 * radius * z_hat + 0.82 * radius * sideways
+
+
+def _median_edge_z(surface_xyz, edge: str, mesh_pkg: Any) -> float:
+    """Median deformed Z of DIC points that sit on a named mesh edge."""
+    pts = np.asarray(surface_xyz, dtype=float)
+    if pts.ndim != 2 or pts.shape[0] == 0 or pts.shape[1] < 3:
+        return 0.0
+    xyz = mesh_convert.mesh_xyz(mesh_pkg)
+    x_min, x_max = float(xyz[:, 0].min()), float(xyz[:, 0].max())
+    y_min, y_max = float(xyz[:, 1].min()), float(xyz[:, 1].max())
+    span_x = max(x_max - x_min, 1.0e-9)
+    span_y = max(y_max - y_min, 1.0e-9)
+    band = 0.08
+    key = str(edge or "").strip().lower()
+    if key == "top":
+        mask = pts[:, 1] >= y_max - band * span_y
+    elif key == "bottom":
+        mask = pts[:, 1] <= y_min + band * span_y
+    elif key == "left":
+        mask = pts[:, 0] <= x_min + band * span_x
+    elif key == "right":
+        mask = pts[:, 0] >= x_max - band * span_x
+    else:
+        mask = np.ones(pts.shape[0], dtype=bool)
+    z = pts[mask, 2] if mask.any() else pts[:, 2]
+    finite = z[np.isfinite(z)]
+    if finite.size == 0:
+        return 0.0
+    return float(np.median(finite))
+
+
+def moment_arc_points(
+    origin,
+    plane_axis,
+    radius: float,
+    n_samples: int = _ARC_SAMPLES,
+) -> np.ndarray:
+    """Semicircle in the ``n``–Z plane, bulge on +Z, arrowhead at +n.
+
+    ``p(θ) = origin + R (cos θ n + sin θ e_z)`` with θ running from
+    ``π−ε`` down to ``ε``, so the tangent at the crest takes +Z toward +n
+    (CLT positive ``M_αα`` / positive ``κ_αα``).
+    """
+    origin = np.asarray(origin, dtype=float).reshape(-1)
+    if origin.size < 3:
+        origin = np.array(
+            [
+                origin[0] if origin.size > 0 else 0.0,
+                origin[1] if origin.size > 1 else 0.0,
+                0.0,
+            ]
+        )
+    else:
+        origin = origin[:3].copy()
+    planar = np.asarray(plane_axis, dtype=float).reshape(-1)
+    if planar.size < 3:
+        planar = np.array(
+            [planar[0] if planar.size > 0 else 1.0,
+             planar[1] if planar.size > 1 else 0.0, 0.0]
+        )
+    planar[2] = 0.0
+    n = _unit(planar) if float(np.linalg.norm(planar)) > 1.0e-15 else np.array(
+        [1.0, 0.0, 0.0]
+    )
+    z = np.array([0.0, 0.0, 1.0])
+    theta = np.linspace(np.pi - _ARC_THETA_EPS, _ARC_THETA_EPS, int(max(n_samples, 3)))
+    radius = float(radius)
+    return origin[None, :] + radius * (
+        np.cos(theta)[:, None] * n[None, :] + np.sin(theta)[:, None] * z[None, :]
+    )
+
+
+def _isometric_xy(origin_xy, offset_xyz) -> np.ndarray:
+    """Top-view shear used by Z-pyramids: z contributes to both x and y."""
+    origin_xy = np.asarray(origin_xy, dtype=float).reshape(-1)[:2]
+    offset_xyz = np.asarray(offset_xyz, dtype=float).reshape(-1)
+    if offset_xyz.size < 3:
+        offset_xyz = np.array(
+            [
+                offset_xyz[0] if offset_xyz.size > 0 else 0.0,
+                offset_xyz[1] if offset_xyz.size > 1 else 0.0,
+                0.0,
+            ]
+        )
+    return origin_xy + np.array(
+        [
+            offset_xyz[0] + _ISO_SHEAR_X * offset_xyz[2],
+            offset_xyz[1] + _ISO_SHEAR_Y * offset_xyz[2],
+        ]
+    )
 
 
 def display_axis(dof: str, inward: Optional[np.ndarray] = None) -> np.ndarray:
@@ -311,32 +591,28 @@ def _force_arrow(pv, origin: np.ndarray, direction: np.ndarray, length: float):
     return _merge(pv, [shaft, head])
 
 
-def _moment_arrow(pv, origin: np.ndarray, direction: np.ndarray, length: float):
-    """Abaqus concentrated moment: two heads, same direction, different lengths."""
-    direction = _unit(direction)
-    origin = np.asarray(origin, dtype=float)
-    shaft = pv.Cylinder(
-        center=origin + 0.40 * length * direction,
-        direction=direction,
-        radius=0.045 * length,
-        height=0.80 * length,
-        resolution=18,
-    )
-    head_far = pv.Cone(
-        center=origin + 0.86 * length * direction,
-        direction=direction,
-        height=0.28 * length,
-        radius=0.17 * length,
+def _moment_arc(pv, origin: np.ndarray, plane_axis: np.ndarray, radius: float):
+    """Kirchhoff moment: tube along a +Z semicircle in the n–Z plane, head at +n."""
+    pts = moment_arc_points(origin, plane_axis, radius)
+    n_pts = int(pts.shape[0])
+    if n_pts < 2:
+        return None
+    poly = pv.PolyData(pts)
+    poly.lines = np.hstack([[n_pts], np.arange(n_pts, dtype=np.int64)]).astype(np.int64)
+    try:
+        shaft = poly.tube(radius=0.08 * float(radius), n_sides=16, capping=True)
+    except TypeError:
+        shaft = poly.tube(radius=0.08 * float(radius))
+    tangent = _unit(pts[-1] - pts[-2])
+    head_h = 0.28 * float(radius)
+    head = pv.Cone(
+        center=pts[-1] + 0.50 * head_h * tangent,
+        direction=tangent,
+        height=head_h,
+        radius=0.17 * float(radius),
         resolution=20,
     )
-    head_near = pv.Cone(
-        center=origin + 0.58 * length * direction,
-        direction=direction,
-        height=0.22 * length,
-        radius=0.12 * length,
-        resolution=20,
-    )
-    return _merge(pv, [shaft, head_far, head_near])
+    return _merge(pv, [shaft, head])
 
 
 def _glyph_scale(mesh_pkg: Any) -> float:
@@ -352,17 +628,25 @@ def _subsample(xyz: np.ndarray, limit: int = 5) -> np.ndarray:
     return xyz[idx]
 
 
-def _remove_bc_actors(plotter, experiment: ExperimentModel) -> None:
-    for kind, entries in (
-        ("prescribed", experiment.prescribed),
-        ("linking", experiment.linking),
-        ("external", experiment.external),
-    ):
-        for index, _entry in enumerate(entries):
-            try:
-                plotter.remove_actor(f"bc-{kind}-{index}")
-            except Exception:
-                pass
+def _remove_bc_actors(plotter, experiment: ExperimentModel | None = None) -> None:
+    names = []
+    actors = getattr(plotter, "actors", None) or {}
+    for name in list(actors):
+        if str(name).startswith("bc-"):
+            names.append(name)
+    if not names and experiment is not None:
+        for kind, entries in (
+            ("prescribed", experiment.prescribed),
+            ("linking", experiment.linking),
+            ("external", experiment.external),
+        ):
+            for index in range(len(entries) + 1):
+                names.append(f"bc-{kind}-{index}")
+    for name in names:
+        try:
+            plotter.remove_actor(name)
+        except Exception:
+            pass
 
 
 def add_bc_glyphs(
@@ -371,12 +655,15 @@ def add_bc_glyphs(
     experiment: ExperimentModel,
     mesh_pkg: Any,
     selection: Optional[Selection] = None,
+    surface_xyz: Optional[np.ndarray] = None,
 ) -> None:
     """Abaqus BC symbols oriented along each constrained / loaded DOF."""
     scale = _glyph_scale(mesh_pkg)
     selected = None
     if selection is not None and selection.kind == "bc":
         selected = (selection.bc_kind, selection.bc_index)
+    mesh_xyz = mesh_convert.mesh_xyz(mesh_pkg)
+    specimen_center = mesh_xyz.mean(axis=0) if mesh_xyz.size else np.zeros(3)
     for kind, entries in (
         ("prescribed", experiment.prescribed),
         ("linking", experiment.linking),
@@ -388,6 +675,9 @@ def add_bc_glyphs(
             xyz = mesh_convert.edge_node_xyz(mesh_pkg, entry.edge)
             if xyz.size == 0:
                 continue
+            if surface_xyz is not None:
+                xyz = np.asarray(xyz, dtype=float).copy()
+                xyz[:, 2] = _median_edge_z(surface_xyz, entry.edge, mesh_pkg)
             pts = _subsample(xyz)
             inward = _EDGE_INWARD.get(str(entry.edge).lower(), np.array([0.0, 0.0, 1.0]))
             axis = display_axis(entry.dof, inward)
@@ -400,10 +690,14 @@ def add_bc_glyphs(
             try:
                 geom = None
                 if kind == "prescribed":
+                    cone_mag = PRESCRIBED_CONE_SCALE * mag
                     if is_angular_dof(entry.dof):
-                        parts = [_double_cone(pv, pt, axis, 0.85 * mag, 0.26 * mag) for pt in pts]
+                        parts = [
+                            _double_cone(pv, pt, axis, 0.85 * cone_mag, 0.26 * cone_mag)
+                            for pt in pts
+                        ]
                     else:
-                        parts = [_pin_cone(pv, pt, axis, mag, 0.30 * mag) for pt in pts]
+                        parts = [_pin_cone(pv, pt, axis, cone_mag, 0.30 * cone_mag) for pt in pts]
                     geom = _merge(pv, parts)
                 elif kind == "linking":
                     plotter.add_mesh(
@@ -416,11 +710,12 @@ def add_bc_glyphs(
                     )
                     continue
                 else:
-                    length = mag * (2.1 if is_angular_dof(entry.dof) else 1.8)
                     if is_angular_dof(entry.dof):
-                        parts = [_moment_arrow(pv, pt, axis, length) for pt in pts]
+                        plane_n = moment_plane_normal(entry.dof, entry.edge)
+                        radius = 0.90 * mag
+                        parts = [_moment_arc(pv, pt, plane_n, radius) for pt in pts]
                     else:
-                        parts = [_force_arrow(pv, pt, axis, length) for pt in pts]
+                        parts = [_force_arrow(pv, pt, axis, mag * 1.8) for pt in pts]
                     geom = _merge(pv, parts)
                 if geom is not None:
                     plotter.add_mesh(
@@ -429,6 +724,17 @@ def add_bc_glyphs(
                         name=name,
                         reset_camera=False,
                         smooth_shading=True,
+                    )
+                if kind == "external" and is_angular_dof(entry.dof):
+                    label = conjugate_moment_plain(entry.dof, entry.edge)
+                    origin = np.asarray(pts, dtype=float).mean(axis=0)
+                    plane_n = moment_plane_normal(entry.dof, entry.edge)
+                    radius = 0.90 * mag
+                    anchor = moment_label_anchor(
+                        origin, plane_n, radius, specimen_center=specimen_center
+                    )
+                    _add_moment_point_label(
+                        plotter, anchor, label, name=f"{name}-label"
                     )
             except Exception:
                 pass
@@ -523,7 +829,9 @@ def _z_pyramid_2d(axis, origin, size: float, color: str, sign: float = 1.0) -> N
     z = sign * height
 
     def _project(x: float, y: float, z_value: float) -> np.ndarray:
-        return origin + np.array([x + 0.45 * z_value, y + 0.20 * z_value])
+        return origin + np.array(
+            [x + _ISO_SHEAR_X * z_value, y + _ISO_SHEAR_Y * z_value]
+        )
 
     apex = _project(0.0, 0.0, 0.0)
     b1 = _project(radius, 0.0, z)
@@ -572,10 +880,34 @@ def _arrow_2d(axis, origin, direction, length: float, color: str, head_scale: fl
     )
 
 
-def _moment_arrow_2d(axis, origin, direction, length: float, color: str) -> None:
-    """Abaqus moment: two heads, same direction, slightly different lengths."""
-    _arrow_2d(axis, origin, direction, length, color, head_scale=1.0)
-    _arrow_2d(axis, origin, direction, 0.70 * length, color, head_scale=0.82)
+def _moment_arc_2d(axis, origin, plane_axis, radius: float, color: str) -> None:
+    """Isometric projection of the Kirchhoff n–Z moment arc (same as 3D)."""
+    from matplotlib.path import Path
+    from matplotlib.patches import PathPatch
+
+    pts = moment_arc_points(origin, plane_axis, radius)
+    origin_xy = np.asarray(origin, dtype=float).reshape(-1)[:2]
+    projected = np.vstack(
+        [_isometric_xy(origin_xy, pt - np.array([origin_xy[0], origin_xy[1], 0.0])) for pt in pts]
+    )
+    if projected.shape[0] < 2:
+        return
+    verts = projected
+    codes = [Path.MOVETO] + [Path.LINETO] * (len(verts) - 1)
+    axis.add_patch(
+        PathPatch(
+            Path(verts, codes),
+            facecolor="none",
+            edgecolor=color,
+            linewidth=1.6,
+            capstyle="round",
+            joinstyle="round",
+            zorder=8,
+            clip_on=False,
+        )
+    )
+    tangent = projected[-1] - projected[-2]
+    _triangle_2d(axis, projected[-1], tangent, 0.32 * float(radius), color)
 
 
 def add_bc_symbols_2d(
@@ -591,6 +923,7 @@ def add_bc_symbols_2d(
 
     span = float(max(x_max - x_min, y_max - y_min, 1.0))
     pin = 0.055 * span
+    cone_pin = PRESCRIBED_CONE_SCALE * pin
     arrow = 0.11 * span
     for kind, entries in (
         ("prescribed", experiment.prescribed),
@@ -628,20 +961,54 @@ def add_bc_symbols_2d(
                 if kind == "prescribed":
                     if is_angular_dof(entry.dof):
                         if along_z:
-                            _z_pyramid_2d(axis, pt, 0.85 * pin, color, sign=1.0)
-                            _z_pyramid_2d(axis, pt, 0.85 * pin, color, sign=-1.0)
+                            _z_pyramid_2d(axis, pt, 0.85 * cone_pin, color, sign=1.0)
+                            _z_pyramid_2d(axis, pt, 0.85 * cone_pin, color, sign=-1.0)
                         else:
-                            _triangle_2d(axis, pt, plane, 0.90 * pin, color)
-                            _triangle_2d(axis, pt, -plane, 0.90 * pin, color)
+                            _triangle_2d(axis, pt, plane, 0.90 * cone_pin, color)
+                            _triangle_2d(axis, pt, -plane, 0.90 * cone_pin, color)
                     elif along_z:
-                        _z_pyramid_2d(axis, pt, pin, color, sign=1.0)
+                        _z_pyramid_2d(axis, pt, cone_pin, color, sign=1.0)
                     else:
-                        _triangle_2d(axis, pt, plane, pin, color)
+                        _triangle_2d(axis, pt, plane, cone_pin, color)
                     continue
                 if is_angular_dof(entry.dof):
-                    _moment_arrow_2d(axis, pt, plane, 1.15 * arrow, color)
+                    plane_n = moment_plane_normal(entry.dof, entry.edge)
+                    _moment_arc_2d(axis, pt, plane_n, 0.90 * pin, color)
                 else:
                     _arrow_2d(axis, pt, plane, arrow, color)
+            if kind == "external" and is_angular_dof(entry.dof):
+                mid = np.asarray(pts, dtype=float).mean(axis=0)
+                label = conjugate_moment_plain(entry.dof, entry.edge)
+                plane_n = moment_plane_normal(entry.dof, entry.edge)
+                radius = 0.90 * pin
+                specimen_center = np.array(
+                    [0.5 * (x_min + x_max), 0.5 * (y_min + y_max), 0.0]
+                )
+                anchor3 = moment_label_anchor(
+                    [mid[0], mid[1], 0.0],
+                    plane_n,
+                    radius,
+                    specimen_center=specimen_center,
+                )
+                anchor_xy = _isometric_xy(mid, anchor3 - np.array([mid[0], mid[1], 0.0]))
+                axis.text(
+                    anchor_xy[0],
+                    anchor_xy[1],
+                    label,
+                    color="#0B3D2E",
+                    fontsize=9,
+                    ha="center",
+                    va="center",
+                    zorder=9,
+                    clip_on=False,
+                    bbox={
+                        "boxstyle": "round,pad=0.22",
+                        "facecolor": "white",
+                        "edgecolor": color,
+                        "linewidth": 0.7,
+                        "alpha": 0.94,
+                    },
+                )
 
 
 def update_bc_glyphs(
@@ -650,9 +1017,45 @@ def update_bc_glyphs(
     experiment: ExperimentModel,
     mesh_pkg: Any,
     selection: Optional[Selection] = None,
+    surface_xyz: Optional[np.ndarray] = None,
 ) -> None:
     _remove_bc_actors(plotter, experiment)
-    add_bc_glyphs(plotter, pv, experiment, mesh_pkg, selection)
+    add_bc_glyphs(
+        plotter, pv, experiment, mesh_pkg, selection, surface_xyz=surface_xyz
+    )
+
+
+def _add_moment_point_label(plotter, anchor, label: str, *, name: str) -> None:
+    """Dark text on a white billboard so the green Myy/Mxy label is readable."""
+    kwargs = dict(
+        text_color="#0B3D2E",
+        font_size=14,
+        fill_shape=True,
+        shape_color="white",
+        shape_opacity=0.94,
+        always_visible=True,
+        justification_horizontal="center",
+        show_points=False,
+        name=name,
+        reset_camera=False,
+        render=False,
+    )
+    try:
+        plotter.add_point_labels([anchor], [label], **kwargs)
+    except TypeError:
+        fallback = dict(
+            text_color="#0B3D2E",
+            font_size=14,
+            fill_shape=True,
+            shape="rounded_rect",
+            name=name,
+        )
+        try:
+            plotter.add_point_labels([anchor], [label], **fallback)
+        except TypeError:
+            plotter.add_point_labels(
+                [anchor], [label], text_color="#0B3D2E", font_size=14, name=name
+            )
 
 
 def add_material_axes(plotter, experiment: ExperimentModel, mesh_pkg: Any) -> None:

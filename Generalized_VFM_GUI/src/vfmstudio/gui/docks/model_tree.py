@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from PySide6.QtCore import QSize, Qt, Signal
-from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtGui import QFont, QKeySequence, QShortcut
+from PySide6.QtWidgets import QMenu, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget
 
 from vfmstudio.gui.session import AppSession, Selection
 from vfmstudio.resources import icon
@@ -54,6 +54,12 @@ _KIND_ICONS = {
     "post_uncertainty_info": "post",
     "post_uncertainty_loo": "post",
 }
+
+_BC_ADD_LABELS = (
+    ("prescribed", "Add prescribed BC…"),
+    ("linking", "Add linking BC…"),
+    ("external", "Add external BC…"),
+)
 
 _POST_CHILDREN = (
     ("Coefficient Evolution", "post_plots", ()),
@@ -143,6 +149,8 @@ def _node_matches(node: QTreeWidgetItem, selection: Selection) -> bool:
 
 class ModelTreeDock(QWidget):
     selection_changed = Signal(object)
+    request_add_bc = Signal(int, str)
+    request_delete_bc = Signal(int, str, int)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -156,7 +164,12 @@ class ModelTreeDock(QWidget):
         self.tree.setTextElideMode(Qt.TextElideMode.ElideRight)
         self.tree.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.tree.setStyleSheet("QTreeView { padding: 0px; margin: 0px; }")
+        self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(self._on_context_menu)
         self.tree.itemSelectionChanged.connect(self._emit_selection)
+        self._delete_bc_shortcut = QShortcut(QKeySequence.StandardKey.Delete, self.tree)
+        self._delete_bc_shortcut.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
+        self._delete_bc_shortcut.activated.connect(self._delete_current_bc)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.tree)
@@ -224,6 +237,10 @@ class ModelTreeDock(QWidget):
         match = self._find_item(selection)
         self.tree.blockSignals(True)
         if match is not None:
+            parent = match.parent()
+            while parent is not None:
+                parent.setExpanded(True)
+                parent = parent.parent()
             self.tree.setCurrentItem(match)
         else:
             self.tree.clearSelection()
@@ -250,3 +267,57 @@ class ModelTreeDock(QWidget):
         if not items:
             return
         self.selection_changed.emit(_selection_from_node(items[0]))
+
+    def _on_context_menu(self, pos) -> None:
+        node = self.tree.itemAt(pos)
+        if node is None:
+            return
+        self.tree.setCurrentItem(node)
+        kind = str(node.data(0, ROLE_KIND) or "")
+        menu = QMenu(self)
+        if kind == "bcs":
+            for bc_kind, label in _BC_ADD_LABELS:
+                action = menu.addAction(label)
+                action.setData(bc_kind)
+        elif kind == "bc_group":
+            bc_kind = str(node.data(0, ROLE_BC_KIND) or "")
+            if bc_kind in {"prescribed", "linking", "external"}:
+                action = menu.addAction(f"Add {bc_kind} BC…")
+                action.setData(bc_kind)
+        elif kind == "bc":
+            label = node.text(0) or "boundary condition"
+            action = menu.addAction(f'Delete "{label}"')
+            chosen = menu.exec(self.tree.viewport().mapToGlobal(pos))
+            if chosen is action:
+                self._emit_delete(node)
+            return
+        else:
+            return
+        if not menu.actions():
+            return
+        chosen = menu.exec(self.tree.viewport().mapToGlobal(pos))
+        if chosen is not None:
+            self._emit_add(node, str(chosen.data()))
+
+    def _delete_current_bc(self) -> None:
+        items = self.tree.selectedItems()
+        if not items:
+            return
+        node = items[0]
+        if str(node.data(0, ROLE_KIND) or "") != "bc":
+            return
+        self._emit_delete(node)
+
+    def _emit_add(self, node: QTreeWidgetItem, kind: str) -> None:
+        experiment_id = node.data(0, ROLE_EXP)
+        if experiment_id is None or kind not in {"prescribed", "linking", "external"}:
+            return
+        self.request_add_bc.emit(int(experiment_id), kind)
+
+    def _emit_delete(self, node: QTreeWidgetItem) -> None:
+        experiment_id = node.data(0, ROLE_EXP)
+        kind = node.data(0, ROLE_BC_KIND)
+        index = node.data(0, ROLE_BC_INDEX)
+        if experiment_id is None or not kind or index is None:
+            return
+        self.request_delete_bc.emit(int(experiment_id), str(kind), int(index))

@@ -1120,20 +1120,23 @@ def main() -> int:
             raise AssertionError("Expected an empty EXTERNAL list to raise.")
 
         #  (2) load declared on the wrong axis.  kappa_yy dominates 18x, so a
-        #  W_X (i.e. M_xx) group is inconsistent -- the run would complete and
-        #  report the OTHER coefficient.
+        #  W_X-on-top group (twisting M_xy, not M_xx) is inconsistent with a
+        #  bending field -- the run would complete and report the OTHER
+        #  coefficient.
         assert not check_load_orientation(
             _guard_project("W_Y", 5.0e-4, -9.7e-3)), (
             "a correctly-oriented experiment must not warn")
 
         swapped = check_load_orientation(_guard_project("W_X", 5.0e-4, -9.7e-3))
         assert swapped and "kappa_yy" in swapped[0], swapped
+        assert "kappa_xy" in swapped[0] or "M_xy" in swapped[0], swapped
 
-        #  ...but a genuinely biaxial coupon (an off-axis or torsion test) has
-        #  no dominant curvature, so the check must stay SILENT rather than
-        #  cry wolf on the 45 deg experiment this solver now supports.
+        #  ...but a genuinely biaxial BENDING coupon (an off-axis test) has
+        #  no dominant normal curvature, so the check must stay SILENT rather
+        #  than cry wolf on the 45 deg experiment this solver now supports.
+        #  W_Y on top is M_yy; W_X on top is twist and is checked separately.
         assert not check_load_orientation(
-            _guard_project("W_X", -7.5e-3, -9.7e-3)), (
+            _guard_project("W_Y", -7.5e-3, -9.7e-3)), (
             "the orientation check must not fire on a biaxial coupon")
 
         print("[smoke]   project guards (missing EXTERNAL, swapped load) OK.")

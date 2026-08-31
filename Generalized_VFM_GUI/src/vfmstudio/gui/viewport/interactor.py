@@ -10,8 +10,13 @@ from PySide6.QtWidgets import QGridLayout, QLabel, QStackedWidget, QWidget
 
 from vfmstudio.core import bridge, mesh_convert
 from vfmstudio.core.document import ExperimentModel, SessionDocument
-from vfmstudio.core.fields import experiment_alignment_angle, load_step_fields
-from vfmstudio.core.step_series import resolve_step_data_file
+from vfmstudio.core.fields import (
+    experiment_alignment_angle,
+    has_deformed_configuration,
+    load_step_fields,
+    specimen_points_xyz,
+)
+from vfmstudio.core.step_series import resolve_step_data_file, viewport_caption
 from vfmstudio.gui.session import AppSession
 from vfmstudio.gui.viewport import overlays
 from vfmstudio.gui.viewport.load_plot import LoadPlotOverlay
@@ -40,6 +45,11 @@ class ViewportWidget(QWidget):
         self._last_dic_xyz = None
         self._xy_axes_on = False
         self._element_counts_on = False
+        self._showing_deformed = False
+        self._last_applied_force = None
+        self._ref_xyz = None
+        self._uvw = None
+        self._warp_mesh = None
         self._session: AppSession | None = None
         self._load_plot_visible = False
         layout = QGridLayout(self)
@@ -135,6 +145,63 @@ class ViewportWidget(QWidget):
     def load_plot_visible(self) -> bool:
         return self._load_plot_visible
 
+    def _update_caption(self, session: AppSession) -> None:
+        if self._plotter is None:
+            return
+        experiment = session.selected_experiment()
+        if experiment is None:
+            overlays.add_viewport_caption(self._plotter, "")
+            return
+        step = session.selected_step()
+        step_index = 0
+        if experiment.steps:
+            if session.selection.step_index is not None:
+                step_index = int(session.selection.step_index)
+            elif step is not None:
+                try:
+                    step_index = experiment.steps.index(step)
+                except ValueError:
+                    step_index = 0
+        overlays.add_viewport_caption(
+            self._plotter,
+            viewport_caption(
+                experiment,
+                step,
+                step_index=step_index,
+                applied_force=self._last_applied_force,
+            ),
+        )
+
+    def apply_deformation_scale(
+        self, session: AppSession, scale: float, *, live: bool = True
+    ) -> None:
+        """Warp the existing DIC surface without retessellating or rebuilding BCs."""
+        self._session = session
+        if self._plotter is None or self._ref_xyz is None or self._uvw is None:
+            return
+        if not self._showing_deformed:
+            return
+        factor = max(0.0, float(scale))
+        pts = self._ref_xyz + factor * self._uvw
+        self._last_dic_xyz = pts
+        overlays.set_mesh_points(self._warp_mesh, pts)
+        if not live and self._mesh_pkg is not None:
+            experiment = session.selected_experiment()
+            if experiment is not None:
+                overlays.update_bc_glyphs(
+                    self._plotter,
+                    self._pv,
+                    experiment,
+                    self._mesh_pkg,
+                    session.selection,
+                    surface_xyz=pts,
+                )
+        try:
+            self._plotter.render()
+        except Exception:
+            pass
+        self._scene_key = _scene_key(session)
+
     def refresh(self, session: AppSession, force: bool = False) -> None:
         self._session = session
         if self._load_plot_visible:
@@ -162,6 +229,12 @@ class ViewportWidget(QWidget):
             self._last_dic_xyz = None
             self._xy_axes_on = False
             self._element_counts_on = False
+            self._showing_deformed = False
+            self._last_applied_force = None
+            self._ref_xyz = None
+            self._uvw = None
+            self._warp_mesh = None
+            self._update_caption(session)
             return
         try:
             if rebuild_mesh:
@@ -176,28 +249,32 @@ class ViewportWidget(QWidget):
                 self._mesh_pkg = mesh_pkg
                 self._mesh_key = mesh_key
                 self._bc_key = bc_key
-                try:
-                    self._plotter.render()
-                except Exception:
-                    pass
             else:
-                overlays.remove_named(self._plotter, "dic", "contour", "cid")
+                overlays.remove_named(self._plotter, "dic", "contour", "cid", "deformed_msg")
                 if bc_key != self._bc_key and self._mesh_pkg is not None:
                     overlays.update_bc_glyphs(
                         self._plotter, self._pv, experiment, self._mesh_pkg, session.selection
                     )
                     self._bc_key = bc_key
-                    try:
-                        self._plotter.render()
-                    except Exception:
-                        pass
         except Exception as exc:
             self._plotter.add_text(f"Mesh error:\n{exc}", font_size=9)
             return
 
         n_points = self._update_dic_cloud(session, experiment)
         if self._mesh_pkg is not None and self._pv is not None:
-            overlays.add_mesh_wireframe(self._plotter, self._pv, self._mesh_pkg)
+            if self._showing_deformed:
+                overlays.set_named_visible(self._plotter, "mesh", False)
+            else:
+                overlays.add_mesh_wireframe(self._plotter, self._pv, self._mesh_pkg)
+            overlays.update_bc_glyphs(
+                self._plotter,
+                self._pv,
+                experiment,
+                self._mesh_pkg,
+                session.selection,
+                surface_xyz=self._last_dic_xyz,
+            )
+            self._bc_key = bc_key
         axes_were_on = self._xy_axes_on
         self._sync_xy_axes(session)
         self._sync_element_point_counts(session)
@@ -206,8 +283,9 @@ class ViewportWidget(QWidget):
         except Exception:
             pass
         if reset_camera or rebuild_mesh or (session.show_xy_axes and not axes_were_on):
-            self._plotter.reset_camera()
+            self._fit_camera(deformed=self._showing_deformed)
             self._camera_key = camera_key
+        self._update_caption(session)
         session.status_n_points = n_points
         self._scene_key = key
 
@@ -307,9 +385,26 @@ class ViewportWidget(QWidget):
         except Exception:
             return
 
+    def _fit_camera(self, *, deformed: bool) -> None:
+        """Fit the scene; use an isometric view when the plate is warped."""
+        try:
+            if deformed:
+                self._plotter.view_isometric()
+        except Exception:
+            pass
+        try:
+            self._plotter.reset_camera()
+        except Exception:
+            pass
+
     def _update_dic_cloud(self, session: AppSession, experiment: ExperimentModel) -> int:
-        overlays.remove_named(self._plotter, "dic", "contour", "cid")
+        overlays.remove_named(self._plotter, "dic", "contour", "cid", "deformed_msg")
         self._last_dic_xyz = None
+        self._showing_deformed = False
+        self._last_applied_force = None
+        self._ref_xyz = None
+        self._uvw = None
+        self._warp_mesh = None
         scalar_name = session.current_scalar
         if scalar_name.lower() == "cid":
             overlays.set_named_visible(self._plotter, "mesh", True)
@@ -339,35 +434,69 @@ class ViewportWidget(QWidget):
                     alignment_angle_deg=angle if experiment.fit_data_to_system_axes else None,
                 )
                 self._dic_cache[cache_key] = dataset
-            pts = mesh_convert.points_xyz(dataset["x"].values, dataset["y"].values)
+            want_deformed = bool(experiment.show_deformed_configuration)
+            can_deform = has_deformed_configuration(dataset)
+            self._last_applied_force = dataset.attrs.get("applied_force")
+            if want_deformed and not can_deform:
+                try:
+                    self._plotter.add_text(
+                        "Deformed configuration not available",
+                        font_size=9,
+                        name="deformed_msg",
+                    )
+                except Exception:
+                    pass
+            showing = want_deformed and can_deform
+            warp = 1.0
+            if showing:
+                warp = float(getattr(experiment, "deformation_scale", 1.0) or 1.0)
+            ref = specimen_points_xyz(dataset, deformed=False)
+            uvw = None
+            if can_deform:
+                n = int(ref.shape[0])
+                uvw = np.column_stack(
+                    [
+                        np.asarray(dataset["u"].values, dtype=float).ravel()[:n],
+                        np.asarray(dataset["v"].values, dtype=float).ravel()[:n],
+                        np.asarray(dataset["w"].values, dtype=float).ravel()[:n],
+                    ]
+                )
+                n = min(n, uvw.shape[0])
+                ref = ref[:n]
+                uvw = uvw[:n]
+            self._ref_xyz = ref
+            self._uvw = uvw
+            pts = ref if not showing or uvw is None else ref + warp * uvw
             self._last_dic_xyz = pts
+            self._showing_deformed = showing
             n_points = pts.shape[0]
-            warp = float(session.warp_scale)
-            if "w" in dataset:
-                pts[:, 2] = np.asarray(dataset["w"].values, dtype=float) * warp
-            overlays.set_named_visible(self._plotter, "mesh", True)
+            overlays.set_named_visible(self._plotter, "mesh", not showing)
             available = [str(name) for name in dataset.data_vars]
             session.available_scalars = tuple(available)
             if session.display_mode == "points":
-                overlays.add_dic_points(
+                self._warp_mesh = overlays.add_dic_points(
                     self._plotter, self._pv, pts, color="#B8B8B8"
                 )
                 return n_points
             if scalar_name not in dataset:
-                overlays.add_dic_points(
+                self._warp_mesh = overlays.add_dic_points(
                     self._plotter, self._pv, pts, color="#B8B8B8"
                 )
                 return n_points
-            overlays.add_field_contour(
+            self._warp_mesh = overlays.add_field_contour(
                 self._plotter,
                 self._pv,
-                pts,
+                ref,
                 dataset[scalar_name].values,
                 scalar_name,
+                deformed=showing,
             )
+            if showing and uvw is not None:
+                overlays.set_mesh_points(self._warp_mesh, pts)
             return n_points
         except Exception:
             overlays.set_named_visible(self._plotter, "mesh", True)
+            self._showing_deformed = False
             return 0
 
     def _build_mesh(self, document: SessionDocument, experiment: ExperimentModel):
@@ -408,9 +537,15 @@ def _mesh_key(session: AppSession):
         round(bounds.y_min, 6),
         round(bounds.y_max, 6),
         bool(experiment.fit_data_to_system_axes),
-        len(experiment.prescribed),
-        len(experiment.linking),
-        len(experiment.external),
+        tuple(
+            (kind, entry.dof, entry.edge, entry.load_type)
+            for kind, entries in (
+                ("prescribed", experiment.prescribed),
+                ("linking", experiment.linking),
+                ("external", experiment.external),
+            )
+            for entry in entries
+        ),
     )
 
 
@@ -427,6 +562,7 @@ def _camera_key(session: AppSession):
         round(bounds.x_max, 6),
         round(bounds.y_min, 6),
         round(bounds.y_max, 6),
+        bool(experiment.show_deformed_configuration),
     )
 
 
@@ -438,6 +574,7 @@ def _bc_select_key(session: AppSession):
 
 
 def _scene_key(session: AppSession):
+    experiment = session.selected_experiment()
     return (
         _mesh_key(session),
         _existing_data_file(session),
@@ -445,6 +582,10 @@ def _scene_key(session: AppSession):
         session.display_mode,
         bool(session.show_xy_axes),
         bool(session.show_element_point_counts),
-        round(float(session.warp_scale), 4),
+        round(float(getattr(experiment, "deformation_scale", 1.0) or 1.0), 4),
+        session.selection.step_index,
         _bc_select_key(session),
+        bool(getattr(experiment, "show_deformed_configuration", False))
+        if experiment is not None
+        else False,
     )

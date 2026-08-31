@@ -144,6 +144,42 @@ def test_campaign_json_round_trip():
     assert len(project.tests) == sum(len(exp.steps) for exp in document.experiments)
 
 
+def test_remove_boundary_entry_shifts_external_values():
+    experiment = ExperimentModel(
+        experiment_id=1,
+        prescribed=[
+            BoundaryEntry(label="fix W", dof="W", edge="bottom"),
+            BoundaryEntry(label="fix RX", dof="W_X", edge="bottom"),
+        ],
+        linking=[
+            BoundaryEntry(label="link", dof="W", edge="top"),
+        ],
+        external=[
+            BoundaryEntry.model_validate(
+                {"label": "M1", "dof": "W_Y", "edge": "top", "loadType": "distributed"}
+            ),
+            BoundaryEntry.model_validate(
+                {"label": "M2", "dof": "W_Y", "edge": "bottom", "loadType": "distributed"}
+            ),
+        ],
+        steps=[
+            LoadStepModel(data_file="a.mat", external_values=[10.0, 20.0]),
+            LoadStepModel(data_file="b.mat", external_values=[11.0]),
+        ],
+    )
+    first = experiment.remove_boundary_entry("prescribed", 0)
+    assert first is not None and first.label == "fix W"
+    assert [entry.label for entry in experiment.prescribed] == ["fix RX"]
+    assert experiment.remove_boundary_entry("linking", 0) is not None
+    assert experiment.linking == []
+    removed = experiment.remove_boundary_entry("external", 0)
+    assert removed is not None and removed.label == "M1"
+    assert [entry.label for entry in experiment.external] == ["M2"]
+    assert experiment.steps[0].external_values == [20.0]
+    assert experiment.steps[1].external_values == []
+    assert experiment.remove_boundary_entry("prescribed", 9) is None
+
+
 def test_hdf5_round_trip(tmp_path):
     from vfmstudio.io.hdf5_project import load_vfm, save_vfm
 
@@ -210,6 +246,8 @@ def test_vfmproj_analysis_sidecar(tmp_path):
     document.experiments[0].reference_step = 1
     document.experiments[0].fit_data_to_system_axes = True
     document.experiments[0].include_in_identification = False
+    document.experiments[0].show_deformed_configuration = True
+    document.experiments[0].deformation_scale = 8.5
     out = tmp_path / "session.vfmproj.json"
     save_vfmproj(document, out)
     payload = out.read_text(encoding="utf-8")
@@ -221,6 +259,8 @@ def test_vfmproj_analysis_sidecar(tmp_path):
     assert restored.experiments[0].reference_step == 1
     assert restored.experiments[0].fit_data_to_system_axes is True
     assert restored.experiments[0].include_in_identification is False
+    assert restored.experiments[0].show_deformed_configuration is True
+    assert restored.experiments[0].deformation_scale == 8.5
     assert restored.experiments[0].included_step_indices() == [1, 2]
 
 
@@ -232,12 +272,16 @@ def test_hdf5_keeps_analysis_window(tmp_path):
     document.experiments[0].analysis_end = 2
     document.experiments[0].reference_step = 1
     document.experiments[0].include_in_identification = False
+    document.experiments[0].show_deformed_configuration = True
+    document.experiments[0].deformation_scale = 12.0
     out = tmp_path / "session.vfm"
     save_vfm(document, out)
     restored = load_vfm(out)
     assert restored.experiments[0].analysis_end == 2
     assert restored.experiments[0].reference_step == 1
     assert restored.experiments[0].include_in_identification is False
+    assert restored.experiments[0].show_deformed_configuration is True
+    assert restored.experiments[0].deformation_scale == 12.0
 
 
 def test_detected_bounds_replace_unit_square():

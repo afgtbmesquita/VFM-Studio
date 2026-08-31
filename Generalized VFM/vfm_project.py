@@ -474,8 +474,22 @@ def check_experiment_consistency(project: VfmProject) -> List[str]:
     return problems
 
 
-#  Which measured curvature an EXTERNAL group's DOF is conjugate to.  A moment
-#  that does work through dw/dy is M_yy, whose conjugate curvature is kappa_yy.
+#  Kirchhoff traction on a named edge.  W_X / W_Y are slopes, not moment
+#  names: W_X on top/bottom is the twisting couple M_xy (kappa_xy), not M_xx.
+def _conjugate_curvature(dof: str, edge: str = "") -> Optional[str]:
+    key = str(dof or "").strip().upper().replace(" ", "_")
+    side = str(edge or "").strip().lower()
+    if key == "W_XY":
+        return "kappa_xy"
+    if key == "W_X":
+        return "kappa_xy" if side in {"top", "bottom"} else "kappa_xx"
+    if key == "W_Y":
+        return "kappa_xy" if side in {"left", "right"} else "kappa_yy"
+    return None
+
+
+#  Back-compat for callers that only have a DOF (no edge): the normal-moment
+#  pairing, which is correct on left/right for W_X and on top/bottom for W_Y.
 _DOF_TO_CURVATURE = {"W_X": "kappa_xx", "W_Y": "kappa_yy"}
 
 #  Below this dominance ratio the coupon is genuinely biaxial (an off-axis or
@@ -503,9 +517,12 @@ def check_load_orientation(project: VfmProject) -> List[str]:
         if not reference.external or not reference.data_file.is_file():
             continue
 
+        expected = {
+            _conjugate_curvature(str(e.get("dof", "")), str(e.get("edge", "")))
+            for e in reference.external
+        }
+        expected.discard(None)
         dofs = {str(e.get("dof", "")).upper() for e in reference.external}
-        expected = {_DOF_TO_CURVATURE[d] for d in dofs
-                    if d in _DOF_TO_CURVATURE}
         if not expected:
             continue
 
@@ -513,7 +530,25 @@ def check_load_orientation(project: VfmProject) -> List[str]:
             raw = loadmat(reference.data_file, squeeze_me=True)
             k_xx = float(np.mean(np.asarray(raw["SK1grid"], dtype=float)))
             k_yy = float(np.mean(np.asarray(raw["SK2grid"], dtype=float)))
+            k_xy = float(np.mean(np.asarray(raw["SK3grid"], dtype=float)))
         except Exception:                  # pragma: no cover -- diagnostic only
+            continue
+
+        if expected == {"kappa_xy"}:
+            bending = max(abs(k_xx), abs(k_yy))
+            if abs(k_xy) > _ORIENTATION_MARGIN * max(bending, 1e-30):
+                continue
+            if bending > _ORIENTATION_MARGIN * max(abs(k_xy), 1e-30):
+                measured = "kappa_yy" if abs(k_yy) >= abs(k_xx) else "kappa_xx"
+                warnings.append(
+                    f"{name}: the applied load is declared on "
+                    f"{'/'.join(sorted(dofs))} on a top/bottom (or left/right "
+                    f"W_Y) cut, which is the twisting couple conjugate to "
+                    f"kappa_xy -- but the measured field is dominated by "
+                    f"{measured} (mean kappa_xx = {k_xx:.3e}, "
+                    f"kappa_yy = {k_yy:.3e}, kappa_xy = {k_xy:.3e}). "
+                    f"A W_X group on the top edge is M_xy, not M_xx."
+                )
             continue
 
         big, small = max(abs(k_xx), abs(k_yy)), min(abs(k_xx), abs(k_yy))

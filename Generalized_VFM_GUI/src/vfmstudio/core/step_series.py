@@ -12,6 +12,8 @@ from vfmstudio.core.document import ExperimentModel, LoadStepModel
 from vfmstudio.core.fields import (
     SCALAR_LABELS_IN_PLANE,
     SCALAR_LABELS_OUT_OF_PLANE,
+    conjugate_curvature_name,
+    conjugate_moment_math,
     experiment_alignment_angle,
     load_step_fields,
 )
@@ -132,6 +134,56 @@ def step_display_label(step: LoadStepModel) -> str:
     return raw
 
 
+def _finite_load_values(raw) -> np.ndarray:
+    if raw is None:
+        return np.zeros(0, dtype=float)
+    arr = np.atleast_1d(np.asarray(raw, dtype=float)).ravel()
+    return arr
+
+
+def viewport_caption(
+    experiment: ExperimentModel,
+    step: Optional[LoadStepModel] = None,
+    *,
+    step_index: Optional[int] = None,
+    applied_force=None,
+) -> str:
+    """Bottom-right 3D overlay: experiment, current step, and applied loads."""
+    name = str(experiment.name or "").strip() or f"Experiment {experiment.experiment_id}"
+    lines = [name]
+    n_steps = len(experiment.steps)
+    if step is not None and n_steps:
+        if step_index is None:
+            try:
+                step_index = experiment.steps.index(step)
+            except ValueError:
+                step_index = 0
+        step_index = max(0, min(int(step_index), n_steps - 1))
+        lines.append(
+            f"Step {step_index + 1}/{n_steps}: {step_display_label(step)}"
+        )
+        values = _finite_load_values(applied_force)
+        if values.size == 0:
+            values = _finite_load_values(getattr(step, "external_values", None))
+        n_force = max(int(values.size), len(experiment.external), 1)
+        channels = force_components(experiment, n_force)
+        load_lines = []
+        for channel in channels:
+            if channel.index >= values.size:
+                continue
+            value = float(values[channel.index])
+            if not np.isfinite(value):
+                continue
+            load_lines.append(f"{channel.combo_label} = {value:.4g} N·mm")
+        if load_lines:
+            lines.extend(load_lines)
+        else:
+            lines.append("Load: —")
+    elif not n_steps:
+        lines.append("No load steps")
+    return "\n".join(lines)
+
+
 def curvature_field_names(analysis_type: str) -> List[str]:
     key = str(analysis_type).lower()
     if key in {"in_plane", "inplane"}:
@@ -143,16 +195,6 @@ def curvature_field_names(analysis_type: str) -> List[str]:
     return [name for name, _label in pairs]
 
 
-_DOF_MOMENT_MATH = {
-    "W_Y": r"M_{yy}",
-    "W_X": r"M_{xx}",
-    "W_XY": r"M_{xy}",
-    "W": r"F_{z}",
-    "U": r"F_{x}",
-    "V": r"F_{y}",
-}
-
-
 @dataclass
 class ForceComponent:
     """One applied-load channel plotted on the Y axis (N·mm, never N)."""
@@ -161,6 +203,8 @@ class ForceComponent:
     edge: Optional[str]
     combo_label: str
     axis_math: str
+    dof: Optional[str] = None
+    curvature_name: Optional[str] = None
 
 
 @dataclass
@@ -177,6 +221,18 @@ class SpatialSelection:
 
 
 def _moment_symbol(group) -> str:
+    """Kirchhoff traction on this edge, from the DOF — not from W_X ⇒ M_xx.
+
+    ``W_X`` on a top/bottom cut is the twisting moment ``M_xy`` (tangential
+    slope).  Calling it ``M_xx`` is what made twist tests look like a
+    positive bending couple on the loaded edge.
+    """
+    dof = str(getattr(group, "dof", "") or "")
+    edge = str(getattr(group, "edge", "") or "") or None
+    if conjugate_curvature_name(dof, edge) is not None or str(dof).upper() in {
+        "W", "U", "V",
+    }:
+        return conjugate_moment_math(dof, edge)
     raw = str(getattr(group, "label", "") or "").strip()
     token = raw.split()[0] if raw else ""
     if token.lower().startswith("m") or token.lower().startswith("f"):
@@ -188,8 +244,7 @@ def _moment_symbol(group) -> str:
         subscript = body[1:] if body.lower().startswith("f") else body
         subscript = subscript.replace("{", "").replace("}", "")
         return rf"F_{{{subscript}}}" if subscript else r"F"
-    dof = str(getattr(group, "dof", "") or "W_Y")
-    return _DOF_MOMENT_MATH.get(dof, r"M")
+    return r"M"
 
 
 def force_components(experiment: ExperimentModel, n_force: int) -> List[ForceComponent]:
@@ -212,6 +267,10 @@ def force_components(experiment: ExperimentModel, n_force: int) -> List[ForceCom
                 edge=edge,
                 combo_label=f"{plain}{edge_note}",
                 axis_math=rf"${symbol}\ (\mathrm{{N\cdot mm}})$",
+                dof=str(getattr(group, "dof", "") or "") or None,
+                curvature_name=conjugate_curvature_name(
+                    getattr(group, "dof", ""), edge
+                ),
             )
         )
     if not items and n_force > 0:

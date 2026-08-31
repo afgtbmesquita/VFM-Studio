@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -16,9 +16,11 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QPushButton,
     QScrollArea,
     QSizePolicy,
+    QSlider,
     QSpinBox,
     QStackedWidget,
     QVBoxLayout,
@@ -26,7 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from vfmstudio.core import mesh_convert
-from vfmstudio.core.fields import sync_mesh_bounds_from_file
+from vfmstudio.core.fields import mat_has_deformed_configuration, sync_mesh_bounds_from_file
 from vfmstudio.core.jobs import reduced_chi_square
 from vfmstudio.core.document import parameter_unit_plain
 from vfmstudio.core.parameter_space import (
@@ -34,7 +36,7 @@ from vfmstudio.core.parameter_space import (
     group_statistics,
     space_from_document,
 )
-from vfmstudio.core.step_series import step_display_label
+from vfmstudio.core.step_series import resolve_step_data_file, step_display_label
 from vfmstudio.core.uncertainty import default_baseline_flags
 from vfmstudio.gui.results.experiment_check import collect_experiment_steps
 from vfmstudio.gui.results.plot_export import has_exportable_plot
@@ -42,6 +44,12 @@ from vfmstudio.gui.results.plot_style import experiment_colour
 from vfmstudio.gui.results.table_style import format_number
 from vfmstudio.gui.session import AppSession, Selection, is_post_kind, is_uncertainty_kind
 from vfmstudio.gui.widgets.color_swatch import ColorSwatchButton, LINE_PALETTE
+
+_BC_ADD_LABELS = (
+    ("prescribed", "Add prescribed BC…"),
+    ("linking", "Add linking BC…"),
+    ("external", "Add external BC…"),
+)
 
 
 def _block_set_text(widget: QLineEdit, text: str) -> None:
@@ -65,9 +73,19 @@ def _block_set_combo_data(widget: QComboBox, data) -> None:
     widget.blockSignals(False)
 
 
+_DEFORM_SCALE_MAX = 50.0
+_DEFORM_SCALE_TICKS = 10
+
+
 def _block_set_spin(widget: QSpinBox | QDoubleSpinBox, value: float) -> None:
     widget.blockSignals(True)
     widget.setValue(value)
+    widget.blockSignals(False)
+
+
+def _block_set_slider(widget: QSlider, ticks: int) -> None:
+    widget.blockSignals(True)
+    widget.setValue(int(ticks))
     widget.blockSignals(False)
 
 
@@ -80,7 +98,9 @@ def _block_set_checked(widget: QCheckBox, checked: bool) -> None:
 class PropertyEditorDock(QWidget):
     document_changed = Signal()
     view_changed = Signal()
+    deformation_scale_changed = Signal(float, bool)
     request_add_bc = Signal(int, str)
+    request_delete_bc = Signal(int, str, int)
     request_add_step = Signal(int)
     request_visualize_steps = Signal()
     request_uncertainty = Signal()
@@ -96,6 +116,8 @@ class PropertyEditorDock(QWidget):
         self._bound_spins: dict[str, QDoubleSpinBox] = {}
         self._step_load_spins: list[QDoubleSpinBox] = []
         self._step_load_labels: list[QLabel] = []
+        self._deform_sliders: list[QSlider] = []
+        self._deform_spins: list[QDoubleSpinBox] = []
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
@@ -187,8 +209,6 @@ class PropertyEditorDock(QWidget):
         self._exp_source = QComboBox()
         self._exp_source.addItems(["mat", "manual"])
         self._exp_source.currentTextChanged.connect(self._on_exp_source)
-        add_bc = QPushButton("Add EXTERNAL group…")
-        add_bc.clicked.connect(self._on_add_bc)
         add_step = QPushButton("Add load steps…")
         add_step.clicked.connect(self._on_add_step)
         add_step.setToolTip(
@@ -209,7 +229,27 @@ class PropertyEditorDock(QWidget):
         )
         self._exp_fit_axes.toggled.connect(self._on_exp_fit_axes)
         experiment.addRow("Fit data to system axes", self._exp_fit_axes)
-        experiment.addRow(add_bc)
+        self._exp_show_deformed = QCheckBox()
+        self._exp_show_deformed.setMinimumSize(18, 18)
+        self._exp_show_deformed.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
+        )
+        self._exp_show_deformed.setToolTip(
+            "Warp the 3D specimen to X+U, Y+V, Z+W when the load-step MAT "
+            "file contains matching displacement fields."
+        )
+        self._exp_show_deformed.toggled.connect(self._on_exp_show_deformed)
+        experiment.addRow("Show Deformed Configuration", self._exp_show_deformed)
+        deform_row, self._exp_deform_slider, self._exp_deform_spin = (
+            self._make_deform_scale_row()
+        )
+        experiment.addRow("Deformation scale", deform_row)
+        self._add_bc_buttons = {}
+        for kind, label in _BC_ADD_LABELS:
+            button = QPushButton(label)
+            button.clicked.connect(lambda checked=False, k=kind: self._on_add_bc(k))
+            self._add_bc_buttons[kind] = button
+            experiment.addRow(button)
         experiment.addRow(add_step)
 
         mesh = self._add_page("mesh")
@@ -267,6 +307,9 @@ class PropertyEditorDock(QWidget):
         bc.addRow("DOF", self._bc_dof)
         bc.addRow("Edge", self._bc_edge)
         bc.addRow(self._bc_load_label, self._bc_load)
+        self._bc_delete = QPushButton("Delete this BC")
+        self._bc_delete.clicked.connect(self._on_delete_bc)
+        bc.addRow(self._bc_delete)
 
         step = self._add_page("step")
         self._step_label = QLineEdit()
@@ -309,6 +352,10 @@ class PropertyEditorDock(QWidget):
         self._visualize_steps = QPushButton("Visualize Step Load Data")
         self._visualize_steps.clicked.connect(self.request_visualize_steps.emit)
         step.addRow(self._visualize_steps)
+        step_deform_row, self._step_deform_slider, self._step_deform_spin = (
+            self._make_deform_scale_row()
+        )
+        step.addRow("Deformation scale", step_deform_row)
 
         empty = self._add_page("empty")
         empty.addRow(QLabel("No experiment selected."))
@@ -495,6 +542,8 @@ class PropertyEditorDock(QWidget):
             "material": "Material",
             "solver": "Solver",
             "experiment": "Experiment",
+            "bcs": "Boundary conditions",
+            "bc_group": "Boundary conditions",
             "mesh": "Mesh",
             "bc": "Boundary condition",
             "step": "Load step",
@@ -1159,6 +1208,11 @@ class PropertyEditorDock(QWidget):
         _block_set_combo(self._exp_source, experiment.applied_load_source)
         _block_set_checked(self._exp_fit_axes, bool(experiment.fit_data_to_system_axes))
         self._exp_fit_axes.setVisible(True)
+        _block_set_checked(
+            self._exp_show_deformed, bool(experiment.show_deformed_configuration)
+        )
+        self._exp_show_deformed.setVisible(True)
+        self._fill_deform_scale(experiment)
 
     def _fill_mesh(self, session: AppSession, experiment_id: Optional[int]) -> None:
         experiment = session.document.experiment_by_id(experiment_id or 0)
@@ -1228,6 +1282,7 @@ class PropertyEditorDock(QWidget):
         self._analysis_end.setEnabled(has_steps)
         self._analysis_reference.setEnabled(has_steps)
         self._visualize_steps.setEnabled(has_steps)
+        self._fill_deform_scale(experiment)
         if not has_steps:
             for combo in (
                 self._analysis_start,
@@ -1403,11 +1458,122 @@ class PropertyEditorDock(QWidget):
             )
         self._notify()
 
-    def _on_add_bc(self) -> None:
+    def _on_exp_show_deformed(self, checked: bool) -> None:
+        experiment = self._current_experiment()
+        if experiment is None or self._session is None:
+            return
+        experiment.show_deformed_configuration = bool(checked)
+        self._set_deform_scale_enabled(bool(checked))
+        if checked:
+            step = self._session.selected_step() or self._current_step()
+            path = None
+            if step is not None:
+                path = resolve_step_data_file(
+                    step.data_file, self._session.document.source_path
+                )
+            if not mat_has_deformed_configuration(path):
+                QMessageBox.information(
+                    self,
+                    "Deformed configuration",
+                    "Deformed configuration is not available for this load step. "
+                    "The MAT file does not contain U, V, and W (and matching "
+                    "X, Y, Z) for each point.",
+                )
+        self._notify()
+
+    def _make_deform_scale_row(self) -> tuple[QWidget, QSlider, QDoubleSpinBox]:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        slider = QSlider(Qt.Orientation.Horizontal)
+        slider.setRange(0, int(_DEFORM_SCALE_MAX * _DEFORM_SCALE_TICKS))
+        slider.setSingleStep(1)
+        slider.setPageStep(_DEFORM_SCALE_TICKS)
+        slider.setValue(_DEFORM_SCALE_TICKS)
+        slider.setToolTip(
+            "Scale DIC displacements in the 3D view. 1× is true scale; "
+            "increase to exaggerate out-of-plane motion."
+        )
+        spin = QDoubleSpinBox()
+        spin.setRange(0.0, _DEFORM_SCALE_MAX)
+        spin.setDecimals(1)
+        spin.setSingleStep(0.5)
+        spin.setSuffix(" ×")
+        spin.setValue(1.0)
+        spin.setMaximumWidth(78)
+        spin.setToolTip(slider.toolTip())
+        layout.addWidget(slider, 1)
+        layout.addWidget(spin, 0)
+        slider.valueChanged.connect(self._on_deform_slider)
+        slider.sliderReleased.connect(self._on_deform_slider_released)
+        spin.valueChanged.connect(self._on_deform_spin)
+        self._deform_sliders.append(slider)
+        self._deform_spins.append(spin)
+        return row, slider, spin
+
+    def _fill_deform_scale(self, experiment) -> None:
+        scale = float(getattr(experiment, "deformation_scale", 1.0) or 1.0)
+        ticks = int(round(scale * _DEFORM_SCALE_TICKS))
+        for slider in self._deform_sliders:
+            _block_set_slider(slider, ticks)
+        for spin in self._deform_spins:
+            _block_set_spin(spin, scale)
+        self._set_deform_scale_enabled(bool(experiment.show_deformed_configuration))
+
+    def _set_deform_scale_enabled(self, enabled: bool) -> None:
+        for slider in self._deform_sliders:
+            slider.setEnabled(enabled)
+        for spin in self._deform_spins:
+            spin.setEnabled(enabled)
+
+    def _on_deform_slider(self, ticks: int) -> None:
+        self._commit_deformation_scale(float(ticks) / _DEFORM_SCALE_TICKS, live=True)
+
+    def _on_deform_spin(self, value: float) -> None:
+        self._commit_deformation_scale(float(value), live=False)
+
+    def _on_deform_slider_released(self) -> None:
         experiment = self._current_experiment()
         if experiment is None:
             return
-        self.request_add_bc.emit(experiment.experiment_id, "external")
+        self._commit_deformation_scale(
+            float(experiment.deformation_scale), live=False
+        )
+
+    def _commit_deformation_scale(self, value: float, *, live: bool = True) -> None:
+        value = min(_DEFORM_SCALE_MAX, max(0.0, float(value)))
+        ticks = int(round(value * _DEFORM_SCALE_TICKS))
+        for slider in self._deform_sliders:
+            _block_set_slider(slider, ticks)
+        for spin in self._deform_spins:
+            _block_set_spin(spin, value)
+        experiment = self._current_experiment()
+        if experiment is None:
+            return
+        experiment.deformation_scale = value
+        if not live and self._session is not None:
+            self._session.mark_dirty()
+        self.deformation_scale_changed.emit(value, live)
+
+    def _on_add_bc(self, kind: str = "prescribed") -> None:
+        experiment = self._current_experiment()
+        if experiment is None:
+            return
+        if kind not in {"prescribed", "linking", "external"}:
+            return
+        self.request_add_bc.emit(experiment.experiment_id, kind)
+
+    def _on_delete_bc(self) -> None:
+        experiment = self._current_experiment()
+        if experiment is None or self._session is None:
+            return
+        selection = self._session.selection
+        if selection.bc_kind is None or selection.bc_index is None:
+            return
+        self.request_delete_bc.emit(
+            experiment.experiment_id, str(selection.bc_kind), int(selection.bc_index)
+        )
 
     def _on_add_step(self) -> None:
         experiment = self._current_experiment()

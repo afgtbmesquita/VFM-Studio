@@ -65,6 +65,53 @@ _FIELD_AXIS_MATH = {
 
 MOMENT_AXIS_MATH = r"$M\ (\mathrm{N\cdot mm})$"
 
+# Kirchhoff traction conjugate to a virtual-field DOF on a named edge.
+# W_X / W_Y are slopes, not moment names: the same DOF is a normal moment on
+# one pair of cuts and a twisting moment on the other.
+#   x = const (left/right):  W_X → M_xx,  W_Y → M_xy
+#   y = const (top/bottom):  W_Y → M_yy,  W_X → M_xy
+_MOMENT_MATH_BY_CURVATURE = {
+    "kappa_xx": r"M_{xx}",
+    "kappa_yy": r"M_{yy}",
+    "kappa_xy": r"M_{xy}",
+}
+
+
+def conjugate_curvature_name(dof: str, edge: Optional[str] = None) -> Optional[str]:
+    """Measured curvature conjugate to ``dof`` acting on ``edge``."""
+    key = str(dof or "").strip().upper().replace(" ", "_")
+    side = str(edge or "").strip().lower()
+    horizontal = side in {"top", "bottom"}
+    vertical = side in {"left", "right"}
+    if key == "W_XY":
+        return "kappa_xy"
+    if key == "W_X":
+        return "kappa_xy" if horizontal else "kappa_xx"
+    if key == "W_Y":
+        return "kappa_xy" if vertical else "kappa_yy"
+    return None
+
+
+def conjugate_moment_math(dof: str, edge: Optional[str] = None) -> str:
+    """MathText moment / force symbol for an EXTERNAL (or loaded) DOF."""
+    key = str(dof or "").strip().upper().replace(" ", "_")
+    if key == "W":
+        return r"F_{z}"
+    if key == "U":
+        return r"F_{x}"
+    if key == "V":
+        return r"F_{y}"
+    curvature = conjugate_curvature_name(key, edge)
+    if curvature is not None:
+        return _MOMENT_MATH_BY_CURVATURE[curvature]
+    return r"M"
+
+
+def conjugate_moment_plain(dof: str, edge: Optional[str] = None) -> str:
+    """Viewport / combo label, e.g. ``Mxy`` from ``W_X`` on the top cut."""
+    math = conjugate_moment_math(dof, edge)
+    return math.replace("{", "").replace("}", "").replace("_", "")
+
 
 def field_display_label(name: str) -> str:
     """Plain-text / Qt label (LaTeX-like Unicode)."""
@@ -103,9 +150,20 @@ def measurements_to_dataset(
     for row, (key, _label) in enumerate(names):
         if row < strains.shape[0]:
             data_vars[key] = ("point", strains[row])
-    if extras:
-        for key, values in extras.items():
-            data_vars[key] = ("point", np.asarray(values, dtype=float).ravel())
+    extras = dict(extras or {})
+    z_values = extras.pop("z", None)
+    n_points = int(np.asarray(x).size)
+
+    def _matching(values: Any) -> Optional[np.ndarray]:
+        arr = np.asarray(values, dtype=float).ravel()
+        if arr.size != n_points:
+            return None
+        return arr
+
+    for key, values in extras.items():
+        fitted = _matching(values)
+        if fitted is not None:
+            data_vars[key] = ("point", fitted)
     force = getattr(measurements, "applied_force", None)
     attrs = {
         "analysis_type": analysis_type,
@@ -114,15 +172,19 @@ def measurements_to_dataset(
         ),
         "applied_force": None if force is None else np.asarray(force).tolist(),
     }
+    coords = {"x": ("point", x), "y": ("point", y)}
+    z_arr = _matching(z_values) if z_values is not None else None
+    if z_arr is not None:
+        coords["z"] = ("point", z_arr)
     return xr.Dataset(
         data_vars,
-        coords={"x": ("point", x), "y": ("point", y)},
+        coords=coords,
         attrs=attrs,
     )
 
 
 def try_load_displacements(mat_path: Path) -> Dict[str, np.ndarray]:
-    """Best-effort extra channels (W, U, V) from a Vic-3D style MAT file."""
+    """Best-effort extra channels (W, U, V, Z) from a Vic-3D style MAT file."""
     try:
         from scipy.io import loadmat
     except ImportError:
@@ -138,6 +200,7 @@ def try_load_displacements(mat_path: Path) -> Dict[str, np.ndarray]:
         "w": ("W", "Wgrid", "Uz", "UZ"),
         "u": ("U", "Ugrid", "Ux", "UX"),
         "v": ("V", "Vgrid", "Uy", "UY"),
+        "z": ("Z", "Zgrid"),
     }
     for key, names in aliases.items():
         for name in names:
@@ -145,6 +208,76 @@ def try_load_displacements(mat_path: Path) -> Dict[str, np.ndarray]:
                 extras[key] = np.asarray(raw[name], dtype=float).ravel()
                 break
     return extras
+
+
+def mat_has_deformed_configuration(mat_path: Optional[Path]) -> bool:
+    """True if a MAT file contains matching-length U, V, and W arrays."""
+    if mat_path is None:
+        return False
+    extras = try_load_displacements(Path(mat_path))
+    return _uvw_same_length(extras)
+
+
+def has_deformed_configuration(dataset: xr.Dataset) -> bool:
+    """True if the dataset has U, V, W of the same length as the point cloud."""
+    n_points = int(dataset.sizes.get("point", 0)) if dataset is not None else 0
+    if n_points <= 0:
+        return False
+    extras = {}
+    for name in ("u", "v", "w"):
+        if name not in dataset:
+            return False
+        extras[name] = np.asarray(dataset[name].values, dtype=float).ravel()
+    return _uvw_same_length(extras, n_points=n_points)
+
+
+def specimen_points_xyz(
+    dataset: xr.Dataset,
+    *,
+    deformed: bool = False,
+    scale: float = 1.0,
+) -> np.ndarray:
+    """Reference ``(X, Y, Z)`` or current ``(X+sU, Y+sV, Z+sW)`` specimen points."""
+    x = np.asarray(dataset["x"].values, dtype=float).ravel()
+    y = np.asarray(dataset["y"].values, dtype=float).ravel()
+    n = min(x.size, y.size)
+    if "z" in dataset:
+        z = np.asarray(dataset["z"].values, dtype=float).ravel()
+        n = min(n, z.size)
+    else:
+        z = np.zeros(n, dtype=float)
+    pts = np.column_stack([x[:n], y[:n], z[:n]])
+    if not deformed or not has_deformed_configuration(dataset):
+        return pts
+    factor = float(scale) if np.isfinite(scale) else 1.0
+    u = np.asarray(dataset["u"].values, dtype=float).ravel()[:n]
+    v = np.asarray(dataset["v"].values, dtype=float).ravel()[:n]
+    w = np.asarray(dataset["w"].values, dtype=float).ravel()[:n]
+    pts = pts.copy()
+    pts[:, 0] = pts[:, 0] + factor * u
+    pts[:, 1] = pts[:, 1] + factor * v
+    pts[:, 2] = pts[:, 2] + factor * w
+    return pts
+
+
+def _uvw_same_length(
+    extras: Dict[str, np.ndarray],
+    n_points: Optional[int] = None,
+) -> bool:
+    arrays = []
+    for name in ("u", "v", "w"):
+        if name not in extras:
+            return False
+        arrays.append(np.asarray(extras[name], dtype=float).ravel())
+    sizes = {arr.size for arr in arrays}
+    if len(sizes) != 1:
+        return False
+    size = next(iter(sizes))
+    if size <= 0:
+        return False
+    if n_points is not None and size != int(n_points):
+        return False
+    return True
 
 
 def load_step_fields(

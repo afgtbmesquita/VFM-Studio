@@ -54,6 +54,7 @@ where = ["src"]
 vfmstudio = [
     "gui/style/*.qss",
     "resources/icons/*.svg",
+    "resources/*",
 ]
 
 [tool.pytest.ini_options]

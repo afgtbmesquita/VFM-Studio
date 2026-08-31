@@ -15,6 +15,14 @@ from PySide6.QtWidgets import (
     QToolBar,
 )
 
+from vfmstudio import __version__
+from vfmstudio.branding import (
+    APP_AUTHOR,
+    APP_COPYRIGHT_LINE,
+    APP_LICENSE_LINE,
+    APP_NAME,
+    APP_TRADEMARK_LINE,
+)
 from vfmstudio.core.document import ExperimentModel, MeshModel
 from vfmstudio.core.fields import sync_mesh_bounds_from_file
 from vfmstudio.core.jobs import validate_document
@@ -51,7 +59,7 @@ from vfmstudio.gui.workers import (
 )
 from vfmstudio.io import load_any, save_any
 from vfmstudio.io.export_vtk import export_mesh_vtk
-from vfmstudio.resources import icon
+from vfmstudio.resources import app_icon, icon
 
 
 class MainWindow(QMainWindow):
@@ -60,7 +68,8 @@ class MainWindow(QMainWindow):
         self.session = AppSession()
         self.pool = QThreadPool.globalInstance()
         self._jobs = []
-        self.setWindowTitle("VFM Studio")
+        self.setWindowTitle(APP_NAME)
+        self.setWindowIcon(app_icon())
         self.resize(1400, 900)
         self.actions = ActionRegistry(self)
 
@@ -91,7 +100,11 @@ class MainWindow(QMainWindow):
         self.tree.selection_changed.connect(self._on_tree_selection)
         self.props.document_changed.connect(self._on_document_edited)
         self.props.view_changed.connect(self._on_view_option_changed)
+        self.props.deformation_scale_changed.connect(self._on_deformation_scale)
         self.props.request_add_bc.connect(self._add_bc)
+        self.tree.request_add_bc.connect(self._add_bc)
+        self.tree.request_delete_bc.connect(self._delete_bc)
+        self.props.request_delete_bc.connect(self._delete_bc)
         self.props.request_add_step.connect(self._add_step)
         self.props.request_visualize_steps.connect(self._show_step_load_plot)
         self.props.request_uncertainty.connect(self.run_uncertainty)
@@ -173,6 +186,13 @@ class MainWindow(QMainWindow):
 
         edit_menu = self.menuBar().addMenu("&Edit")
         self.actions.add("delete_exp", "Delete selected experiment", self.delete_experiment, menu=edit_menu)
+        self.actions.add(
+            "delete_bc",
+            "Delete selected BC",
+            self.delete_selected_bc,
+            menu=edit_menu,
+        )
+        self.actions.get("delete_bc").setEnabled(False)
 
         view_menu = self.menuBar().addMenu("&View")
         view_menu.addAction(self.dock_model.toggleViewAction())
@@ -212,7 +232,7 @@ class MainWindow(QMainWindow):
         )
         self.actions.add(
             "add_external",
-            "Add EXTERNAL group…",
+            "Add external BC…",
             lambda: self._add_bc_current("external"),
             menu=vfm_menu,
         )
@@ -283,7 +303,7 @@ class MainWindow(QMainWindow):
         if path.is_file():
             self.open_project_path(path)
         else:
-            QMessageBox.warning(self, "VFM Studio", f"Campaign project not found:\n{path}")
+            QMessageBox.warning(self, APP_NAME, f"Campaign project not found:\n{path}")
 
     def open_samples_ab(self) -> None:
         path = samples_ab_all_project_path()
@@ -292,7 +312,7 @@ class MainWindow(QMainWindow):
         else:
             QMessageBox.warning(
                 self,
-                "VFM Studio",
+                APP_NAME,
                 f"Samples A/B project not found:\n{path}\n\n"
                 "Rebuild with Samples_A_B/VFM_analysis/make_gui_project.py",
             )
@@ -464,13 +484,65 @@ class MainWindow(QMainWindow):
 
     def _add_bc(self, experiment_id: int, kind: str) -> None:
         experiment = self.session.document.experiment_by_id(experiment_id)
-        if experiment is None:
+        if experiment is None or kind not in {"prescribed", "linking", "external"}:
             return
         dialog = AddBcDialog(self, kind=kind)
         if self._exec_dialog(dialog, f"AddBc:{kind}"):
-            getattr(experiment, kind).append(dialog.entry())
+            entries = getattr(experiment, kind)
+            entries.append(dialog.entry())
+            if kind == "external":
+                for step in experiment.steps:
+                    values = list(step.external_values)
+                    while len(values) < len(experiment.external):
+                        values.append(None)
+                    step.external_values = values
+            self.session.selection = Selection(
+                kind="bc",
+                experiment_id=experiment.experiment_id,
+                bc_kind=kind,
+                bc_index=len(entries) - 1,
+            )
             self.session.mark_dirty()
+            self.log.log(
+                f"Added {kind} BC to "
+                f"{experiment.name or f'experiment {experiment.experiment_id}'}."
+            )
             self._refresh_all()
+
+    def delete_selected_bc(self) -> None:
+        selection = self.session.selection
+        if selection.kind != "bc" or selection.experiment_id is None:
+            return
+        if selection.bc_kind is None or selection.bc_index is None:
+            return
+        self._delete_bc(selection.experiment_id, selection.bc_kind, selection.bc_index)
+
+    def _delete_bc(self, experiment_id: int, kind: str, index: int) -> None:
+        experiment = self.session.document.experiment_by_id(experiment_id)
+        if experiment is None:
+            return
+        try:
+            entries = experiment.boundary_entries(kind)
+        except KeyError:
+            return
+        if index < 0 or index >= len(entries):
+            return
+        entry = entries[index]
+        label = entry.label or f"{entry.dof} @{entry.edge or 'nodes'}"
+        removed = experiment.remove_boundary_entry(kind, index)
+        if removed is None:
+            return
+        self.session.selection = Selection(
+            kind="bc_group",
+            experiment_id=experiment.experiment_id,
+            bc_kind=kind,
+        )
+        self.session.mark_dirty()
+        self.log.log(
+            f"Deleted {kind} BC '{label}' from "
+            f"{experiment.name or f'experiment {experiment.experiment_id}'}."
+        )
+        self._refresh_all()
 
     def _on_document_edited(self) -> None:
         self.tree.rebuild(self.session)
@@ -490,6 +562,10 @@ class MainWindow(QMainWindow):
             self.field_combo.setEnabled(not post)
         if hasattr(self, "display_combo"):
             self.display_combo.setEnabled(not post)
+        try:
+            self.actions.get("delete_bc").setEnabled(selection.kind == "bc")
+        except KeyError:
+            pass
         if post:
             if self.viewport.load_plot_visible():
                 self.viewport.hide_load_plot()
@@ -524,6 +600,14 @@ class MainWindow(QMainWindow):
     def _on_show_xy_axes(self, checked: bool) -> None:
         self.session.show_xy_axes = bool(checked)
         self.viewport.refresh(self.session)
+
+    def _on_deformation_scale(self, scale: float, live: bool = True) -> None:
+        try:
+            self.viewport.apply_deformation_scale(
+                self.session, float(scale), live=bool(live)
+            )
+        except Exception:
+            pass
 
     def _on_view_option_changed(self) -> None:
         self._apply_combination_view()
@@ -576,7 +660,7 @@ class MainWindow(QMainWindow):
         self._update_status()
 
     def _update_title(self) -> None:
-        name = "VFM Studio"
+        name = APP_NAME
         path = self.session.path
         if path is not None:
             name += f" — {path.name}"
@@ -804,7 +888,10 @@ class MainWindow(QMainWindow):
     def _about(self) -> None:
         QMessageBox.information(
             self,
-            "VFM Studio",
-            "VFM Studio 0.1 — CAE frontend for the Generalized VFM plate solver.\n"
+            f"About {APP_NAME}",
+            f"{APP_NAME} {__version__} — CAE frontend for the Generalized VFM plate solver.\n"
+            f"Created by {APP_AUTHOR}.\n\n"
+            f"{APP_COPYRIGHT_LINE} {APP_TRADEMARK_LINE}\n"
+            f"{APP_LICENSE_LINE}\n\n"
             "The solver folder is not modified; this application wraps it.",
         )

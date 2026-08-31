@@ -15,7 +15,12 @@ from vfmstudio.core.document import (
 
 
 _SIDECAR_INT_KEYS = ("analysis_start", "analysis_end", "reference_step")
-_SIDECAR_BOOL_KEYS = ("fit_data_to_system_axes", "include_in_identification")
+_SIDECAR_BOOL_KEYS = (
+    "fit_data_to_system_axes",
+    "include_in_identification",
+    "show_deformed_configuration",
+)
+_SIDECAR_FLOAT_KEYS = ("deformation_scale",)
 
 
 def _vfmstudio_sidecar(document: SessionDocument) -> Dict[str, Any]:
@@ -26,6 +31,9 @@ def _vfmstudio_sidecar(document: SessionDocument) -> Dict[str, Any]:
         }
         payload.update(
             {key: bool(getattr(experiment, key)) for key in _SIDECAR_BOOL_KEYS}
+        )
+        payload.update(
+            {key: float(getattr(experiment, key)) for key in _SIDECAR_FLOAT_KEYS}
         )
         experiments[str(experiment.experiment_id)] = payload
     return {"experiments": experiments}
@@ -59,6 +67,13 @@ def _apply_vfmstudio_sidecar(document: SessionDocument, path: Path) -> None:
             if field not in values:
                 continue
             setattr(experiment, field, bool(values[field]))
+        for field in _SIDECAR_FLOAT_KEYS:
+            if field not in values:
+                continue
+            try:
+                setattr(experiment, field, float(values[field]))
+            except (TypeError, ValueError):
+                continue
 
 
 def _write_vfmstudio_sidecar(document: SessionDocument, path: Path) -> None:

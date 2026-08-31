@@ -186,6 +186,37 @@ def test_force_components_skip_bottom_edge():
     assert channels[0].edge == "top"
     assert "bottom" not in channels[0].combo_label.lower()
     assert r"N\cdot mm" in channels[0].axis_math
+    assert channels[0].combo_label.startswith("M_yy")
+    assert channels[0].curvature_name == "kappa_yy"
+
+
+def test_force_components_wx_on_top_is_mxy():
+    """Twist: W_X on the loaded (top) cut is M_xy, not M_xx."""
+    from vfmstudio.core.document import BoundaryEntry
+    from vfmstudio.core.fields import conjugate_curvature_name, conjugate_moment_plain
+    from vfmstudio.core.step_series import force_components
+
+    assert conjugate_curvature_name("W_X", "top") == "kappa_xy"
+    assert conjugate_moment_plain("W_X", "top") == "Mxy"
+    assert conjugate_curvature_name("W_X", "right") == "kappa_xx"
+    assert conjugate_curvature_name("W_Y", "top") == "kappa_yy"
+
+    experiment = ExperimentModel(
+        experiment_id=1,
+        external=[
+            BoundaryEntry(
+                label="twisting couple on the loaded (top) cut",
+                dof="W_X",
+                edge="top",
+            ),
+        ],
+    )
+    channels = force_components(experiment, n_force=1)
+    assert len(channels) == 1
+    assert "M_xy" in channels[0].combo_label
+    assert "M_xx" not in channels[0].combo_label
+    assert channels[0].curvature_name == "kappa_xy"
+    assert r"M_{xy}" in channels[0].axis_math
 
 
 def test_field_from_selection_point_and_roi():
@@ -209,3 +240,33 @@ def test_field_from_selection_point_and_roi():
     )
     assert roi == 3.0
     assert r"mm}^{-1}" in field_axis_math("kappa_yy")
+
+
+def test_viewport_caption_lists_experiment_step_and_load():
+    from vfmstudio.core.document import BoundaryEntry, LoadStepModel
+    from vfmstudio.core.step_series import viewport_caption
+
+    experiment = ExperimentModel(
+        experiment_id=9,
+        name="B1_Twist",
+        external=[
+            BoundaryEntry(
+                label="twisting couple on the loaded (top) cut",
+                dof="W_X",
+                edge="top",
+            ),
+        ],
+        steps=[
+            LoadStepModel(data_file="a.mat", label="B1_Twist_step03"),
+            LoadStepModel(data_file="b.mat", label="B1_Twist_step04"),
+        ],
+    )
+    text = viewport_caption(
+        experiment,
+        experiment.steps[1],
+        step_index=1,
+        applied_force=[40.270314],
+    )
+    assert text.splitlines()[0] == "B1_Twist"
+    assert "Step 2/2: B1_Twist_step04" in text
+    assert "M_xy (top) = 40.27 N·mm" in text

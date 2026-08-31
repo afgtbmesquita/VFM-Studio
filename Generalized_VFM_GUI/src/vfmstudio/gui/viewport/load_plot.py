@@ -289,14 +289,17 @@ class LoadPlotOverlay(QWidget):
                 match = self._force.findData(force_data)
                 if match >= 0:
                     self._force.setCurrentIndex(match)
-            if field_data is not None:
-                match = self._field.findData(field_data)
+            preferred_field = field_data if isinstance(field_data, str) else None
+            if preferred_field is None and series.force_channels:
+                preferred_field = series.force_channels[0].curvature_name
+            if preferred_field:
+                match = self._field.findData(preferred_field)
                 if match >= 0:
                     self._field.setCurrentIndex(match)
-                else:
-                    default = self._field.findData("kappa_yy")
-                    if default >= 0:
-                        self._field.setCurrentIndex(default)
+            if self._field.currentData() is None:
+                fallback = self._field.findData("kappa_yy")
+                if fallback >= 0:
+                    self._field.setCurrentIndex(fallback)
         self._force.blockSignals(False)
         self._field.blockSignals(False)
 
