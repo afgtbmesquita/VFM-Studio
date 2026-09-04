@@ -28,6 +28,7 @@ from vfmstudio.gui.results.plot_style import (
     INK_PRIMARY,
     apply_matplotlib_style,
     empty_message,
+    heading_stylesheet,
     pad_limits,
     place_legend_below,
     style_axis,
@@ -75,16 +76,12 @@ class ParameterSpacePanel(QWidget):
         self._title = QLabel("Parameter space")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._title.setWordWrap(True)
-        self._title.setStyleSheet(
-            f"color: {INK_PRIMARY}; font-size: 12pt; font-family: 'Times New Roman', serif;"
-        )
+        self._title.setStyleSheet(heading_stylesheet())
         self._subtitle = QLabel("")
         self._subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._subtitle.setWordWrap(True)
         self._subtitle.setVisible(False)
-        self._subtitle.setStyleSheet(
-            f"color: {INK_MUTED}; font-size: 9pt; font-family: 'Times New Roman', serif;"
-        )
+        self._subtitle.setStyleSheet(heading_stylesheet(muted=True))
         self._figure = Figure(facecolor="#FFFFFF")
         self._canvas = FigureCanvas(self._figure)
         self._canvas.setSizePolicy(

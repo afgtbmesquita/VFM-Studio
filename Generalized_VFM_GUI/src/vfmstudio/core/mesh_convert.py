@@ -84,6 +84,64 @@ def points_xyz(x: Iterable[float], y: Iterable[float], z=None) -> np.ndarray:
     return np.column_stack([x_arr, y_arr, z_arr])
 
 
+def _keep_element_ids(mesh_pkg: Any, keep_cells) -> list:
+    if not keep_cells:
+        return []
+    grid = np.asarray(getattr(mesh_pkg, "element_grid_index", []), dtype=np.int64)
+    if grid.ndim != 2 or grid.size == 0:
+        return []
+    ids: list = []
+    nx, ny = int(grid.shape[0]), int(grid.shape[1])
+    for cell in keep_cells:
+        if cell is None or len(cell) < 2:
+            continue
+        ix, iy = int(cell[0]), int(cell[1])
+        if 0 <= ix < nx and 0 <= iy < ny:
+            eid = int(grid[ix, iy])
+            if eid >= 0:
+                ids.append(eid)
+    return ids
+
+
+def node_xyz(mesh_pkg: Any, node_ids) -> np.ndarray:
+    """Coordinates of the given node ids (invalid ids are skipped)."""
+    xyz = mesh_xyz(mesh_pkg)
+    if xyz.size == 0:
+        return np.zeros((0, 3), dtype=float)
+    ids = np.asarray(list(node_ids), dtype=np.int64).ravel()
+    ids = ids[(ids >= 0) & (ids < xyz.shape[0])]
+    if ids.size == 0:
+        return np.zeros((0, 3), dtype=float)
+    return xyz[ids]
+
+
+def bc_anchor_xyz(mesh_pkg: Any, entry: Any) -> np.ndarray:
+    """Points where a BC glyph is drawn: named edge, else explicit nodes."""
+    edge = getattr(entry, "edge", None)
+    if edge:
+        return edge_node_xyz(mesh_pkg, edge)
+    nodes = getattr(entry, "nodes", None) or []
+    if nodes:
+        return node_xyz(mesh_pkg, nodes)
+    return np.zeros((0, 3), dtype=float)
+
+
+def _prune_by_dic(mesh_pkg: Any, document: Any, experiment: Any, analysis_type: str):
+    """Drop empty cells so GUI node ids match Identify (tabbed plates)."""
+    source_path = getattr(document, "source_path", None)
+    xy = dic_xy_for_counts(experiment, analysis_type, source_path)
+    if xy is None or xy.shape[0] == 0:
+        return mesh_pkg
+    prune = getattr(bridge.vfm_mesh(), "prune_mesh_by_measurement_points", None)
+    if not callable(prune):
+        return mesh_pkg
+    try:
+        pruned, _ = prune(mesh_pkg, np.asarray(xy, dtype=float)[:, :2])
+    except Exception:
+        return mesh_pkg
+    return pruned
+
+
 def build_experiment_mesh(document: Any, experiment: Any):
     """Build the solver mesh package for an experiment (GUI wrapper only)."""
     MeshSettings = bridge.mesh_settings_class()
@@ -106,7 +164,12 @@ def build_experiment_mesh(document: Any, experiment: Any):
     material = getattr(document, "material", None)
     if material is not None:
         analysis_type = getattr(material, "analysis_type", analysis_type)
-    return bridge.build_mesh(settings, analysis_type)
+    mesh_pkg = bridge.build_mesh(settings, analysis_type)
+    keep_ids = _keep_element_ids(mesh_pkg, payload.get("keep_cells"))
+    n_el = int(getattr(mesh_pkg, "n_elements", 0) or 0)
+    if keep_ids and len(set(keep_ids)) < n_el:
+        mesh_pkg, _ = bridge.subset_mesh_elements(mesh_pkg, keep_ids)
+    return _prune_by_dic(mesh_pkg, document, experiment, analysis_type)
 
 
 def element_centroids(mesh_pkg: Any) -> np.ndarray:

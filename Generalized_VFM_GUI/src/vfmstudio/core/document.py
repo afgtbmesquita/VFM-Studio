@@ -34,6 +34,14 @@ class MeshModel(BaseModel):
     bounds: BoundsModel = Field(default_factory=BoundsModel)
     x_nodes: Optional[List[float]] = None
     y_nodes: Optional[List[float]] = None
+    free_nodes: Optional[List[List[float]]] = None
+    keep_cells: Optional[List[List[int]]] = None
+
+    def clear_free_and_manual(self) -> None:
+        self.x_nodes = None
+        self.y_nodes = None
+        self.free_nodes = None
+        self.keep_cells = None
 
     def to_payload(self) -> Dict[str, Any]:
         payload: Dict[str, Any] = {
@@ -42,15 +50,25 @@ class MeshModel(BaseModel):
             "bounds": self.bounds.model_dump(),
         }
         if self.x_nodes:
-            payload["x_nodes"] = list(self.x_nodes)
+            payload["x_nodes"] = [float(v) for v in self.x_nodes]
         if self.y_nodes:
-            payload["y_nodes"] = list(self.y_nodes)
+            payload["y_nodes"] = [float(v) for v in self.y_nodes]
+        if self.free_nodes:
+            payload["free_nodes"] = [
+                [float(pair[0]), float(pair[1])] for pair in self.free_nodes
+            ]
+        if self.keep_cells:
+            payload["keep_cells"] = [
+                [int(cell[0]), int(cell[1])] for cell in self.keep_cells
+            ]
         return payload
 
     @classmethod
     def from_payload(cls, payload: Optional[dict]) -> "MeshModel":
         payload = dict(payload or {})
         raw_bounds = payload.get("bounds") or {}
+        free_nodes = _pairs_from_payload(payload.get("free_nodes"), float)
+        keep_cells = _pairs_from_payload(payload.get("keep_cells"), int)
         return cls(
             n_elements_x=int(
                 payload.get("number_of_elements_x")
@@ -72,7 +90,20 @@ class MeshModel(BaseModel):
             ),
             x_nodes=payload.get("x_nodes"),
             y_nodes=payload.get("y_nodes"),
+            free_nodes=free_nodes,
+            keep_cells=keep_cells,
         )
+
+
+def _pairs_from_payload(raw, caster) -> Optional[List[list]]:
+    if not raw:
+        return None
+    pairs: List[list] = []
+    for item in raw:
+        if item is None or len(item) < 2:
+            continue
+        pairs.append([caster(item[0]), caster(item[1])])
+    return pairs or None
 
 
 def apply_detected_mesh_bounds(
@@ -85,7 +116,7 @@ def apply_detected_mesh_bounds(
     if detected.x_max <= detected.x_min or detected.y_max <= detected.y_min:
         return False
     mesh = experiment.mesh
-    if mesh.x_nodes or mesh.y_nodes:
+    if mesh.x_nodes or mesh.y_nodes or mesh.keep_cells:
         return False
     current = mesh.bounds
     if replace or current.is_unit_square() or len(experiment.steps) <= 1:
@@ -112,6 +143,7 @@ class BoundaryEntry(BaseModel):
     value: Optional[float] = None
     load_type: Optional[str] = Field(default=None, alias="loadType")
     sort_direction: Optional[str] = Field(default=None, alias="sortDirection")
+    force_index: Optional[int] = Field(default=None, alias="forceIndex")
 
     def to_solver_dict(self) -> Dict[str, Any]:
         data: Dict[str, Any] = {}
@@ -221,6 +253,85 @@ class ExperimentModel(BaseModel):
                     step.external_values = values
         return removed
 
+    def clear_mesh_and_dependencies(self) -> None:
+        """Reset the mesh and drop every BC that references it."""
+        self.mesh = MeshModel()
+        self.prescribed = []
+        self.linking = []
+        self.external = []
+        for step in self.steps:
+            step.external_values = []
+
+    def _shift_step_index(self, value: Optional[int], removed_index: int) -> Optional[int]:
+        """Remap a 1-based analysis index after deleting 0-based ``removed_index``."""
+        if value is None:
+            return None
+        removed_one = int(removed_index) + 1
+        current = int(value)
+        if current == removed_one:
+            return None
+        if current > removed_one:
+            return current - 1
+        return current
+
+    def _clamp_analysis_window(self) -> None:
+        n_steps = len(self.steps)
+        if n_steps == 0:
+            self.analysis_start = None
+            self.analysis_end = None
+            self.reference_step = None
+            return
+        if self.analysis_start is not None:
+            self.analysis_start = max(1, min(int(self.analysis_start), n_steps))
+        if self.analysis_end is not None:
+            self.analysis_end = max(1, min(int(self.analysis_end), n_steps))
+        if (
+            self.analysis_start is not None
+            and self.analysis_end is not None
+            and int(self.analysis_start) > int(self.analysis_end)
+        ):
+            self.analysis_end = int(self.analysis_start)
+        if self.reference_step is not None:
+            reference = int(self.reference_step)
+            if reference < 1 or reference > n_steps:
+                self.reference_step = None
+
+    def remove_step(self, index: int) -> Optional[LoadStepModel]:
+        """Drop one load step and keep the analysis window pointing at remaining files."""
+        if index < 0 or index >= len(self.steps):
+            return None
+        removed = self.steps.pop(index)
+        self.analysis_start = self._shift_step_index(self.analysis_start, index)
+        self.analysis_end = self._shift_step_index(self.analysis_end, index)
+        self.reference_step = self._shift_step_index(self.reference_step, index)
+        self._clamp_analysis_window()
+        return removed
+
+    def move_step(self, index: int, delta: int) -> bool:
+        """Swap a load step with its neighbour. Analysis indices follow the files."""
+        other = int(index) + int(delta)
+        if index < 0 or index >= len(self.steps):
+            return False
+        if other < 0 or other >= len(self.steps):
+            return False
+        self.steps[index], self.steps[other] = self.steps[other], self.steps[index]
+        first, second = index + 1, other + 1
+
+        def remap(value: Optional[int]) -> Optional[int]:
+            if value is None:
+                return None
+            current = int(value)
+            if current == first:
+                return second
+            if current == second:
+                return first
+            return current
+
+        self.analysis_start = remap(self.analysis_start)
+        self.analysis_end = remap(self.analysis_end)
+        self.reference_step = remap(self.reference_step)
+        return True
+
 
 class MaterialModel(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -235,6 +346,19 @@ class MaterialModel(BaseModel):
             return bridge.parameter_labels(self.material_type, self.analysis_type)
         except Exception:
             return [f"P{i + 1}" for i in range(len(self.initial_parameters))]
+
+    def sync_parameters(self, default: float = 1.0) -> List[float]:
+        """Keep θ the length the constitutive model expects. Never drop extras
+        unless the model shrank; pad missing entries with ``default``."""
+        labels = self.labels()
+        n = len(labels)
+        values = [float(v) for v in (self.initial_parameters or [])]
+        if len(values) < n:
+            values.extend([float(default)] * (n - len(values)))
+        elif len(values) > n:
+            values = values[:n]
+        self.initial_parameters = values
+        return self.initial_parameters
 
 
 def parameter_math_label(label: str) -> str:
@@ -310,6 +434,36 @@ class SessionDocument(BaseModel):
             return 1
         return max(item.experiment_id for item in self.experiments) + 1
 
+    def duplicate_experiment(self, experiment_id: int) -> Optional[ExperimentModel]:
+        source = self.experiment_by_id(experiment_id)
+        if source is None:
+            return None
+        clone = source.model_copy(deep=True)
+        clone.experiment_id = self.next_experiment_id()
+        base = source.name or f"Experiment {source.experiment_id}"
+        clone.name = f"{base} copy"
+        self.experiments.append(clone)
+        return clone
+
+    def copy_boundary_conditions(
+        self, source_id: int, target_id: int
+    ) -> Optional[ExperimentModel]:
+        """Copy prescribed, linking, and external BCs from one experiment to another."""
+        source = self.experiment_by_id(source_id)
+        target = self.experiment_by_id(target_id)
+        if source is None or target is None or source is target:
+            return None
+        target.prescribed = [item.model_copy(deep=True) for item in source.prescribed]
+        target.linking = [item.model_copy(deep=True) for item in source.linking]
+        target.external = [item.model_copy(deep=True) for item in source.external]
+        n_ext = len(target.external)
+        for step in target.steps:
+            values = list(step.external_values or [])
+            if len(values) < n_ext:
+                values.extend([None] * (n_ext - len(values)))
+            step.external_values = values[:n_ext] if n_ext else []
+        return target
+
 
 def empty_document() -> SessionDocument:
     return SessionDocument(
@@ -370,7 +524,7 @@ def document_from_vfm_project(project: Any) -> SessionDocument:
             )
         )
     source = getattr(project, "source_path", None)
-    return SessionDocument(
+    document = SessionDocument(
         description=str(getattr(project, "description", "") or ""),
         created=str(getattr(project, "created", "") or ""),
         source_path=Path(source) if source else None,
@@ -398,12 +552,15 @@ def document_from_vfm_project(project: Any) -> SessionDocument:
         ),
         experiments=experiments,
     )
+    document.material.sync_parameters()
+    return document
 
 
 def document_to_vfm_project(document: SessionDocument):
     module = bridge.vfm_project()
     ProjectTest = getattr(module, "ProjectTest")
     VfmProject = getattr(module, "VfmProject")
+    document.material.sync_parameters()
     tests = []
     names: Dict[int, str] = {}
     for experiment in document.experiments:

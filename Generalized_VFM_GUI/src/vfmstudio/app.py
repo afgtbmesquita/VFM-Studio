@@ -10,7 +10,7 @@ from typing import Optional
 
 from PySide6.QtCore import QEventLoop, QTimer, Qt, qInstallMessageHandler
 from PySide6.QtGui import QFont
-from PySide6.QtWidgets import QApplication, QMessageBox, QWidget
+from PySide6.QtWidgets import QApplication, QMessageBox, QStyleFactory, QWidget
 
 from vfmstudio import __version__
 from vfmstudio.branding import APP_AUTHOR, APP_NAME
@@ -75,11 +75,14 @@ def _pump(app: QApplication) -> None:
     app.processEvents(QEventLoop.ProcessEventsFlag.AllEvents, 50)
 
 
+SPLASH_MINIMUM_S = 1.0
+
+
 def _hold_splash(
     app: QApplication,
     splash: Optional[QWidget],
     started: float,
-    minimum_s: float = 5.0,
+    minimum_s: float = SPLASH_MINIMUM_S,
 ) -> None:
     """Keep the banner visible long enough to read, even on a fast launch."""
     if splash is None:
@@ -111,6 +114,9 @@ def run_app(project_path: Optional[Path] = None) -> int:
     qInstallMessageHandler(_qt_message_handler)
     QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts, True)
     app = QApplication.instance() or QApplication(sys.argv)
+    fusion = QStyleFactory.create("Fusion")
+    if fusion is not None:
+        app.setStyle(fusion)
     app.setApplicationName(APP_NAME)
     app.setApplicationVersion(__version__)
     app.setOrganizationName(APP_AUTHOR)
@@ -135,7 +141,11 @@ def run_app(project_path: Optional[Path] = None) -> int:
         text = "".join(traceback.format_exception(exc_type, exc, tb))
         sys.stderr.write(text)
         try:
-            QMessageBox.critical(None, APP_NAME, f"Unhandled error:\n\n{exc}")
+            from vfmstudio.platform.scipy_wdac import explain_native_import_error
+
+            QMessageBox.critical(
+                None, APP_NAME, f"Unhandled error:\n\n{explain_native_import_error(exc)}"
+            )
         except Exception:
             pass
 

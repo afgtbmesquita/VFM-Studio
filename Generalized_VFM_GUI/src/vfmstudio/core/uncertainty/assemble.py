@@ -15,7 +15,6 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
 import numpy as np
-from scipy.linalg import cholesky, solve_triangular
 
 SOLVER_AGREEMENT_TOLERANCE = 1.0e-8
 SCORE_SUM_TOLERANCE = 1.0e-8
@@ -120,7 +119,17 @@ class EstimatingSystem:
         return self.rank_bound() >= self.n_parameters
 
 
+def _scipy_linalg():
+    from vfmstudio.platform.scipy_wdac import prepare_scipy_native_imports
+
+    prepare_scipy_native_imports()
+    from scipy.linalg import cholesky, solve_triangular
+
+    return cholesky, solve_triangular
+
+
 def _whiten_block(matrix: np.ndarray, vector: np.ndarray, covariance: np.ndarray):
+    cholesky, solve_triangular = _scipy_linalg()
     try:
         factor = cholesky(np.asarray(covariance, dtype=float), lower=True)
     except np.linalg.LinAlgError as error:

@@ -64,7 +64,7 @@ def test_app_icon_is_bundled():
 def test_windows_ico_is_bundled():
     from vfmstudio.resources import _resources_dir
 
-    ico = _resources_dir() / "LamXtract_Icon.ico"
+    ico = _resources_dir() / "abdXtract_Icon.ico"
     assert ico.is_file()
     assert ico.stat().st_size > 1_000
 
@@ -74,7 +74,7 @@ def test_official_logo_is_bundled():
 
     path = logo_path()
     assert path is not None
-    assert path.name == "LamXtract_Logo.png"
+    assert path.name == "abdXtract_Logo.png"
     assert path.is_file()
     assert path.stat().st_size > 300_000
 
@@ -94,7 +94,7 @@ def test_logo_never_upscales(qapp):
     small = _fit_logo_pixmap(logo, 200, 40)
     assert small.width() <= 200
     assert small.height() <= 40
-    assert APP_NAME == "LamXtract"
+    assert APP_NAME == "abdXtract"
     assert APP_AUTHOR == "Afonso Mesquita"
     assert "GPL" in APP_LICENSE_LINE
     assert "warranty" in APP_LICENSE_LINE.lower()

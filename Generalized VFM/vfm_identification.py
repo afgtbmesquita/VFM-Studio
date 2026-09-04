@@ -475,6 +475,8 @@ def _resolve_applied_force(
     ``'mat'`` (the default, and the historical behaviour)
         1. ``measurements.applied_force`` (the MAT file's ``F`` field) when
            it is provided.  A scalar is broadcast to ``n_external_groups``.
+           Otherwise ``F[i]`` feeds EXTERNAL group ``i``, unless a group
+           sets ``forceIndex`` to pick a different component.
         2. The per-entry ``value`` fields declared in the BC file's
            ``EXTERNAL`` list (writable from the GUI).
 
@@ -536,17 +538,11 @@ def _resolve_applied_force(
     if measurements.applied_force is not None:
         applied_force = np.asarray(measurements.applied_force,
                                     dtype=float).ravel()
-        if applied_force.size == 1 and n_external_groups > 1:
-            applied_force = np.repeat(applied_force, n_external_groups)
-        if applied_force.size != n_external_groups:
-            raise ValueError(
-                f"Applied force from the measurement file has "
-                f"{applied_force.size} entries but the BC file declares "
-                f"{n_external_groups} external-work group(s).  Either "
-                f"fix the size of 'F' in the MAT file, or remove it and "
-                "set the 'value' on each EXTERNAL entry instead."
-            )
-        return applied_force
+        return _map_mat_force_to_groups(
+            applied_force,
+            boundary_conditions.external,
+            n_external_groups,
+        )
 
     # ---- Path 2: per-entry 'value' from the BC file ---------------------
     n_bc_groups = len(boundary_conditions.external)
@@ -578,6 +574,82 @@ def _resolve_applied_force(
         + ".  Either add 'F' to the MAT file, or open the BC GUI "
         "and set a 'value' on every EXTERNAL entry."
     )
+
+
+def _force_index_for_entry(entry, group_index: int) -> int:
+    """Which ``F`` component loads this EXTERNAL group. Default is list order."""
+    raw = None
+    if isinstance(entry, dict):
+        raw = entry.get("forceIndex", entry.get("force_index"))
+    else:
+        raw = getattr(entry, "force_index", None)
+    if raw is None or raw == "":
+        return int(group_index)
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return int(group_index)
+
+
+def _map_mat_force_to_groups(
+    applied_force: np.ndarray,
+    external,
+    n_external_groups: int,
+) -> np.ndarray:
+    """Scatter the MAT ``F`` vector onto EXTERNAL groups.
+
+    Historical behaviour (no ``forceIndex`` on any group): a scalar ``F`` is
+    copied to every group, otherwise ``F[i]`` feeds group ``i`` and the
+    lengths must match.
+
+    With ``forceIndex``, each group picks a component.  Lengths may differ.
+    """
+    arr = np.asarray(applied_force, dtype=float).ravel()
+    if arr.size == 0:
+        raise ValueError("Measurement file 'F' is empty.")
+    entries = list(external or [])
+    explicit = False
+    for entry in entries:
+        if isinstance(entry, dict):
+            raw = entry.get("forceIndex", entry.get("force_index"))
+        else:
+            raw = getattr(entry, "force_index", None)
+        if raw is not None and raw != "":
+            explicit = True
+            break
+    if arr.size == 1 and n_external_groups > 1 and not explicit:
+        return np.repeat(arr, n_external_groups)
+    if not explicit and arr.size != n_external_groups:
+        raise ValueError(
+            f"Applied force from the measurement file has "
+            f"{arr.size} entries but the BC file declares "
+            f"{n_external_groups} external-work group(s).  Assign each "
+            f"group a .mat F component in the load table, or fix the "
+            f"size of 'F'."
+        )
+    mapped = np.empty(n_external_groups, dtype=float)
+    for index in range(n_external_groups):
+        entry = entries[index] if index < len(entries) else None
+        f_index = _force_index_for_entry(entry, index)
+        if arr.size == 1:
+            mapped[index] = float(arr[0])
+            continue
+        if f_index < 0 or f_index >= arr.size:
+            label = "<unlabeled>"
+            if isinstance(entry, dict):
+                label = str(entry.get("label") or label)
+            elif entry is not None:
+                label = str(getattr(entry, "label", None) or label)
+            raise ValueError(
+                f"EXTERNAL group #{index} '{label}' is assigned F[{f_index}], "
+                f"but this step's .mat F has {arr.size} "
+                f"entr{'y' if arr.size == 1 else 'ies'} (F[0]…F[{arr.size - 1}]). "
+                f"Pick a valid component in the load table."
+            )
+        mapped[index] = float(arr[f_index])
+    if not np.all(np.isfinite(mapped)):
+        raise ValueError("Mapped applied force contains a non-finite value.")
+    return mapped
 
 
 def _is_finite_number(raw_value) -> bool:

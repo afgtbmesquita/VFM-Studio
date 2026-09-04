@@ -175,6 +175,43 @@ def test_bc_symbols_2d_draw_pins_and_moments():
     plt.close(figure)
 
 
+def test_bc_symbols_2d_draws_node_only_prescribed():
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Polygon
+
+    figure, axis = plt.subplots()
+    axis.set_xlim(0.0, 10.0)
+    axis.set_ylim(0.0, 10.0)
+    experiment = ExperimentModel(
+        prescribed=[BoundaryEntry(label="W @0, 2", dof="W", nodes=[0, 2])]
+    )
+    cloud = np.array(
+        [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0], [0.0, 10.0, 0.0], [10.0, 10.0, 0.0]]
+    )
+    add_bc_symbols_2d(axis, experiment, 0.0, 10.0, 0.0, 10.0, node_xyz=cloud)
+    polygons = [patch for patch in axis.patches if isinstance(patch, Polygon)]
+    assert len(polygons) == 4  # two nodes × two-face Z pyramid
+    plt.close(figure)
+
+
+def test_bc_symbols_2d_skips_node_only_without_cloud():
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    figure, axis = plt.subplots()
+    experiment = ExperimentModel(
+        prescribed=[BoundaryEntry(label="W", dof="W", nodes=[0, 2])]
+    )
+    add_bc_symbols_2d(axis, experiment, 0.0, 10.0, 0.0, 10.0)
+    assert len(axis.patches) == 0
+    plt.close(figure)
+
+
 def test_bc_symbols_2d_label_top_wx_as_mxy():
     import matplotlib
 
@@ -229,3 +266,54 @@ def test_nice_ticks_cover_specimen_ends():
     assert x_max == 6.0
     assert y_min == 0.5
     assert y_max == 7.0
+
+
+def test_node_highlight_geometry_selected_and_lattice():
+    from vfmstudio.gui.viewport.overlays import node_highlight_geometry
+
+    class _Mesh:
+        node_coords = np.array(
+            [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]]
+        )
+
+    selected, rest, labels, ids = node_highlight_geometry(_Mesh(), [0, 2, 2, -1, 99])
+    assert ids == [0, 2]
+    assert labels == ["0", "2"]
+    assert selected.shape == (2, 3)
+    assert rest.shape == (0, 3)
+    assert selected[0, 2] > 0.0
+
+    selected, rest, labels, ids = node_highlight_geometry(
+        _Mesh(), [2], show_all=True
+    )
+    assert ids == [2]
+    assert rest.shape == (3, 3)
+
+
+def test_node_highlight_spec_preview_overrides_bc():
+    from vfmstudio.core.document import BoundaryEntry, ExperimentModel
+    from vfmstudio.gui.session import AppSession, Selection
+    from vfmstudio.gui.viewport.interactor import _node_highlight_spec
+
+    session = AppSession()
+    session.preview_node_ids = (3, 5)
+    session.preview_all_nodes = True
+    ids, show_all = _node_highlight_spec(session)
+    assert ids == (3, 5)
+    assert show_all is True
+
+    session.preview_node_ids = ()
+    session.preview_all_nodes = False
+    session.document.experiments = [
+        ExperimentModel(
+            experiment_id=1,
+            prescribed=[BoundaryEntry(dof="W", nodes=[16, 24])],
+        )
+    ]
+    session.selection = Selection(
+        kind="bc", experiment_id=1, bc_kind="prescribed", bc_index=0
+    )
+    ids, show_all = _node_highlight_spec(session)
+    assert ids == (16, 24)
+    assert show_all is False
+

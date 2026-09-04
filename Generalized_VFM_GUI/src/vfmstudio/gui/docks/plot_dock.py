@@ -11,18 +11,13 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QSizePolicy, QVBoxLayout, QWidget
 
 from vfmstudio.core.document import SessionDocument, parameter_math_label, parameter_unit_math
-from vfmstudio.core.parameter_space import (
-    is_full_combination,
-    selected_experiment_ids,
-    space_from_document,
-    theta_for_experiment_ids,
-)
+from vfmstudio.core.parameter_space import estimate_combination
 from vfmstudio.gui.results.plot_style import (
     INK_MUTED,
-    INK_PRIMARY,
     SERIES_COLOUR,
     SERIES_MARKER,
     apply_matplotlib_style,
+    heading_stylesheet,
     pad_limits as _pad_limits,
     style_axis as _style_axis,
 )
@@ -83,16 +78,12 @@ class PlotDock(QWidget):
         self._title = QLabel("Coefficient evolution through the FGLS loop")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._title.setWordWrap(True)
-        self._title.setStyleSheet(
-            f"color: {INK_PRIMARY}; font-size: 12pt; font-family: 'Times New Roman', serif;"
-        )
+        self._title.setStyleSheet(heading_stylesheet())
         self._subtitle = QLabel("")
         self._subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._subtitle.setWordWrap(True)
         self._subtitle.setVisible(False)
-        self._subtitle.setStyleSheet(
-            f"color: {INK_MUTED}; font-size: 9pt; font-family: 'Times New Roman', serif;"
-        )
+        self._subtitle.setStyleSheet(heading_stylesheet(muted=True))
         self._figure = Figure(facecolor="#FFFFFF")
         self._canvas = FigureCanvas(self._figure)
         self._canvas.setSizePolicy(
@@ -145,7 +136,13 @@ class PlotDock(QWidget):
         except Exception as exc:
             self._figure.clear()
             self._message(f"Could not apply that combination.\n{exc}")
+        self._redraw_canvas()
+
+    def _redraw_canvas(self) -> None:
+        # draw_idle() after figure.clear() often leaves the on-screen Qt pixmap
+        # unchanged. draw() paints immediately; update() asks Qt to blit it.
         self._canvas.draw()
+        self._canvas.update()
 
     def _message(self, text: str) -> None:
         axis = self._figure.add_subplot(111)
@@ -180,18 +177,17 @@ class PlotDock(QWidget):
             self._subtitle.setVisible(False)
             self._message("No identification result.")
             return
-        space = space_from_document(result, self._document)
-        ids = selected_experiment_ids(self._document)
+        estimate = estimate_combination(result, self._document)
+        ids = estimate.selected_ids
         if not ids:
+            self._title.setText("Coefficient evolution through the FGLS loop")
             self._set_fit_subtitle("No tests selected.")
             self._message("Tick at least one test to show a combination.")
             return
-        theta = theta_for_experiment_ids(space, ids) if space is not None else None
-        if space is None:
+        if not estimate.has_blocks:
             self._set_fit_subtitle()
-            n_ticked = len(ids)
-            n_all = len(self._document.experiments) if self._document else n_ticked
-            if n_ticked < n_all:
+            n_all = len(self._document.experiments) if self._document else len(ids)
+            if len(ids) < n_all:
                 self._message(
                     "This identification has no per-test GLS blocks, so a "
                     "subset cannot be applied. Run Identify again."
@@ -199,7 +195,7 @@ class PlotDock(QWidget):
                 return
             self._plot_evolution()
             return
-        if theta is None:
+        if estimate.theta is None:
             self._set_fit_subtitle(
                 "Last Identify did not include every ticked test."
             )
@@ -207,12 +203,15 @@ class PlotDock(QWidget):
                 "Those tests were not in the last Identify."
             )
             return
-        if not is_full_combination(space, ids):
+        if not estimate.is_full:
+            self._title.setText("Selected combination against the last Identify")
             self._set_fit_subtitle(
                 "Frozen GLS at the virtual fields of the last Identify."
             )
             self._plot_combination(
-                theta, space.theta_full, _labels_for(self._document, int(theta.size))
+                estimate.theta,
+                estimate.theta_full,
+                _labels_for(self._document, int(estimate.theta.size)),
             )
             return
         self._set_fit_subtitle()
@@ -307,6 +306,7 @@ class PlotDock(QWidget):
         ax_shift.set_title("Shift from Identify", pad=8)
 
     def _plot_evolution(self) -> None:
+        self._title.setText("Coefficient evolution through the FGLS loop")
         result = self._result
         iterations, values = _parameter_history(result, self._document)
         if iterations is None or values is None or values.size == 0:

@@ -26,11 +26,12 @@ INK_PRIMARY = "#141413"
 INK_SECONDARY = "#52514e"
 INK_MUTED = "#8f8e88"
 GRID_COLOUR = "#dcdbd5"
+UI_FONT_STACK = "Arial, Helvetica, sans-serif"
 
 MPL_RCPARAMS = {
-    "font.family": "serif",
-    "font.serif": ["Times New Roman", "STIXGeneral", "DejaVu Serif"],
-    "mathtext.fontset": "stix",
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Arial", "Helvetica", "DejaVu Sans"],
+    "mathtext.fontset": "dejavusans",
     "font.size": 9,
     "axes.labelsize": 10,
     "axes.titlesize": 10,
@@ -51,6 +52,16 @@ def apply_matplotlib_style() -> None:
     import matplotlib as mpl
 
     mpl.rcParams.update(MPL_RCPARAMS)
+
+
+def heading_stylesheet(*, muted: bool = False) -> str:
+    """QLabel chrome matching the Abaqus-style Arial UI, not journal serif."""
+    color = INK_MUTED if muted else INK_PRIMARY
+    size = "9pt" if muted else "12pt"
+    return (
+        f"color: {color}; font-size: {size}; font-family: {UI_FONT_STACK}; "
+        "background: none;"
+    )
 
 
 def pad_limits(axis, values, fraction: float = 0.14, *, which: str = "y") -> None:

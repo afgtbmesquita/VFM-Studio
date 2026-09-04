@@ -26,6 +26,7 @@ from PySide6.QtWidgets import (
 )
 
 from vfmstudio.core.fields import field_axis_math, field_display_label
+from vfmstudio.core.mesh_convert import build_experiment_mesh, mesh_xyz
 from vfmstudio.core.step_series import (
     SpatialSelection,
     StepSeries,
@@ -83,22 +84,9 @@ class LoadPlotOverlay(QWidget):
         self._spec_xlim = None
         self._spec_ylim = None
 
-        import matplotlib as mpl
+        from vfmstudio.gui.results.plot_style import apply_matplotlib_style
 
-        mpl.rcParams.update(
-            {
-                "font.family": "serif",
-                "font.serif": ["Times New Roman", "STIXGeneral", "DejaVu Serif"],
-                "mathtext.fontset": "stix",
-                "font.size": 9,
-                "axes.labelsize": 10,
-                "axes.titlesize": 10,
-                "legend.fontsize": 8,
-                "legend.frameon": False,
-                "axes.linewidth": 0.6,
-                "text.usetex": False,
-            }
-        )
+        apply_matplotlib_style()
 
         self._force = QComboBox()
         self._force.currentIndexChanged.connect(self._redraw)
@@ -150,7 +138,9 @@ class LoadPlotOverlay(QWidget):
         bar.addWidget(close, 0, Qt.AlignmentFlag.AlignTop)
 
         self._status = QLabel("Whole-field mean")
-        self._status.setStyleSheet(f"color: {INK_MUTED}; padding: 0 8px 4px 8px;")
+        self._status.setStyleSheet(
+            f"color: {INK_MUTED}; padding: 0 8px 4px 8px; background: none;"
+        )
 
         self._plot_fig = Figure(figsize=(5.2, 3.6), layout="constrained")
         self._plot_canvas = FigureCanvas(self._plot_fig)
@@ -190,7 +180,7 @@ class LoadPlotOverlay(QWidget):
                 background-color: #E6E6E6;
             }
             #loadPlotOverlay QLabel {
-                background: transparent;
+                background: none;
                 color: #222222;
             }
             #loadPlotOverlay QComboBox {
@@ -258,6 +248,7 @@ class LoadPlotOverlay(QWidget):
             tuple(str(step.data_file) for step in experiment.steps),
             str(session.document.source_path),
             bool(experiment.fit_data_to_system_axes),
+            experiment.reference_step,
         )
         if key != self._series_key:
             self._series = collect_step_series(
@@ -593,7 +584,15 @@ class LoadPlotOverlay(QWidget):
         axis.autoscale(enable=False)
         experiment = self._session.selected_experiment() if self._session else None
         if experiment is not None:
-            add_bc_symbols_2d(axis, experiment, x_min, x_max, y_min, y_max)
+            add_bc_symbols_2d(
+                axis,
+                experiment,
+                x_min,
+                x_max,
+                y_min,
+                y_max,
+                node_xyz=_specimen_node_xyz(self._session, experiment),
+            )
         self._spec_xlim = axis.get_xlim()
         self._spec_ylim = axis.get_ylim()
         self._rubber = None
@@ -741,3 +740,13 @@ class LoadPlotOverlay(QWidget):
             y=float(y[nearest]),
         )
         self._redraw()
+
+
+def _specimen_node_xyz(session, experiment):
+    """Mesh node coordinates so node-only BCs can be drawn on the 2-D map."""
+    if session is None or experiment is None:
+        return None
+    try:
+        return mesh_xyz(build_experiment_mesh(session.document, experiment))
+    except Exception:
+        return None

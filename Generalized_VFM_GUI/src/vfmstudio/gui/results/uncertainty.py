@@ -47,10 +47,12 @@ class UncertaintyLanding(QWidget):
             layout.setContentsMargins(0, 10, 0, 6)
             layout.setSpacing(4)
             head = QLabel(heading)
-            head.setStyleSheet("font-weight: 600; font-size: 11pt; color: #1F1F1F;")
+            head.setStyleSheet(
+                "font-weight: 600; font-size: 11pt; color: #1F1F1F; background: none;"
+            )
             text = QLabel(body)
             text.setWordWrap(True)
-            text.setStyleSheet("color: #555555;")
+            text.setStyleSheet("color: #555555; background: none;")
             layout.addWidget(head)
             layout.addWidget(text)
             return box

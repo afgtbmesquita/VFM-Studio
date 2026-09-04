@@ -36,11 +36,16 @@ class SolverSettingsDialog(QDialog):
         self.weight.setCurrentText(solver.weighting)
         self.spatial = QCheckBox("Spatial correction of Γ")
         self.spatial.setChecked(solver.spatial_correction)
+        self.cov_tol = QDoubleSpinBox()
+        self.cov_tol.setDecimals(12)
+        self.cov_tol.setRange(0.0, 1.0)
+        self.cov_tol.setValue(solver.covariance_tolerance)
         form = QFormLayout()
         form.addRow("Max iterations", self.iters)
         form.addRow("Tolerance", self.tol)
         form.addRow("Γ basis degree", self.degree)
         form.addRow("Weighting", self.weight)
+        form.addRow("Covariance tolerance", self.cov_tol)
         form.addRow(self.spatial)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
@@ -57,3 +62,4 @@ class SolverSettingsDialog(QDialog):
         solver.basis_degree = int(self.degree.value())
         solver.weighting = self.weight.currentText()
         solver.spatial_correction = self.spatial.isChecked()
+        solver.covariance_tolerance = float(self.cov_tol.value())

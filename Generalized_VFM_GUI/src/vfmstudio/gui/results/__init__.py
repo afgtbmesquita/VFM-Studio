@@ -6,6 +6,7 @@ from vfmstudio.gui.results.experiment_check import ExperimentCheckPanel
 from vfmstudio.gui.results.identifiability import IdentifiabilityPanel
 from vfmstudio.gui.results.identifiability_strength import IdentifiabilityStrengthPanel
 from vfmstudio.gui.results.parameter_space import ParameterSpacePanel
+from vfmstudio.gui.results.stress_space import StressSpacePanel
 from vfmstudio.gui.results.uncertainty import (
     CovariancePanel,
     ExperimentUncertaintyPanel,
@@ -28,6 +29,7 @@ __all__ = [
     "LeaveOneOutPanel",
     "MatricesPanel",
     "ParameterSpacePanel",
+    "StressSpacePanel",
     "UncertaintyLanding",
     "VirtualFieldPanel",
 ]

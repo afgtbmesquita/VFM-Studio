@@ -207,3 +207,94 @@ def test_group_statistics_match_intersection_cloud():
     values = space.theta[pick]
     assert np.allclose(one["mean"], np.mean(values, axis=0))
     assert np.allclose(one["std"], np.std(values, axis=0, ddof=1))
+
+
+def test_estimate_combination_matches_subset_sweep():
+    from vfmstudio.core.document import ExperimentModel, empty_document
+    from vfmstudio.core.parameter_space import estimate_combination, theta_for_experiment_ids
+
+    system, _ = _random_system(12, 4, 5, seed=12)
+    space = from_system(system)
+    document = empty_document()
+    document.experiments = [
+        ExperimentModel(experiment_id=int(experiment_id), name=name)
+        for experiment_id, name in zip(space.experiment_ids, space.names)
+    ]
+    keep = [int(experiment_id) for experiment_id in space.experiment_ids[:-3]]
+    for experiment in document.experiments:
+        experiment.include_in_identification = experiment.experiment_id in set(keep)
+    estimate = estimate_combination(system, document)
+    expected = theta_for_experiment_ids(space, keep)
+    assert estimate.has_blocks is True
+    assert estimate.is_full is False
+    assert estimate.theta is not None
+    assert np.allclose(estimate.theta, expected, atol=1.0e-10)
+    for experiment in document.experiments:
+        experiment.include_in_identification = True
+    full = estimate_combination(system, document)
+    assert full.is_full is True
+    assert np.allclose(full.theta, space.theta_full, atol=1.0e-10)
+
+
+def test_estimate_combination_is_cheap_for_twelve_tests():
+    from vfmstudio.core.document import ExperimentModel, empty_document
+    from vfmstudio.core.parameter_space import estimate_combination
+
+    system, _ = _random_system(12, 4, 6, seed=13)
+    document = empty_document()
+    document.experiments = [
+        ExperimentModel(experiment_id=index + 1, name=f"E{index + 1}")
+        for index in range(12)
+    ]
+    document.experiments[-1].include_in_identification = False
+    first = estimate_combination(system, document)
+    document.experiments[-2].include_in_identification = False
+    second = estimate_combination(system, document)
+    assert first.theta is not None and second.theta is not None
+    assert first.theta.shape == second.theta.shape
+    assert not np.allclose(first.theta, second.theta)
+
+
+def test_estimate_combination_matches_by_name_when_ids_differ():
+    from vfmstudio.core.document import ExperimentModel, empty_document
+    from vfmstudio.core.parameter_space import estimate_combination
+
+    system, _ = _random_system(3, 4, 5, seed=14)
+    document = empty_document()
+    document.experiments = [
+        ExperimentModel(experiment_id=10, name="E1"),
+        ExperimentModel(experiment_id=20, name="E2"),
+        ExperimentModel(experiment_id=30, name="E3"),
+    ]
+    document.experiments[-1].include_in_identification = False
+    estimate = estimate_combination(system, document)
+    assert estimate.has_blocks is True
+    assert estimate.is_full is False
+    assert estimate.theta is not None
+    for experiment in document.experiments:
+        experiment.include_in_identification = True
+    full = estimate_combination(system, document)
+    assert full.is_full is True
+
+
+def test_estimate_combination_matches_by_order_when_ids_collide():
+    from vfmstudio.core.document import ExperimentModel, empty_document
+    from vfmstudio.core.parameter_space import estimate_combination
+
+    system, _ = _random_system(12, 4, 4, seed=15)
+    for cluster in system.clusters:
+        cluster.experiment_id = 1
+    document = empty_document()
+    document.experiments = [
+        ExperimentModel(experiment_id=index + 1, name=f"T{index + 1}")
+        for index in range(12)
+    ]
+    document.experiments[-1].include_in_identification = False
+    subset = estimate_combination(system, document)
+    assert subset.is_full is False
+    assert subset.theta is not None
+    for experiment in document.experiments:
+        experiment.include_in_identification = True
+    full = estimate_combination(system, document)
+    assert full.is_full is True
+    assert not np.allclose(subset.theta, full.theta)

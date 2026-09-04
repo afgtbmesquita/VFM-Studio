@@ -19,7 +19,9 @@ def first_attr(obj: Any, *names: str, default: Any = None) -> Any:
 
 def _load(name: str) -> ModuleType:
     from vfmstudio.core.paths import ensure_core_on_path
+    from vfmstudio.platform.scipy_wdac import prepare_scipy_native_imports
 
+    prepare_scipy_native_imports()
     ensure_core_on_path()
     return __import__(name)
 
@@ -166,6 +168,10 @@ def apply_experiment_definition(
 
 def build_mesh(mesh_settings, analysis_type: str):
     return vfm_mesh().build_mesh(mesh_settings, analysis_type=analysis_type)
+
+
+def subset_mesh_elements(mesh_pkg, keep_elements):
+    return vfm_mesh().subset_mesh_elements(mesh_pkg, keep_elements)
 
 
 def mesh_settings_class():

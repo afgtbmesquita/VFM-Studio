@@ -22,10 +22,10 @@ def _resources_dir() -> Path:
 def _app_icon_path() -> Path | None:
     resources = _resources_dir()
     if sys.platform == "win32":
-        ico = resources / "LamXtract_Icon.ico"
+        ico = resources / "abdXtract_Icon.ico"
         if ico.is_file():
             return ico
-    png = resources / "LamXtract_Icon.png"
+    png = resources / "abdXtract_Icon.png"
     if png.is_file():
         return png
     return None
@@ -39,7 +39,7 @@ def icon(name: str) -> QIcon:
 
 
 def app_icon() -> QIcon:
-    """LamXtract window / taskbar icon (multi-size for Windows)."""
+    """abdXtract window / taskbar icon (multi-size for Windows)."""
     global _APP_ICON
     if _APP_ICON is not None and not _APP_ICON.isNull():
         return _APP_ICON

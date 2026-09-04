@@ -93,6 +93,17 @@ def validate_document(document: SessionDocument) -> JobReport:
                 report.errors.append(
                     f"{label}: measurement file not found: {step.data_file}"
                 )
+    material = document.material
+    labels = material.labels()
+    before = [float(v) for v in material.initial_parameters]
+    material.sync_parameters()
+    if before != material.initial_parameters:
+        report.warnings.append(
+            f"Initial θ was length {len(before)}; "
+            f"{material.material_type} {material.analysis_type} needs "
+            f"{len(labels)} {list(labels)}. Missing entries were set to 1. "
+            "Check Material if those are not the intended starting values."
+        )
     try:
         project = project_for_identification(document)
     except Exception as exc:

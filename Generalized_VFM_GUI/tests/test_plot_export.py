@@ -49,6 +49,7 @@ def test_resolve_export_path_follows_suffix_or_filter():
 def test_has_exportable_plot_covers_plot_pages_only():
     assert has_exportable_plot("post_plots")
     assert has_exportable_plot("post_virtual_fields")
+    assert has_exportable_plot("post_stress_space")
     assert has_exportable_plot("post_uncertainty_cov")
     assert not has_exportable_plot("post_identifiability")
     assert not has_exportable_plot("post_uncertainty")
@@ -73,3 +74,13 @@ def test_save_figure_rejects_unknown_suffix(tmp_path):
     figure = _line_figure()
     with pytest.raises(ValueError, match=r"\.pdf or \.png"):
         save_figure(figure, tmp_path / "plot.jpg")
+
+
+def test_plot_style_uses_abaqus_sans_serif():
+    from vfmstudio.gui.results.plot_style import MPL_RCPARAMS, heading_stylesheet
+
+    assert MPL_RCPARAMS["font.family"] == "sans-serif"
+    assert "Arial" in MPL_RCPARAMS["font.sans-serif"]
+    assert "Times New Roman" not in str(MPL_RCPARAMS)
+    assert "Arial" in heading_stylesheet()
+    assert "Times" not in heading_stylesheet()

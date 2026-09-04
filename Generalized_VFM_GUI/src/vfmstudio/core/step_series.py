@@ -15,6 +15,7 @@ from vfmstudio.core.fields import (
     conjugate_curvature_name,
     conjugate_moment_math,
     experiment_alignment_angle,
+    force_index_for_group,
     load_step_fields,
 )
 
@@ -162,6 +163,9 @@ def viewport_caption(
         lines.append(
             f"Step {step_index + 1}/{n_steps}: {step_display_label(step)}"
         )
+        reference = getattr(experiment, "reference_step", None)
+        if reference is not None:
+            lines.append(f"Relative to step {int(reference)}")
         values = _finite_load_values(applied_force)
         if values.size == 0:
             values = _finite_load_values(getattr(step, "external_values", None))
@@ -255,8 +259,10 @@ def force_components(experiment: ExperimentModel, n_force: int) -> List[ForceCom
         edge = str(group.edge or "").strip().lower() or None
         if edge == "bottom":
             continue
-        force_index = index if n_force > index else 0
-        if n_force <= 0:
+        force_index = force_index_for_group(group, index)
+        if n_force == 1:
+            force_index = 0
+        elif n_force <= 0 or force_index < 0 or force_index >= n_force:
             continue
         symbol = _moment_symbol(group)
         plain = symbol.replace("{", "").replace("}", "")
@@ -388,7 +394,7 @@ def collect_step_series(
     source_path: Optional[Path] = None,
     cache: Optional[dict] = None,
 ) -> StepSeries:
-    """Load raw MAT force vectors and spatial-mean kinematic fields."""
+    """Load MAT force vectors and kinematic fields, referenced if a step is set."""
     field_names = curvature_field_names(analysis_type)
     points: List[StepSeriesPoint] = []
     n_force = 0
@@ -465,6 +471,7 @@ def collect_step_series(
                     error=str(exc),
                 )
             )
+    _subtract_series_reference(experiment, points)
     channels = force_components(experiment, n_force)
     return StepSeries(
         points=points,
@@ -472,6 +479,49 @@ def collect_step_series(
         field_names=field_names,
         force_channels=channels,
     )
+
+
+def _subtract_series_reference(
+    experiment: ExperimentModel,
+    points: List[StepSeriesPoint],
+) -> None:
+    """Make loaded series incremental vs the experiment reference step."""
+    if experiment.reference_step is None or not points:
+        return
+    ref_index = int(experiment.reference_step) - 1
+    if ref_index < 0 or ref_index >= len(points):
+        return
+    reference = points[ref_index]
+    if reference.error:
+        return
+    ref_force = (
+        None
+        if reference.force is None
+        else np.atleast_1d(np.asarray(reference.force, dtype=float)).ravel().copy()
+    )
+    ref_fields = {
+        name: np.asarray(values, dtype=float).copy()
+        for name, values in (reference.fields or {}).items()
+    }
+    for point in points:
+        if point.error:
+            continue
+        if point.force is not None and ref_force is not None:
+            current = np.atleast_1d(np.asarray(point.force, dtype=float)).ravel()
+            if current.shape == ref_force.shape:
+                point.force = current - ref_force
+        for name, values in list(point.fields.items()):
+            baseline = ref_fields.get(name)
+            if baseline is None:
+                continue
+            current = np.asarray(values, dtype=float)
+            if current.shape != baseline.shape:
+                continue
+            updated = current - baseline
+            point.fields[name] = updated
+            point.field_means[name] = (
+                float(np.nanmean(updated)) if updated.size else float("nan")
+            )
 
 
 def series_xy(

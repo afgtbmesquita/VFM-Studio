@@ -60,7 +60,7 @@ class ImportMatDialog(QDialog):
 
     def __init__(self, parent=None, *, start_directory: str = "") -> None:
         super().__init__(parent)
-        self.setWindowTitle("Add load steps")
+        self.setWindowTitle("Import MAT files")
         self.resize(520, 280)
         self._start_directory = start_directory or ""
         self._paths: List[Path] = []
@@ -124,8 +124,8 @@ class ImportMatDialog(QDialog):
         for path in self._paths:
             self._list.addItem(str(path))
 
-    def steps(self) -> List[LoadStepModel]:
-        return load_steps_from_paths(self._paths)
+    def steps(self, skip: Optional[Sequence[Path | str]] = None) -> List[LoadStepModel]:
+        return load_steps_from_paths(self._paths, skip=skip)
 
     def step(self) -> Optional[LoadStepModel]:
         steps = self.steps()

@@ -604,6 +604,7 @@ def project_to_cases(project: VfmProject, verbose: bool = False):
         build_mesh,
         map_points_to_mesh,
         prune_mesh_by_measurement_points,
+        subset_mesh_elements,
         subset_measurements_to_mapped_mesh,
     )
     from vfm_user_inputs import Bounds, MeshSettings
@@ -636,6 +637,20 @@ def project_to_cases(project: VfmProject, verbose: bool = False):
 
         mesh_pkg = build_mesh(mesh_settings,
                               analysis_type=project.analysis_type)
+        keep_cells = payload.get("keep_cells") or []
+        if keep_cells:
+            grid = mesh_pkg.element_grid_index
+            keep_ids = []
+            for cell in keep_cells:
+                if cell is None or len(cell) < 2:
+                    continue
+                ix, iy = int(cell[0]), int(cell[1])
+                if 0 <= ix < grid.shape[0] and 0 <= iy < grid.shape[1]:
+                    eid = int(grid[ix, iy])
+                    if eid >= 0:
+                        keep_ids.append(eid)
+            if keep_ids and len(set(keep_ids)) < int(mesh_pkg.n_elements):
+                mesh_pkg, _ = subset_mesh_elements(mesh_pkg, keep_ids)
         mapping = map_points_to_mesh(measurements.points, mesh_pkg)
         if mapping.n_unmapped:
             n_before = int(mapping.mapped_mask.size)

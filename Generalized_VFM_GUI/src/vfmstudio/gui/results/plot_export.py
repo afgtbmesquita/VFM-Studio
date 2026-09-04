@@ -18,6 +18,7 @@ PLOT_EXPORT_STEMS = {
     "post_processing": "coefficient_evolution",
     "post_plots": "coefficient_evolution",
     "post_parameter_space": "parameter_space",
+    "post_stress_space": "stress_resultant_space",
     "post_experiment_check": "experiment_check",
     "post_identifiability_strength": "identifiability_strength",
     "post_virtual_fields": "virtual_fields",

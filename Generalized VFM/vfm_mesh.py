@@ -876,9 +876,6 @@ def prune_mesh_by_measurement_points(
     if points.ndim != 2 or points.shape[1] != 2:
         raise ValueError("`points` must have shape (n_points, 2).")
 
-    n_elements_before = int(mesh_pkg.n_elements)
-    n_nodes_before = int(mesh_pkg.n_nodes)
-
     counts = count_measurements_per_element(points, mesh_pkg)
     keep_elements = np.flatnonzero(counts >= int(min_points_per_element))
     if keep_elements.size == 0:
@@ -888,7 +885,27 @@ def prune_mesh_by_measurement_points(
             "ensure at least one measurement lies inside the virtual mesh."
         )
 
-    if keep_elements.size == n_elements_before:
+    return subset_mesh_elements(mesh_pkg, keep_elements)
+
+
+def subset_mesh_elements(
+    mesh_pkg: MeshPackage,
+    keep_elements,
+) -> Tuple[MeshPackage, MeshPruneReport]:
+    """Keep a subset of structured-grid elements and compact node/element ids.
+
+    ``element_grid_index`` retains the original ``nx`` / ``ny`` shape; dropped
+    cells are marked ``-1``.  Identification-time DIC pruning can still run
+    on the result.
+    """
+    n_elements_before = int(mesh_pkg.n_elements)
+    n_nodes_before = int(mesh_pkg.n_nodes)
+    keep = np.unique(np.asarray(keep_elements, dtype=np.int64).ravel())
+    keep = keep[(keep >= 0) & (keep < n_elements_before)]
+    if keep.size == 0:
+        raise ValueError("No elements remain after subsetting the mesh.")
+
+    if keep.size == n_elements_before:
         report = MeshPruneReport(
             n_elements_before=n_elements_before,
             n_elements_after=n_elements_before,
@@ -899,9 +916,9 @@ def prune_mesh_by_measurement_points(
         )
         return mesh_pkg, report
 
-    old_element_nodes = mesh_pkg.element_nodes[keep_elements]
-    element_dx = mesh_pkg.element_dx[keep_elements]
-    element_dy = mesh_pkg.element_dy[keep_elements]
+    old_element_nodes = mesh_pkg.element_nodes[keep]
+    element_dx = mesh_pkg.element_dx[keep]
+    element_dy = mesh_pkg.element_dy[keep]
 
     used_nodes = np.unique(old_element_nodes.ravel())
     old_to_new_node = -np.ones(n_nodes_before, dtype=np.int64)
@@ -910,12 +927,11 @@ def prune_mesh_by_measurement_points(
     new_element_nodes = old_to_new_node[old_element_nodes]
     new_node_coords = mesh_pkg.node_coords[used_nodes].copy()
 
-    n_elements_after = int(keep_elements.size)
+    n_elements_after = int(keep.size)
     n_nodes_after = int(used_nodes.size)
 
     old_to_new_element = -np.ones(n_elements_before, dtype=np.int64)
-    old_to_new_element[keep_elements] = np.arange(
-        n_elements_after, dtype=np.int64)
+    old_to_new_element[keep] = np.arange(n_elements_after, dtype=np.int64)
 
     new_element_grid_index = -np.ones_like(mesh_pkg.element_grid_index)
     flat_old = mesh_pkg.element_grid_index.ravel()

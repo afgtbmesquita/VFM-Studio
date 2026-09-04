@@ -7,6 +7,7 @@ from typing import Any, Optional
 import numpy as np
 
 from vfmstudio.core import mesh_convert
+from vfmstudio.core.contour_mesh import field_surface
 from vfmstudio.core.fields import conjugate_moment_plain, field_math_title
 from vfmstudio.core.document import ExperimentModel
 from vfmstudio.gui.session import Selection
@@ -18,7 +19,13 @@ BC_COLORS = {
     "external": "#1baf7a",
 }
 HIGHLIGHT = "#F5C518"
+NODE_GHOST = "#9aa4b2"
 PRESCRIBED_CONE_SCALE = 0.5
+_NODE_HIGHLIGHT_NAMES = (
+    "node_highlight",
+    "node_highlight_all",
+    "node_highlight_labels",
+)
 _ISO_SHEAR_X = 0.45
 _ISO_SHEAR_Y = 0.20
 _ARC_THETA_EPS = 0.12
@@ -45,6 +52,115 @@ def unstructured_quad_grid(pv, mesh_pkg: Any, z: Optional[np.ndarray] = None):
 
 MESH_EDGE_COLOR = "#1A1A1A"
 MESH_EDGE_WIDTH = 3.5
+
+
+def node_highlight_geometry(mesh_pkg: Any, selected_ids, *, show_all: bool = False):
+    """Selected node coordinates, remaining lattice points, and id labels."""
+    xyz = mesh_convert.mesh_xyz(mesh_pkg)
+    n = int(xyz.shape[0]) if xyz.ndim == 2 else 0
+    ids: list[int] = []
+    seen: set[int] = set()
+    for item in selected_ids or []:
+        try:
+            index = int(item)
+        except (TypeError, ValueError):
+            continue
+        if index < 0 or index >= n or index in seen:
+            continue
+        seen.add(index)
+        ids.append(index)
+    selected = xyz[ids] if ids else np.zeros((0, 3), dtype=float)
+    if show_all and n:
+        rest_ids = [index for index in range(n) if index not in seen]
+        rest = xyz[rest_ids] if rest_ids else np.zeros((0, 3), dtype=float)
+    else:
+        rest = np.zeros((0, 3), dtype=float)
+    span = 1.0
+    if n:
+        span = float(max(np.ptp(xyz[:, 0]), np.ptp(xyz[:, 1]), 1.0))
+    lift = 0.012 * span
+    if selected.size:
+        selected = np.asarray(selected, dtype=float).copy()
+        selected[:, 2] += lift
+    if rest.size:
+        rest = np.asarray(rest, dtype=float).copy()
+        rest[:, 2] += 0.5 * lift
+    return selected, rest, [str(index) for index in ids], ids
+
+
+def remove_node_highlights(plotter) -> None:
+    if plotter is None:
+        return
+    for name in _NODE_HIGHLIGHT_NAMES:
+        try:
+            plotter.remove_actor(name)
+        except Exception:
+            pass
+
+
+def update_node_highlights(
+    plotter,
+    pv,
+    mesh_pkg: Any,
+    selected_ids,
+    *,
+    show_all: bool = False,
+) -> None:
+    """Gold spheres + id labels for selected mesh nodes; optional full lattice."""
+    remove_node_highlights(plotter)
+    if plotter is None or pv is None or mesh_pkg is None:
+        return
+    selected, rest, labels, _ids = node_highlight_geometry(
+        mesh_pkg, selected_ids, show_all=show_all
+    )
+    if rest.size:
+        plotter.add_mesh(
+            pv.PolyData(rest),
+            color=NODE_GHOST,
+            point_size=9,
+            render_points_as_spheres=True,
+            name="node_highlight_all",
+            reset_camera=False,
+            pickable=False,
+        )
+    if selected.size:
+        plotter.add_mesh(
+            pv.PolyData(selected),
+            color=HIGHLIGHT,
+            point_size=18,
+            render_points_as_spheres=True,
+            name="node_highlight",
+            reset_camera=False,
+            pickable=False,
+        )
+        kwargs = dict(
+            text_color="#111111",
+            font_size=13,
+            fill_shape=True,
+            shape_color="white",
+            shape_opacity=0.94,
+            always_visible=True,
+            show_points=False,
+            name="node_highlight_labels",
+            reset_camera=False,
+            render=False,
+        )
+        try:
+            plotter.add_point_labels(selected, labels, **kwargs)
+        except TypeError:
+            fallback = dict(
+                text_color="#111111",
+                font_size=13,
+                fill_shape=True,
+                name="node_highlight_labels",
+                reset_camera=False,
+            )
+            try:
+                plotter.add_point_labels(selected, labels, **fallback)
+            except TypeError:
+                plotter.add_point_labels(
+                    selected, labels, text_color="#111111", font_size=13
+                )
 
 
 def add_mesh_wireframe(plotter, pv, mesh_pkg: Any, name: str = "mesh") -> None:
@@ -114,12 +230,29 @@ def _add_styled_scalar_bar(plotter, title: str) -> None:
         bar.SetBarRatio(0.18)
     except Exception:
         pass
-    for prop_name in ("GetTitleTextProperty", "GetLabelTextProperty"):
+    for method, value in (
+        ("DrawBackgroundOff", None),
+        ("SetDrawBackground", False),
+        ("SetDrawFrame", False),
+        ("DrawFrameOff", None),
+    ):
+        fn = getattr(bar, method, None)
+        if callable(fn):
+            try:
+                fn() if value is None else fn(value)
+            except Exception:
+                pass
+    for prop_name in (
+        "GetTitleTextProperty",
+        "GetLabelTextProperty",
+        "GetAnnotationTextProperty",
+    ):
         getter = getattr(bar, prop_name, None)
         if getter is None:
             continue
         try:
             prop = getter()
+            _strip_text_property(prop)
             prop.SetLineOffset(3)
         except Exception:
             pass
@@ -133,26 +266,29 @@ def add_field_contour(
     scalar_name: str,
     *,
     deformed: bool = False,
+    clim=None,
 ) -> None:
     xyz = np.asarray(pts, dtype=float)
     scalars = np.asarray(values, dtype=float).ravel()
     n = min(xyz.shape[0], scalars.size)
     xyz = xyz[:n]
     scalars = scalars[:n]
-    cloud = pv.PolyData(xyz)
-    cloud[scalar_name] = scalars
     try:
-        surf = cloud.delaunay_2d()
-        if scalar_name not in surf.array_names:
-            surf[scalar_name] = cloud[scalar_name]
+        surf = field_surface(pv, xyz, scalars, scalar_name)
     except Exception:
-        surf = cloud
+        surf = pv.PolyData(xyz)
+        surf[scalar_name] = scalars
     finite = scalars[np.isfinite(scalars)]
-    clim = None
+    auto_clim = None
     if finite.size:
         lo, hi = np.percentile(finite, [2.0, 98.0])
         limit = float(max(abs(lo), abs(hi), 1e-12))
-        clim = [-limit, limit]
+        auto_clim = [-limit, limit]
+    if clim is not None and len(clim) == 2:
+        try:
+            auto_clim = [float(clim[0]), float(clim[1])]
+        except (TypeError, ValueError):
+            pass
     kwargs = dict(
         scalars=scalar_name,
         cmap="RdBu_r",
@@ -164,8 +300,8 @@ def add_field_contour(
     )
     if deformed:
         kwargs.update(ambient=0.40, diffuse=0.60, specular=0.18, specular_power=12)
-    if clim is not None:
-        kwargs["clim"] = clim
+    if auto_clim is not None:
+        kwargs["clim"] = auto_clim
     try:
         plotter.add_mesh(surf, **kwargs)
     except TypeError:
@@ -230,48 +366,105 @@ def add_viewport_caption(plotter, text: str) -> None:
             except Exception:
                 return
     _clear_text_backdrop(actor)
+    return actor
+
+
+def add_plain_text(plotter, text: str, **kwargs):
+    """``plotter.add_text`` without the default VTK text billboard."""
+    if plotter is None:
+        return None
+    actor = None
+    try:
+        actor = plotter.add_text(text, **kwargs)
+    except TypeError:
+        kwargs.pop("name", None)
+        kwargs.pop("shadow", None)
+        try:
+            actor = plotter.add_text(text, **kwargs)
+        except Exception:
+            return None
+    except Exception:
+        return None
+    _clear_text_backdrop(actor)
+    return actor
+
+
+def _strip_text_property(prop) -> None:
+    if prop is None:
+        return
+    for method in ("FrameOff", "ShadowOff"):
+        fn = getattr(prop, method, None)
+        if callable(fn):
+            try:
+                fn()
+            except Exception:
+                pass
+    for method, value in (
+        ("SetBackgroundOpacity", 0.0),
+        ("SetFrame", 0),
+        ("SetFrameWidth", 0),
+    ):
+        fn = getattr(prop, method, None)
+        if callable(fn):
+            try:
+                fn(value)
+            except Exception:
+                pass
 
 
 def _clear_text_backdrop(actor) -> None:
     """Strip VTK text frames/fills so the caption is letters only."""
     if actor is None:
         return
+    for method, args in (
+        ("FrameOff", ()),
+        ("ShadowOff", ()),
+        ("SetBackgroundOpacity", (0.0,)),
+        ("SetFrame", (0,)),
+    ):
+        fn = getattr(actor, method, None)
+        if callable(fn):
+            try:
+                fn(*args)
+            except Exception:
+                pass
     props = []
-    getter = getattr(actor, "GetTextProperty", None)
-    if callable(getter):
-        try:
-            props.append(getter())
-        except Exception:
-            pass
+    for getter_name in (
+        "GetTextProperty",
+        "GetCaptionTextProperty",
+        "GetTitleTextProperty",
+        "GetLabelTextProperty",
+    ):
+        getter = getattr(actor, getter_name, None)
+        if callable(getter):
+            try:
+                props.append(getter())
+            except Exception:
+                pass
     inner = getattr(actor, "GetTextActor", None)
     if callable(inner):
         try:
             text_actor = inner()
-            get_prop = getattr(text_actor, "GetTextProperty", None)
+            if text_actor is not None and text_actor is not actor:
+                setter = getattr(text_actor, "SetBackgroundOpacity", None)
+                if callable(setter):
+                    setter(0.0)
+                get_prop = getattr(text_actor, "GetTextProperty", None)
+                if callable(get_prop):
+                    props.append(get_prop())
+        except Exception:
+            pass
+    mapper = getattr(actor, "GetMapper", None)
+    if callable(mapper):
+        try:
+            mapped = mapper()
+            get_prop = getattr(mapped, "GetTextProperty", None)
             if callable(get_prop):
                 props.append(get_prop())
         except Exception:
             pass
     for prop in props:
-        if prop is None:
-            continue
-        for method in ("FrameOff", "ShadowOff"):
-            fn = getattr(prop, method, None)
-            if callable(fn):
-                try:
-                    fn()
-                except Exception:
-                    pass
-        for method, value in (
-            ("SetBackgroundOpacity", 0.0),
-            ("SetFrame", 0),
-        ):
-            fn = getattr(prop, method, None)
-            if callable(fn):
-                try:
-                    fn(value)
-                except Exception:
-                    pass
+        _strip_text_property(prop)
 
 
 def add_dic_points(
@@ -670,21 +863,26 @@ def add_bc_glyphs(
         ("external", experiment.external),
     ):
         for index, entry in enumerate(entries):
-            if not entry.edge:
-                continue
-            xyz = mesh_convert.edge_node_xyz(mesh_pkg, entry.edge)
+            xyz = mesh_convert.bc_anchor_xyz(mesh_pkg, entry)
             if xyz.size == 0:
                 continue
-            if surface_xyz is not None:
+            if surface_xyz is not None and entry.edge:
                 xyz = np.asarray(xyz, dtype=float).copy()
                 xyz[:, 2] = _median_edge_z(surface_xyz, entry.edge, mesh_pkg)
             pts = _subsample(xyz)
-            inward = _EDGE_INWARD.get(str(entry.edge).lower(), np.array([0.0, 0.0, 1.0]))
+            if entry.edge:
+                inward = _EDGE_INWARD.get(str(entry.edge).lower(), np.array([0.0, 0.0, 1.0]))
+            else:
+                mean_pt = np.asarray(xyz, dtype=float).mean(axis=0)
+                inward = specimen_center - mean_pt
+                inward[2] = 0.0
+                if float(np.linalg.norm(inward)) <= 1.0e-15:
+                    inward = np.array([0.0, 0.0, 1.0])
             axis = display_axis(entry.dof, inward)
             active = selected == (kind, index)
             color = HIGHLIGHT if active else BC_COLORS[kind]
             mag = scale * (1.35 if active else 1.0)
-            name = f"bc-{kind}-{index}"
+            name = f"bc:{experiment.experiment_id}:{kind}:{index}"
             if kind == "external" and (entry.load_type or "distributed") == "concentrated":
                 pts = pts.mean(axis=0, keepdims=True)
             try:
@@ -707,6 +905,7 @@ def add_bc_glyphs(
                         render_points_as_spheres=True,
                         name=name,
                         reset_camera=False,
+                        pickable=True,
                     )
                     continue
                 else:
@@ -724,6 +923,7 @@ def add_bc_glyphs(
                         name=name,
                         reset_camera=False,
                         smooth_shading=True,
+                        pickable=True,
                     )
                 if kind == "external" and is_angular_dof(entry.dof):
                     label = conjugate_moment_plain(entry.dof, entry.edge)
@@ -917,6 +1117,7 @@ def add_bc_symbols_2d(
     x_max: float,
     y_min: float,
     y_max: float,
+    node_xyz=None,
 ) -> None:
     """Draw Abaqus BC/load glyphs on a 2-D specimen map (after limits are locked)."""
     from matplotlib.patches import Circle
@@ -931,16 +1132,32 @@ def add_bc_symbols_2d(
         ("external", experiment.external),
     ):
         color = BC_COLORS[kind]
+        cloud = None if node_xyz is None else np.asarray(node_xyz, dtype=float)
         for entry in entries:
-            if not entry.edge:
-                continue
             concentrated = kind == "external" and (entry.load_type or "distributed") == "concentrated"
-            pts = _edge_sample_xy(
-                x_min, x_max, y_min, y_max, entry.edge, concentrated=concentrated
-            )
+            pts = np.zeros((0, 2), dtype=float)
+            if entry.edge:
+                pts = _edge_sample_xy(
+                    x_min, x_max, y_min, y_max, entry.edge, concentrated=concentrated
+                )
+            elif entry.nodes and cloud is not None and cloud.ndim == 2 and cloud.shape[0]:
+                ids = np.asarray(entry.nodes, dtype=np.int64)
+                ids = ids[(ids >= 0) & (ids < cloud.shape[0])]
+                if ids.size:
+                    pts = np.asarray(cloud[ids, :2], dtype=float)
+                    if concentrated:
+                        pts = pts.mean(axis=0, keepdims=True)
             if pts.size == 0:
                 continue
-            inward = _EDGE_INWARD.get(str(entry.edge).lower(), np.array([0.0, 0.0, 1.0]))
+            if entry.edge:
+                inward = _EDGE_INWARD.get(str(entry.edge).lower(), np.array([0.0, 0.0, 1.0]))
+            else:
+                mid = np.asarray(pts, dtype=float).mean(axis=0)
+                inward = np.array(
+                    [0.5 * (x_min + x_max) - mid[0], 0.5 * (y_min + y_max) - mid[1], 0.0]
+                )
+                if float(np.linalg.norm(inward)) <= 1.0e-15:
+                    inward = np.array([0.0, 0.0, 1.0])
             axis3 = display_axis(entry.dof, inward)
             along_z = abs(axis3[2]) > 0.7
             plane = plane_glyph_direction(axis3)
@@ -1387,3 +1604,232 @@ def add_cid_cloud(plotter, pv, identifiability: Any) -> int:
     )
     _add_styled_scalar_bar(plotter, field_math_title("CID"))
     return n
+
+
+_FREE_MESH_NAMES = (
+    "free_mesh_nodes",
+    "free_mesh_guides",
+    "free_mesh_preview",
+    "free_mesh_label",
+)
+
+
+def remove_free_mesh_overlay(plotter) -> None:
+    remove_named(plotter, *_FREE_MESH_NAMES)
+
+
+def add_free_mesh_overlay(
+    plotter,
+    pv,
+    points,
+    quad_xy=None,
+    *,
+    bounds=None,
+    drag_index: Optional[int] = None,
+    drag_label_xyz=None,
+    drag_text: Optional[str] = None,
+) -> None:
+    """Draw placed nodes, snap guides, live quads, and an optional drag label."""
+    remove_free_mesh_overlay(plotter)
+    arr = np.asarray(list(points), dtype=float) if points is not None else np.zeros((0, 2))
+    if arr.ndim != 2 or arr.shape[0] == 0:
+        arr = np.zeros((0, 2), dtype=float)
+    else:
+        arr = arr[:, :2]
+
+    x_min = y_min = 0.0
+    x_max = y_max = 1.0
+    if bounds is not None and len(bounds) == 4:
+        x_min, x_max, y_min, y_max = [float(v) for v in bounds]
+    elif arr.shape[0]:
+        x_min = float(np.min(arr[:, 0]))
+        x_max = float(np.max(arr[:, 0]))
+        y_min = float(np.min(arr[:, 1]))
+        y_max = float(np.max(arr[:, 1]))
+    if x_max <= x_min:
+        x_max = x_min + 1.0
+    if y_max <= y_min:
+        y_max = y_min + 1.0
+    pad_x = 0.02 * (x_max - x_min)
+    pad_y = 0.02 * (y_max - y_min)
+    z = 0.002 * max(x_max - x_min, y_max - y_min, 1.0)
+
+    if arr.shape[0]:
+        xs = np.unique(np.round(arr[:, 0], 9))
+        ys = np.unique(np.round(arr[:, 1], 9))
+        guide_pts = []
+        guide_conn = []
+        for value in xs:
+            a = len(guide_pts)
+            guide_pts.append([float(value), y_min - pad_y, z])
+            guide_pts.append([float(value), y_max + pad_y, z])
+            guide_conn.extend([2, a, a + 1])
+        for value in ys:
+            a = len(guide_pts)
+            guide_pts.append([x_min - pad_x, float(value), z])
+            guide_pts.append([x_max + pad_x, float(value), z])
+            guide_conn.extend([2, a, a + 1])
+        if guide_pts:
+            guides = pv.PolyData(np.asarray(guide_pts, dtype=float))
+            guides.lines = np.asarray(guide_conn, dtype=np.int64)
+            plotter.add_mesh(
+                guides,
+                color="#9aa4b2",
+                line_width=1.0,
+                name="free_mesh_guides",
+                reset_camera=False,
+                pickable=False,
+            )
+
+    quads = np.asarray(quad_xy, dtype=float) if quad_xy is not None else np.zeros((0, 4, 2))
+    if quads.ndim == 3 and quads.shape[0] and quads.shape[1] >= 4:
+        q_pts = []
+        q_conn = []
+        for quad in quads:
+            start = len(q_pts)
+            for corner in quad[:4]:
+                q_pts.append([float(corner[0]), float(corner[1]), z])
+            for i in range(4):
+                q_conn.extend([2, start + i, start + ((i + 1) % 4)])
+        if q_pts:
+            preview = pv.PolyData(np.asarray(q_pts, dtype=float))
+            preview.lines = np.asarray(q_conn, dtype=np.int64)
+            plotter.add_mesh(
+                preview,
+                color="#1f6feb",
+                line_width=2.5,
+                name="free_mesh_preview",
+                reset_camera=False,
+                pickable=False,
+            )
+
+    if arr.shape[0]:
+        xyz = np.column_stack([arr[:, 0], arr[:, 1], np.full(arr.shape[0], z)])
+        cloud = pv.PolyData(xyz)
+        plotter.add_mesh(
+            cloud,
+            color="#d9480f",
+            point_size=14,
+            render_points_as_spheres=True,
+            name="free_mesh_nodes",
+            reset_camera=False,
+            pickable=False,
+        )
+
+    if drag_text and drag_label_xyz is not None:
+        label_pt = np.asarray(drag_label_xyz, dtype=float).ravel()
+        if label_pt.size >= 2:
+            point = [
+                float(label_pt[0]),
+                float(label_pt[1]),
+                float(label_pt[2]) if label_pt.size > 2 else z,
+            ]
+            kwargs = dict(
+                font_size=12,
+                text_color="#111111",
+                fill_shape=False,
+                shape=None,
+                always_visible=True,
+                show_points=False,
+                reset_camera=False,
+                render=False,
+                name="free_mesh_label",
+            )
+            try:
+                plotter.add_point_labels([point], [str(drag_text)], **kwargs)
+            except TypeError:
+                kwargs.pop("name", None)
+                plotter.add_point_labels([point], [str(drag_text)], **kwargs)
+
+
+_DRAG_MESH_NAMES = (
+    "drag_mesh_line",
+    "drag_mesh_nodes",
+    "drag_mesh_label",
+)
+
+
+def remove_drag_mesh_overlay(plotter) -> None:
+    remove_named(plotter, *_DRAG_MESH_NAMES)
+
+
+def add_drag_mesh_overlay(
+    plotter,
+    pv,
+    *,
+    segments=None,
+    nodes=None,
+    drag_label_xyz=None,
+    drag_text: Optional[str] = None,
+) -> None:
+    """Highlight the grid line being dragged and its connected nodes."""
+    remove_drag_mesh_overlay(plotter)
+    segs = np.asarray(segments, dtype=float) if segments is not None else np.zeros((0, 2, 2))
+    pts = np.asarray(nodes, dtype=float) if nodes is not None else np.zeros((0, 2))
+    z = 0.003
+    if segs.ndim == 3 and segs.shape[0]:
+        span = float(np.ptp(segs.reshape(-1, 2))) if segs.size else 1.0
+        z = 0.003 * max(span, 1.0)
+    elif pts.ndim == 2 and pts.shape[0]:
+        span = float(max(np.ptp(pts[:, 0]), np.ptp(pts[:, 1]), 1.0))
+        z = 0.003 * span
+
+    if segs.ndim == 3 and segs.shape[0] and segs.shape[1] >= 2:
+        line_pts = []
+        conn = []
+        for seg in segs:
+            a = len(line_pts)
+            line_pts.append([float(seg[0, 0]), float(seg[0, 1]), z])
+            line_pts.append([float(seg[1, 0]), float(seg[1, 1]), z])
+            conn.extend([2, a, a + 1])
+        if line_pts:
+            lines = pv.PolyData(np.asarray(line_pts, dtype=float))
+            lines.lines = np.asarray(conn, dtype=np.int64)
+            plotter.add_mesh(
+                lines,
+                color="#e8590c",
+                line_width=5.0,
+                name="drag_mesh_line",
+                reset_camera=False,
+                pickable=False,
+            )
+
+    if pts.ndim == 2 and pts.shape[0]:
+        xyz = np.column_stack(
+            [pts[:, 0], pts[:, 1], np.full(pts.shape[0], z, dtype=float)]
+        )
+        cloud = pv.PolyData(xyz)
+        plotter.add_mesh(
+            cloud,
+            color="#e8590c",
+            point_size=16,
+            render_points_as_spheres=True,
+            name="drag_mesh_nodes",
+            reset_camera=False,
+            pickable=False,
+        )
+
+    if drag_text and drag_label_xyz is not None:
+        label_pt = np.asarray(drag_label_xyz, dtype=float).ravel()
+        if label_pt.size >= 2:
+            point = [
+                float(label_pt[0]),
+                float(label_pt[1]),
+                float(label_pt[2]) if label_pt.size > 2 else z,
+            ]
+            kwargs = dict(
+                font_size=12,
+                text_color="#111111",
+                fill_shape=False,
+                shape=None,
+                always_visible=True,
+                show_points=False,
+                reset_camera=False,
+                render=False,
+                name="drag_mesh_label",
+            )
+            try:
+                plotter.add_point_labels([point], [str(drag_text)], **kwargs)
+            except TypeError:
+                kwargs.pop("name", None)
+                plotter.add_point_labels([point], [str(drag_text)], **kwargs)

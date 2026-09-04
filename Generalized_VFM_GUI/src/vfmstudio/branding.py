@@ -1,6 +1,6 @@
 """User-facing product identity. Qt-free so the splash can load it first."""
 
-APP_NAME = "LamXtract"
+APP_NAME = "abdXtract"
 APP_AUTHOR = "Afonso Mesquita"
 APP_COPYRIGHT_YEAR = 2026
 APP_LICENSE_SHORT = "GNU GPL v3"

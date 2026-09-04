@@ -186,7 +186,7 @@ class PlotResultsPage(ResultsPage):
         plot_layout = QVBoxLayout(plot_box)
         plot_layout.setContentsMargins(0, 0, 0, 0)
         plot_layout.setSpacing(6)
-        plot_layout.addWidget(self._mode)
+        self._mode.setVisible(False)
         plot_layout.addWidget(self._canvas, 1)
 
         self._content.removeWidget(self._table)
@@ -197,6 +197,19 @@ class PlotResultsPage(ResultsPage):
         splitter.setStretchFactor(1, 2)
         splitter.setChildrenCollapsible(False)
         self._content.addWidget(splitter, 1)
+
+    def plot_mode_labels(self) -> list[str]:
+        return [self._mode.itemText(i) for i in range(self._mode.count())]
+
+    def set_plot_mode(self, text: str) -> None:
+        if not text:
+            return
+        if self._mode.currentText() == text:
+            return
+        index = self._mode.findText(text)
+        if index < 0:
+            return
+        self._mode.setCurrentIndex(index)
 
     def refresh_plot(self) -> None:
         raise NotImplementedError

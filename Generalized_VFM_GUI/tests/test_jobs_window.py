@@ -270,3 +270,22 @@ def test_viewport_caption_lists_experiment_step_and_load():
     assert text.splitlines()[0] == "B1_Twist"
     assert "Step 2/2: B1_Twist_step04" in text
     assert "M_xy (top) = 40.27 N·mm" in text
+
+
+def test_viewport_caption_mentions_reference_step():
+    from vfmstudio.core.document import LoadStepModel
+    from vfmstudio.core.step_series import viewport_caption
+
+    experiment = ExperimentModel(
+        experiment_id=1,
+        name="plate",
+        reference_step=2,
+        steps=[
+            LoadStepModel(data_file="a.mat", label="s1"),
+            LoadStepModel(data_file="b.mat", label="s2"),
+            LoadStepModel(data_file="c.mat", label="s3"),
+        ],
+    )
+    text = viewport_caption(experiment, experiment.steps[2], step_index=2)
+    assert "Step 3/3: s3" in text
+    assert "Relative to step 2" in text

@@ -12,6 +12,7 @@ from vfmstudio.gui.results import IdentifiabilityPanel
 from vfmstudio.gui.results.experiment_check import ExperimentCheckPanel
 from vfmstudio.gui.results.identifiability_strength import IdentifiabilityStrengthPanel
 from vfmstudio.gui.results.parameter_space import ParameterSpacePanel
+from vfmstudio.gui.results.stress_space import StressSpacePanel
 from vfmstudio.gui.results.uncertainty import (
     CovariancePanel,
     ExperimentUncertaintyPanel,
@@ -26,6 +27,7 @@ _KIND_FIGURE_WIDGET = {
     "post_processing": "plots",
     "post_plots": "plots",
     "post_parameter_space": "parameter_space",
+    "post_stress_space": "stress_space",
     "post_experiment_check": "experiment_check",
     "post_identifiability_strength": "ident_strength",
     "post_virtual_fields": "vf_panel",
@@ -42,6 +44,7 @@ class PostProcessingWorkspace(QWidget):
         super().__init__(parent)
         self.plots = PlotDock()
         self.parameter_space = ParameterSpacePanel()
+        self.stress_space = StressSpacePanel()
         self.experiment_check = ExperimentCheckPanel()
         self.ident_panel = IdentifiabilityPanel()
         self.ident_strength = IdentifiabilityStrengthPanel()
@@ -62,6 +65,7 @@ class PostProcessingWorkspace(QWidget):
         for widget, kinds in (
             (self.plots, ("post_processing", "post_plots")),
             (self.parameter_space, ("post_parameter_space",)),
+            (self.stress_space, ("post_stress_space",)),
             (self.experiment_check, ("post_experiment_check",)),
             (self.ident_panel, ("post_identifiability",)),
             (self.ident_strength, ("post_identifiability_strength",)),
@@ -87,6 +91,11 @@ class PostProcessingWorkspace(QWidget):
         if attr is None:
             return None
         widget = getattr(self, attr, None)
+        if widget is None:
+            return None
+        exporter = getattr(widget, "figure_for_export", None)
+        if callable(exporter):
+            return exporter()
         return getattr(widget, "_figure", None)
 
     def set_results(
@@ -96,13 +105,26 @@ class PostProcessingWorkspace(QWidget):
         identifiability: Any = None,
         warp_scale: float = 1.0,
         uncertainty: Any = None,
+        vf_experiment_id: int | None = None,
+        vf_step_index: int | None = None,
+        vf_view_mode: str | None = None,
+        vf_quantity: str | None = None,
     ) -> None:
         self.plots.set_results(result, identifiability, document)
         self.parameter_space.update_from(document, result)
+        self.stress_space.update_from(document, result)
         self.experiment_check.update_from(document, result)
         self.ident_panel.update_from(identifiability)
         self.ident_strength.update_from(document, uncertainty)
-        self.vf_panel.update_from(document, result, warp_scale=warp_scale)
+        self.vf_panel.update_from(
+            document,
+            result,
+            warp_scale=warp_scale,
+            experiment_id=vf_experiment_id,
+            step_index=vf_step_index,
+            view_mode=vf_view_mode,
+            quantity=vf_quantity,
+        )
         self.uq_cov.update_from(document, uncertainty)
         self.uq_experiments.update_from(document, uncertainty)
         self.uq_ab.update_from(document, uncertainty)

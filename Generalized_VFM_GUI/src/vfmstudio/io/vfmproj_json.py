@@ -94,10 +94,11 @@ def load_vfmproj(path: Path) -> SessionDocument:
     return document
 
 
-def save_vfmproj(document: SessionDocument, path: Path) -> Path:
+def save_vfmproj(document: SessionDocument, path: Path, *, bind_source: bool = True) -> Path:
     project = document_to_vfm_project(document)
     out = Path(path)
     bridge.save_project(project, out)
     _write_vfmstudio_sidecar(document, out)
-    document.source_path = out.resolve()
+    if bind_source:
+        document.source_path = out.resolve()
     return out

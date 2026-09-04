@@ -14,16 +14,22 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QComboBox,
-    QHBoxLayout,
+    QFrame,
     QLabel,
+    QScrollArea,
     QSizePolicy,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
 
 from vfmstudio.core import bridge, mesh_convert
 from vfmstudio.core.document import SessionDocument, parameter_math_label
+from vfmstudio.core.virtual_fields import virtual_fields_for_target
+from vfmstudio.gui.results.plot_style import (
+    apply_matplotlib_style,
+    heading_stylesheet,
+)
 
 INK_PRIMARY = "#141413"
 INK_SECONDARY = "#52514e"
@@ -43,6 +49,23 @@ def _tile_shape(n: int) -> tuple[int, int]:
     ncols = int(math.ceil(math.sqrt(n)))
     nrows = int(math.ceil(n / ncols))
     return nrows, ncols
+
+
+def _3d_gridspec_margins(n: int) -> dict[str, float]:
+    """Leave enough figure-edge room for 3D tick labels and axis names.
+
+    mplot3d draws x/y labels outside the axes rectangle. A 5% bottom margin
+    clips the bottom-row ``x (mm)`` labels against the Jobs dock.
+    """
+    nrows, ncols = _tile_shape(n)
+    return {
+        "left": 0.07,
+        "right": 0.90,
+        "top": 0.90 if nrows > 1 else 0.88,
+        "bottom": 0.16 if nrows > 1 else 0.14,
+        "wspace": 0.36 if ncols > 1 else 0.10,
+        "hspace": 0.46 if nrows > 1 else 0.18,
+    }
 
 
 def _triangles(mesh_pkg) -> np.ndarray:
@@ -90,12 +113,25 @@ def _mesh_for_fields(document: Optional[SessionDocument], u: np.ndarray):
     return None
 
 
+VIEW_MODES = ("3D surface", "2D contour")
+
 QUANTITY_ITEMS = (
     ("w*", r"$w^{*}$"),
     ("kx*", r"$\kappa_x^{*}$"),
     ("ky*", r"$\kappa_y^{*}$"),
     ("kxy*", r"$\kappa_{xy}^{*}$"),
 )
+
+
+def normalize_view_mode(text: str | None) -> str:
+    return "2D contour" if str(text or "").startswith("2D") else "3D surface"
+
+
+def normalize_quantity(text: str | None) -> str:
+    key = str(text or "w*").strip()
+    allowed = {item[0] for item in QUANTITY_ITEMS}
+    return key if key in allowed else "w*"
+
 
 QUANTITY_CBAR = {
     "w*": r"$w^{*}\ (\mathrm{mm})$",
@@ -162,19 +198,31 @@ def _colormap():
         return cm.get_cmap(CMAP)
 
 
-def _scalar_mappable(values: np.ndarray) -> ScalarMappable:
-    finite = np.asarray(values, dtype=float)
-    finite = finite[np.isfinite(finite)]
+def _shared_clim(values_list) -> tuple[float, float]:
+    chunks = []
+    for values in values_list:
+        finite = np.asarray(values, dtype=float)
+        finite = finite[np.isfinite(finite)]
+        if finite.size:
+            chunks.append(finite)
+    if not chunks:
+        return 0.0, 1.0
+    finite = np.concatenate(chunks)
+    vmin = float(np.min(finite))
+    vmax = float(np.max(finite))
+    if vmax - vmin <= 0.0:
+        pad = max(abs(vmax), 1.0) * 1.0e-6
+        return vmin - pad, vmax + pad
+    return vmin, vmax
+
+
+def _scalar_mappable(
+    values: np.ndarray, vmin: float | None = None, vmax: float | None = None
+) -> ScalarMappable:
     cmap = _colormap()
-    if finite.size == 0:
-        norm = Normalize(vmin=0.0, vmax=1.0)
-    else:
-        vmin = float(np.min(finite))
-        vmax = float(np.max(finite))
-        if vmax - vmin <= 0.0:
-            pad = max(abs(vmax), 1.0) * 1.0e-6
-            vmin, vmax = vmin - pad, vmax + pad
-        norm = Normalize(vmin=vmin, vmax=vmax)
+    if vmin is None or vmax is None:
+        vmin, vmax = _shared_clim([values])
+    norm = Normalize(vmin=float(vmin), vmax=float(vmax))
     mappable = ScalarMappable(cmap=cmap, norm=norm)
     mappable.set_array([])
     return mappable
@@ -259,12 +307,12 @@ def _make_2d_axes(figure: Figure, n: int):
     outer = figure.add_gridspec(
         nrows,
         ncols,
-        left=0.07,
+        left=0.08,
         right=0.93,
-        top=0.92,
-        bottom=0.08,
+        top=0.90,
+        bottom=0.12,
         wspace=0.22 if ncols > 1 else 0.08,
-        hspace=0.26 if nrows > 1 else 0.12,
+        hspace=0.30 if nrows > 1 else 0.14,
     )
     axes = []
     for index in range(n):
@@ -280,18 +328,8 @@ def _make_3d_tile_axes(figure: Figure, n: int):
         figure.set_layout_engine("none")
     except Exception:
         figure.set_tight_layout(False)
-    # Leave figure-edge room for z-ticks (left) and colorbar labels (right).
-    # Large hspace keeps bottom-row titles clear of the row above.
-    outer = figure.add_gridspec(
-        nrows,
-        ncols,
-        left=0.05,
-        right=0.90,
-        top=0.93,
-        bottom=0.05,
-        wspace=0.34 if ncols > 1 else 0.08,
-        hspace=0.38 if nrows > 1 else 0.10,
-    )
+    # 3D tick labels and ``x (mm)`` sit outside the axes box; keep them on-canvas.
+    outer = figure.add_gridspec(nrows, ncols, **_3d_gridspec_margins(n))
     pairs = []
     for index in range(n):
         row, col = divmod(index, ncols)
@@ -370,12 +408,12 @@ def _set_3d_limits_and_box(axis, x, y, z) -> None:
     axis.xaxis.set_major_locator(MaxNLocator(nbins=4))
     axis.yaxis.set_major_locator(MaxNLocator(nbins=4))
     axis.zaxis.set_major_locator(MaxNLocator(nbins=4))
-    axis.xaxis.labelpad = 4
-    axis.yaxis.labelpad = 4
+    axis.xaxis.labelpad = 2
+    axis.yaxis.labelpad = 2
     axis.zaxis.labelpad = 2
-    # Keep the 3D box inside its axes so tiles do not collide.
+    # Keep the 3D box inside its axes so labels stay on the canvas.
     try:
-        axis.set_box_aspect((xr, yr, 0.72 * max(xr, yr)), zoom=0.92)
+        axis.set_box_aspect((xr, yr, 0.72 * max(xr, yr)), zoom=0.72)
     except TypeError:
         try:
             axis.set_box_aspect((xr, yr, 0.72 * max(xr, yr)))
@@ -426,46 +464,19 @@ def _make_tile_axes(figure: Figure, n: int, *, projection: str | None = None):
 class VirtualFieldTiledView(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        apply_matplotlib_style()
         import matplotlib as mpl
 
         mpl.rcParams.update(
             {
-                "font.family": "serif",
-                "font.serif": ["Times New Roman", "STIXGeneral", "DejaVu Serif"],
-                "mathtext.fontset": "stix",
-                "font.size": 9,
                 "axes.labelsize": 9,
-                "axes.titlesize": 10,
                 "xtick.labelsize": 7.5,
                 "ytick.labelsize": 7.5,
-                "text.usetex": False,
             }
         )
-        row = QHBoxLayout()
-        view_label = QLabel("View")
-        view_label.setStyleSheet(f"color: {INK_PRIMARY};")
-        self._mode = QComboBox()
-        self._mode.addItems(["3D surface", "2D contour"])
-        self._mode.setMinimumWidth(160)
-        self._mode.currentTextChanged.connect(lambda _: self.refresh())
-        quantity_label = QLabel("Quantity")
-        quantity_label.setStyleSheet(f"color: {INK_PRIMARY};")
-        self._quantity = QComboBox()
-        for text, _math in QUANTITY_ITEMS:
-            self._quantity.addItem(text, text)
-        self._quantity.setMinimumWidth(90)
-        self._quantity.currentTextChanged.connect(lambda _: self.refresh())
-        row.addWidget(view_label)
-        row.addWidget(self._mode)
-        row.addSpacing(16)
-        row.addWidget(quantity_label)
-        row.addWidget(self._quantity)
-        row.addStretch(1)
         self._title = QLabel("Optimal virtual fields")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._title.setStyleSheet(
-            f"color: {INK_PRIMARY}; font-size: 12pt; font-family: 'Times New Roman', serif;"
-        )
+        self._title.setStyleSheet(heading_stylesheet())
         self._figure = Figure(facecolor="#FFFFFF")
         try:
             self._figure.set_layout_engine("none")
@@ -475,69 +486,186 @@ class VirtualFieldTiledView(QWidget):
         self._canvas.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
+        self._scroll = QScrollArea()
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll.setWidget(self._canvas)
+        self._stack = QStackedWidget()
+        self._stack.addWidget(self._scroll)
+        self._vtk_page = QWidget()
+        self._vtk_layout = QVBoxLayout(self._vtk_page)
+        self._vtk_layout.setContentsMargins(0, 0, 0, 0)
+        self._stack.addWidget(self._vtk_page)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 10)
+        layout.setContentsMargins(12, 8, 12, 16)
         layout.setSpacing(6)
-        layout.addLayout(row)
         layout.addWidget(self._title)
-        layout.addWidget(self._canvas, 1)
+        layout.addWidget(self._stack, 1)
+        self._vtk = None
+        self._vtk_shape = None
+        self._pv = None
         self._document: Optional[SessionDocument] = None
         self._result = None
         self._warp_scale = 1.0
+        self._experiment_id: Optional[int] = None
+        self._step_index: Optional[int] = None
+        self._view_mode = "3D surface"
+        self._quantity = "w*"
+
+    def _fit_canvas_height(self, n: int) -> None:
+        """Keep tiles tall enough that 3D tick labels are not clipped."""
+        if n <= 0:
+            self._canvas.setMinimumHeight(0)
+            return
+        nrows, _ = _tile_shape(n)
+        self._canvas.setMinimumHeight(max(300, 290 * nrows))
+
+    def _use_vtk_tiles(self) -> bool:
+        from vfmstudio.gui.viewport.interactor import viewport_enabled
+
+        return viewport_enabled()
+
+    def _show_matplotlib(self) -> None:
+        self._stack.setCurrentWidget(self._scroll)
+
+    def _show_vtk(self) -> None:
+        self._stack.setCurrentWidget(self._vtk_page)
+
+    def _close_vtk(self) -> None:
+        if self._vtk is None:
+            return
+        try:
+            self._vtk.close()
+        except Exception:
+            pass
+        self._vtk = None
+        self._vtk_shape = None
+        self._pv = None
+        while self._vtk_layout.count():
+            item = self._vtk_layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.setParent(None)
+
+    def _ensure_vtk(self, nrows: int, ncols: int):
+        import pyvista as pv
+        from pyvistaqt import QtInteractor
+
+        shape = (int(nrows), int(ncols))
+        if self._vtk is not None and self._vtk_shape == shape:
+            try:
+                self._vtk.clear()
+            except Exception:
+                pass
+            return self._vtk
+        self._close_vtk()
+        try:
+            plotter = QtInteractor(
+                self._vtk_page, shape=shape, auto_update=False
+            )
+        except TypeError:
+            plotter = QtInteractor(self._vtk_page, shape=shape)
+        interactor = getattr(plotter, "interactor", plotter)
+        self._vtk_layout.addWidget(interactor)
+        self._vtk = plotter
+        self._vtk_shape = shape
+        self._pv = pv
+        return plotter
 
     def _current_quantity(self) -> str:
-        data = self._quantity.currentData()
-        return str(data or self._quantity.currentText() or "w*")
+        return normalize_quantity(self._quantity)
 
     def update_from(
         self,
         document: SessionDocument,
         result: Any,
         warp_scale: float = 1.0,
+        experiment_id: Optional[int] = None,
+        step_index: Optional[int] = None,
+        view_mode: Optional[str] = None,
+        quantity: Optional[str] = None,
     ) -> None:
         self._document = document
         self._result = result
         self._warp_scale = float(warp_scale)
+        self._experiment_id = experiment_id
+        self._step_index = step_index
+        if view_mode is not None:
+            self._view_mode = normalize_view_mode(view_mode)
+        if quantity is not None:
+            self._quantity = normalize_quantity(quantity)
         self.refresh()
 
     def refresh(self) -> None:
-        self._figure.clear()
         result = self._result
         if result is None:
+            self._show_matplotlib()
+            self._figure.clear()
             self._title.setText("Optimal virtual fields")
             self._message("Run Identify. Virtual fields are computed with FGLS.")
+            self._fit_canvas_height(0)
             self._canvas.draw_idle()
             return
-        u_list, labels = collect_virtual_fields(result, self._document)
-        if not u_list:
+        payload = virtual_fields_for_target(
+            self._document,
+            result,
+            experiment_id=self._experiment_id,
+            step_index=self._step_index,
+        )
+        if payload is None or not payload.u_list:
+            self._show_matplotlib()
+            self._figure.clear()
             self._title.setText("Optimal virtual fields")
             self._message("No virtual fields on this result. Re-run Identify.")
+            self._fit_canvas_height(0)
             self._canvas.draw_idle()
             return
-        mesh_pkg = _mesh_for_fields(self._document, u_list[0])
+        mesh_pkg = payload.mesh_pkg
         if mesh_pkg is None:
+            self._show_matplotlib()
+            self._figure.clear()
             self._title.setText("Optimal virtual fields")
             self._message(
                 f"No experiment mesh matches the stored virtual fields "
-                f"({u_list[0].size} DOFs)."
+                f"({payload.u_list[0].size} DOFs)."
             )
+            self._fit_canvas_height(0)
             self._canvas.draw_idle()
             return
+        u_list = payload.u_list
+        labels = payload.labels
         n = len(u_list)
         quantity = self._current_quantity()
+        where = ""
+        if payload.experiment_name or payload.step_label:
+            where = f"  ·  {payload.experiment_name}, {payload.step_label}"
         self._title.setText(
-            f"Optimal virtual fields  ({n} field{'s' if n != 1 else ''}, "
-            f"{quantity})"
+            f"Optimal virtual fields{where}  "
+            f"({n} unknown{'s' if n != 1 else ''}, {quantity})"
         )
+        if payload.warning:
+            self._title.setToolTip(payload.warning)
+        else:
+            self._title.setToolTip(
+                "One tile per constitutive unknown. FGLS recomputes these "
+                "fields at every load step of every experiment."
+            )
+        self._fit_canvas_height(n)
         try:
-            if self._mode.currentText().startswith("2D"):
+            if self._view_mode.startswith("2D"):
+                self._show_matplotlib()
+                self._figure.clear()
                 self._draw_contours(mesh_pkg, u_list, labels, quantity)
             else:
                 self._draw_surfaces(mesh_pkg, u_list, labels, quantity)
         except Exception as exc:
+            self._show_matplotlib()
             self._figure.clear()
             self._message(str(exc))
-        self._canvas.draw_idle()
+            self._fit_canvas_height(0)
+        if self._stack.currentWidget() is self._scroll:
+            self._canvas.draw_idle()
 
     def _message(self, text: str) -> None:
         axis = self._figure.add_subplot(111)
@@ -587,20 +715,84 @@ class VirtualFieldTiledView(QWidget):
             _center_plot_and_cbar(axis, cax, cell)
 
     def _draw_surfaces(self, mesh_pkg, u_list, labels, quantity: str) -> None:
+        if self._use_vtk_tiles():
+            try:
+                self._draw_vtk_surfaces(mesh_pkg, u_list, labels, quantity)
+                self._show_vtk()
+                return
+            except Exception:
+                self._close_vtk()
+        self._show_matplotlib()
+        self._figure.clear()
+        self._draw_mpl_surfaces(mesh_pkg, u_list, labels, quantity)
+
+    def _draw_vtk_surfaces(self, mesh_pkg, u_list, labels, quantity: str) -> None:
+        from vfmstudio.gui.viewport import overlays
+
+        n = len(u_list)
+        nrows, ncols = _tile_shape(n)
+        plotter = self._ensure_vtk(nrows, ncols)
+        post = bridge.vfm_virtual_field_post()
+        warp = self._warp_scale
+        scalars = []
+        heights = []
+        cbar_label = ""
+        for u in u_list:
+            _cx, _cy, cz = post.nodal_deformed_xyz(mesh_pkg, u)
+            scalar, cbar_label = _scalar_and_label(post, mesh_pkg, u, quantity)
+            scalars.append(np.asarray(scalar, dtype=float))
+            heights.append(warp * np.asarray(cz, dtype=float))
+        clim = _shared_clim(scalars)
+        for index, (name, scalar, cz) in enumerate(zip(labels, scalars, heights)):
+            row, col = divmod(index, ncols)
+            plotter.subplot(row, col)
+            grid = overlays.unstructured_quad_grid(self._pv, mesh_pkg, z=cz)
+            grid["vf"] = np.asarray(scalar, dtype=float).ravel()[: grid.n_points]
+            kwargs = dict(
+                scalars="vf",
+                cmap=CMAP,
+                clim=clim,
+                show_edges=True,
+                show_scalar_bar=(index == n - 1),
+            )
+            if index == n - 1:
+                kwargs["scalar_bar_args"] = {"title": cbar_label}
+            plotter.add_mesh(grid, **kwargs)
+            overlays.add_plain_text(plotter, str(name), font_size=9)
+        try:
+            plotter.link_views()
+        except Exception:
+            pass
+        try:
+            plotter.reset_camera()
+        except Exception:
+            pass
+        try:
+            plotter.render()
+        except Exception:
+            pass
+
+    def _draw_mpl_surfaces(self, mesh_pkg, u_list, labels, quantity: str) -> None:
         from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
         post = bridge.vfm_virtual_field_post()
         warp = self._warp_scale
         grids = getattr(post, "structured_surface_grids_from_nodal_xyz", None)
         xy = np.asarray(mesh_pkg.node_coords, dtype=float)
-        tiles = _make_3d_tile_axes(self._figure, len(u_list))
-        for (axis, cax, title_ax), u, name in zip(tiles, u_list, labels):
+        prepared = []
+        for u in u_list:
             cx, cy, cz = post.nodal_deformed_xyz(mesh_pkg, u)
             cx = xy[:, 0] + warp * (np.asarray(cx, dtype=float) - xy[:, 0])
             cy = xy[:, 1] + warp * (np.asarray(cy, dtype=float) - xy[:, 1])
             cz = warp * np.asarray(cz, dtype=float)
             scalar, cbar_label = _scalar_and_label(post, mesh_pkg, u, quantity)
-            mappable = _scalar_mappable(scalar)
+            prepared.append((cx, cy, cz, scalar, cbar_label))
+        vmin, vmax = _shared_clim([item[3] for item in prepared])
+        tiles = _make_3d_tile_axes(self._figure, len(u_list))
+        for (axis, cax, title_ax), name, (cx, cy, cz, scalar, cbar_label) in zip(
+            tiles, labels, prepared
+        ):
+            mappable = _scalar_mappable(scalar, vmin=vmin, vmax=vmax)
             drawn = False
             surface_x, surface_y, surface_z = cx, cy, cz
             if grids is not None:
@@ -624,10 +816,17 @@ class VirtualFieldTiledView(QWidget):
                     drawn = False
             if not drawn:
                 tris = _triangles(mesh_pkg)
-                axis.plot_trisurf(
-                    cx, cy, cz, triangles=tris, cmap=CMAP,
-                    linewidth=0, antialiased=True,
-                )
+                try:
+                    axis.plot_trisurf(
+                        cx, cy, cz, triangles=tris, cmap=CMAP,
+                        linewidth=0, antialiased=True,
+                        vmin=vmin, vmax=vmax,
+                    )
+                except TypeError:
+                    axis.plot_trisurf(
+                        cx, cy, cz, triangles=tris, cmap=CMAP,
+                        linewidth=0, antialiased=True,
+                    )
             axis.set_xlabel("x (mm)")
             axis.set_ylabel("y (mm)")
             axis.set_zlabel("")

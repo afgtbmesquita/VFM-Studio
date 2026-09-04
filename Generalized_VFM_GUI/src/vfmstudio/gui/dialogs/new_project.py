@@ -43,4 +43,5 @@ class NewProjectDialog(QDialog):
         document.description = self.name.text()
         document.material.material_type = self.material.currentText()
         document.material.analysis_type = self.analysis.currentText()
+        document.material.sync_parameters()
         return document

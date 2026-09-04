@@ -43,6 +43,7 @@ _KIND_ICONS = {
     "post_processing": "post",
     "post_plots": "post",
     "post_parameter_space": "post",
+    "post_stress_space": "post",
     "post_experiment_check": "post",
     "post_identifiability": "post",
     "post_identifiability_strength": "post",
@@ -64,6 +65,7 @@ _BC_ADD_LABELS = (
 _POST_CHILDREN = (
     ("Coefficient Evolution", "post_plots", ()),
     ("Parameter space", "post_parameter_space", ()),
+    ("Stress resultant space", "post_stress_space", ()),
     ("Individual Experiment check", "post_experiment_check", ()),
     ("Identifiability", "post_identifiability", ()),
     ("Identifiability strength", "post_identifiability_strength", ()),
@@ -149,8 +151,14 @@ def _node_matches(node: QTreeWidgetItem, selection: Selection) -> bool:
 
 class ModelTreeDock(QWidget):
     selection_changed = Signal(object)
+    request_add_experiment = Signal()
     request_add_bc = Signal(int, str)
     request_delete_bc = Signal(int, str, int)
+    request_add_step = Signal(int)
+    request_delete_step = Signal(int, int)
+    request_move_step = Signal(int, int, int)
+    request_delete_experiment = Signal(int)
+    request_duplicate_experiment = Signal(int)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -275,29 +283,68 @@ class ModelTreeDock(QWidget):
         self.tree.setCurrentItem(node)
         kind = str(node.data(0, ROLE_KIND) or "")
         menu = QMenu(self)
-        if kind == "bcs":
+        if kind in {"experiments", "project"}:
+            menu.addAction("Add experiment").setData(("add_experiment", None))
+        elif kind == "experiment":
+            menu.addAction("Add load steps…").setData(("add_step", None))
+            menu.addAction("Duplicate experiment").setData(("duplicate_experiment", None))
+            menu.addSeparator()
+            label = node.text(0) or "experiment"
+            menu.addAction(f'Delete "{label}"').setData(("delete_experiment", None))
+        elif kind == "steps":
+            menu.addAction("Add load steps…").setData(("add_step", None))
+        elif kind == "step":
+            menu.addAction("Move up").setData(("move_step", -1))
+            menu.addAction("Move down").setData(("move_step", 1))
+            menu.addSeparator()
+            label = node.text(0) or "load step"
+            menu.addAction(f'Delete "{label}"').setData(("delete_step", None))
+        elif kind == "bcs":
             for bc_kind, label in _BC_ADD_LABELS:
-                action = menu.addAction(label)
-                action.setData(bc_kind)
+                menu.addAction(label).setData(("add_bc", bc_kind))
         elif kind == "bc_group":
             bc_kind = str(node.data(0, ROLE_BC_KIND) or "")
             if bc_kind in {"prescribed", "linking", "external"}:
-                action = menu.addAction(f"Add {bc_kind} BC…")
-                action.setData(bc_kind)
+                menu.addAction(f"Add {bc_kind} BC…").setData(("add_bc", bc_kind))
         elif kind == "bc":
             label = node.text(0) or "boundary condition"
-            action = menu.addAction(f'Delete "{label}"')
-            chosen = menu.exec(self.tree.viewport().mapToGlobal(pos))
-            if chosen is action:
-                self._emit_delete(node)
-            return
+            menu.addAction(f'Delete "{label}"').setData(("delete_bc", None))
         else:
             return
         if not menu.actions():
             return
         chosen = menu.exec(self.tree.viewport().mapToGlobal(pos))
-        if chosen is not None:
-            self._emit_add(node, str(chosen.data()))
+        if chosen is None:
+            return
+        action, extra = chosen.data()
+        self._dispatch_context(node, str(action), extra)
+
+    def _dispatch_context(self, node: QTreeWidgetItem, action: str, extra) -> None:
+        experiment_id = node.data(0, ROLE_EXP)
+        if action == "add_experiment":
+            self.request_add_experiment.emit()
+            return
+        if experiment_id is None:
+            return
+        exp_id = int(experiment_id)
+        if action == "add_step":
+            self.request_add_step.emit(exp_id)
+        elif action == "duplicate_experiment":
+            self.request_duplicate_experiment.emit(exp_id)
+        elif action == "delete_experiment":
+            self.request_delete_experiment.emit(exp_id)
+        elif action == "delete_step":
+            index = node.data(0, ROLE_STEP)
+            if index is not None:
+                self.request_delete_step.emit(exp_id, int(index))
+        elif action == "move_step":
+            index = node.data(0, ROLE_STEP)
+            if index is not None:
+                self.request_move_step.emit(exp_id, int(index), int(extra))
+        elif action == "add_bc":
+            self._emit_add(node, str(extra))
+        elif action == "delete_bc":
+            self._emit_delete(node)
 
     def _delete_current_bc(self) -> None:
         items = self.tree.selectedItems()

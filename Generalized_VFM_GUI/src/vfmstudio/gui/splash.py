@@ -52,7 +52,7 @@ def _splash_enabled() -> bool:
 
 def logo_path() -> Path | None:
     folder = Path(__file__).resolve().parents[1] / "resources"
-    for name in ("LamXtract_Logo.png", "LamXtract_Logo.jpg"):
+    for name in ("abdXtract_Logo.png", "abdXtract_Logo.jpg"):
         path = folder / name
         if path.is_file():
             return path

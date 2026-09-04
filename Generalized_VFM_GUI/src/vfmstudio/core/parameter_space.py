@@ -350,18 +350,61 @@ def compute_parameter_space(
     return from_system(system)
 
 
+_system_cache: dict[tuple[int, tuple[str, ...]], EstimatingSystem] = {}
+_space_cache: dict[int, ParameterSpaceResult] = {}
+
+
+def _document_labels_and_names(
+    document: Any,
+) -> Tuple[Optional[List[str]], Optional[dict[int, str]]]:
+    if document is None:
+        return None, None
+    labels = list(document.material.labels())
+    names = {
+        int(experiment.experiment_id): (
+            experiment.name or f"Experiment {experiment.experiment_id}"
+        )
+        for experiment in document.experiments
+    }
+    return labels, names
+
+
+def system_from_document(result: Any, document: Any = None) -> Optional[EstimatingSystem]:
+    """Pack the last Identify into clusters. Cached per result object."""
+    if result is None:
+        return None
+    if isinstance(result, EstimatingSystem):
+        return result
+    labels, names = _document_labels_and_names(document)
+    key = (id(result), tuple(labels or ()))
+    cached = _system_cache.get(key)
+    if cached is not None:
+        return cached
+    try:
+        system = system_from_result(
+            result,
+            labels=labels,
+            experiment_names=names,
+            verify=False,
+        )
+    except (UncertaintyError, TypeError, ValueError, np.linalg.LinAlgError):
+        return None
+    _system_cache.clear()
+    _system_cache[key] = system
+    return system
+
+
 def space_from_document(result: Any, document: Any = None) -> Optional[ParameterSpaceResult]:
-    labels = None
-    names = None
-    if document is not None:
-        labels = document.material.labels()
-        names = {
-            int(experiment.experiment_id): (
-                experiment.name or f"Experiment {experiment.experiment_id}"
-            )
-            for experiment in document.experiments
-        }
-    return compute_parameter_space(result, labels=labels, experiment_names=names)
+    system = system_from_document(result, document)
+    if system is None:
+        return None
+    cached = _space_cache.get(id(system))
+    if cached is not None:
+        return cached
+    space = from_system(system)
+    _space_cache.clear()
+    _space_cache[id(system)] = space
+    return space
 
 
 def selected_experiment_ids(document: Any) -> List[int]:
@@ -371,3 +414,123 @@ def selected_experiment_ids(document: Any) -> List[int]:
         int(experiment.experiment_id)
         for experiment in document.experiments_in_identification()
     ]
+
+
+def _experiment_display_name(experiment: Any) -> str:
+    experiment_id = int(getattr(experiment, "experiment_id", 0) or 0)
+    name = str(getattr(experiment, "name", "") or "").strip()
+    return name or f"Experiment {experiment_id}"
+
+
+def _clusters_for_selection(
+    system: EstimatingSystem,
+    document: Any,
+    selected_ids: Sequence[int],
+) -> List:
+    """Identify clusters that correspond to the ticked tests.
+
+    Prefer unique experiment_id, then name, then document order. Duplicate
+    cluster IDs (every report defaulting to 1) must not keep every cluster
+    selected when later tests are unticked.
+    """
+    wanted = {int(experiment_id) for experiment_id in selected_ids}
+    clusters = list(system.clusters)
+    if not clusters or not wanted:
+        return []
+
+    ids = [int(cluster.experiment_id) for cluster in clusters]
+    if len(ids) == len(set(ids)):
+        used = [
+            cluster for cluster in clusters if int(cluster.experiment_id) in wanted
+        ]
+        if used:
+            return used
+
+    experiments = list(getattr(document, "experiments", None) or [])
+    selected_names = {
+        _experiment_display_name(experiment)
+        for experiment in experiments
+        if int(experiment.experiment_id) in wanted
+    }
+    if selected_names:
+        used = [
+            cluster
+            for cluster in clusters
+            if str(getattr(cluster, "name", "") or "").strip() in selected_names
+        ]
+        if used:
+            return used
+
+    if experiments and len(experiments) == len(clusters):
+        return [
+            cluster
+            for experiment, cluster in zip(experiments, clusters)
+            if int(experiment.experiment_id) in wanted
+        ]
+    return []
+
+
+@dataclass
+class CombinationEstimate:
+    """Frozen GLS θ for one ticked subset. No 2^n sweep."""
+
+    theta: Optional[np.ndarray]
+    theta_full: np.ndarray
+    labels: List[str]
+    selected_ids: List[int]
+    identified_ids: List[int]
+    is_full: bool
+    has_blocks: bool
+
+
+def estimate_combination(result: Any, document: Any = None) -> CombinationEstimate:
+    """θ_S for the currently ticked tests, one GLS solve.
+
+    Tests that were not in the last Identify are ignored, matching
+    ``theta_for_experiment_ids``. Empty overlap returns ``theta=None``.
+    """
+    selected = selected_experiment_ids(document)
+    labels, _names = _document_labels_and_names(document)
+    system = system_from_document(result, document)
+    if system is None:
+        theta_full = np.asarray(getattr(result, "final_parameters", []), dtype=float).reshape(-1)
+        return CombinationEstimate(
+            theta=None,
+            theta_full=theta_full,
+            labels=list(labels or []),
+            selected_ids=selected,
+            identified_ids=[],
+            is_full=not selected or len(selected) == (
+                len(getattr(document, "experiments", []) or [])
+            ),
+            has_blocks=False,
+        )
+    identified = [int(cluster.experiment_id) for cluster in system.clusters]
+    used = _clusters_for_selection(system, document, selected)
+    n_par = int(len(system.labels))
+    if not used:
+        return CombinationEstimate(
+            theta=None,
+            theta_full=np.asarray(system.theta, dtype=float).reshape(-1),
+            labels=list(system.labels),
+            selected_ids=selected,
+            identified_ids=identified,
+            is_full=False,
+            has_blocks=True,
+        )
+    bread = np.zeros((n_par, n_par), dtype=float)
+    rhs = np.zeros(n_par, dtype=float)
+    for cluster in used:
+        block, vector = _cluster_normal(cluster)
+        bread += block
+        rhs += vector
+    theta = _solve(bread, rhs)
+    return CombinationEstimate(
+        theta=np.asarray(theta, dtype=float).reshape(-1),
+        theta_full=np.asarray(system.theta, dtype=float).reshape(-1),
+        labels=list(system.labels),
+        selected_ids=selected,
+        identified_ids=identified,
+        is_full=len(used) == len(system.clusters),
+        has_blocks=True,
+    )
