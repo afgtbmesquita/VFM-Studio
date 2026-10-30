@@ -1,0 +1,2095 @@
+{
+ "generated_by": "VFM Studio DIC data agent (deterministic analysis; numbers are measured, not estimated by the language model)",
+ "generated_at": "2026-10-30 13:02:06",
+ "format_check": {
+  "expected": "raw Vic-3D facet export: one row per facet with the 33 columns X, Y, Z, U, V, W, exx, eyy, exy, e1, e2, gamma, cxx, cyy, cxy, c1, c2, gamma_c, sigma, x, y, u, v, q, r, q_ref, r_ref, SIGMA_X, SIGMA_Y, SIGMA_Z, Xp, Yp, Zp",
+  "files_checked": 11,
+  "all_files_conform": true,
+  "cross_file_checks": "same facet step in every file of a test; every file shares at least half its facets with the first"
+ },
+ "conventions": {
+  "increments": "Δ quantities are relative to step 1 of each test, in the order the user confirmed",
+  "axes": "figures and zone names use +X to the right and +Y up"
+ },
+ "noise_model": {
+  "reference": "Test_Design_Optimization_OLD/noise_audit_report_v2 (dic_curvature_noise.tex); implementation Digital Twins/laminate_45deg_twins_measured_noise (MEASURED_SEPARABLE)",
+  "equation": "σ_c(x) = σ_int,c · s_c(x),  s_c = 1 + (g_c − 1)/c,  g_c = ‖w_c(x)‖/‖w_c(full)‖ (Vic-3D 15×15 local quadratic stencil, truncated at every boundary of the facet mask)",
+  "interior_floor_inv_mm": {
+   "kxx": 0.0004801,
+   "kyy": 0.0005082,
+   "kxy": 0.0005152
+  },
+  "campaign_region_median_floor_inv_mm": {
+   "kxx": 0.0005278,
+   "kyy": 0.0005388,
+   "kxy": 0.000559
+  },
+  "damping_constant": 1.282,
+  "damping_95pct_interval": [
+   1.24,
+   1.33
+  ],
+  "legacy_envelope_inv_mm": {
+   "kxx": 0.001436,
+   "kyy": 0.001046,
+   "kxy": 0.001606
+  },
+  "calibrated_on": [
+   "45_deg Laminate A1_PB, A1_Twist, A2_PB, A2_Twist, B1_PB, B1_Twist, B2_PB, B2_Twist",
+   "45_deg_optimized Test_2, Test_3 (cutout coupons)"
+  ],
+  "known_limits": [
+   "calibrated on 45° laminate coupons; other laminates, speckle patterns or camera set-ups are extrapolations",
+   "measured interior levels differ by about 2× between specimens in the calibration set",
+   "fitted on plain coupons alone c = 1.244, on cutouts alone 1.582"
+  ],
+  "curvature_convention": "κ = (−2·cxx, −2·cyy, +2·cxy); κxy is the engineering twist"
+ },
+ "reporting_thresholds": {
+  "noise_ratio_high": 1.5,
+  "noise_ratio_low": 0.67,
+  "snr_low": 3.0,
+  "snr_below_noise": 1.0,
+  "residual_dof_low": 3,
+  "linearity_r2_low": 0.95,
+  "secondary_ratio": 0.25,
+  "map_correlation_low": 0.5,
+  "facets_lost_fraction": 0.01,
+  "vic_sigma_growth": 2.0,
+  "filter_stencil_mismatch_gap": 0.2,
+  "refit_noise_ratio_low": 0.8,
+  "refit_noise_ratio_high": 1.25,
+  "smoothing_bias_high": 1.1,
+  "snr_target": 10.0,
+  "full_window_fraction_low": 0.5
+ },
+ "tests": [
+  {
+   "test_name": "Specimen_A1_PB",
+   "files_in_order": [
+    "exp-00000059_0.csv",
+    "exp-00000315_0.csv",
+    "exp-00000571_0.csv",
+    "exp-00000827_0.csv",
+    "exp-00001083_0.csv",
+    "exp-00001339_0.csv",
+    "exp-00001595_0.csv",
+    "exp-00001859_0.csv",
+    "exp-00002111_0.csv",
+    "exp-00002375_0.csv",
+    "exp-00002699_0.csv"
+   ],
+   "specimen": {
+    "test_name": "Specimen_A1_PB",
+    "folder": "Specimen_A1_PB",
+    "parent_folder": "DemoData",
+    "grandparent_folder": "VFM Studio",
+    "measured_region_x_mm": [
+     -0.5883,
+     8.865
+    ],
+    "measured_region_y_mm": [
+     -0.3904,
+     32.47
+    ],
+    "measured_span_mm": {
+     "x": 9.45,
+     "y": 32.9
+    },
+    "measured_area_mm2": 295.0,
+    "facet_pitch_mm": {
+     "x": 0.2067,
+     "y": 0.2009
+    },
+    "camera_image_axes": "image x → +X, image y → −Y",
+    "facet_step_px": 7,
+    "internal_holes": {
+     "count": 0,
+     "area_mm2": 0.0
+    },
+    "width_profile_along_y_mm": [
+     8.68,
+     8.68,
+     8.89,
+     8.89,
+     8.89,
+     9.1,
+     9.1,
+     9.1,
+     9.3,
+     9.3,
+     9.1,
+     6.2
+    ],
+    "height_profile_along_x_mm": [
+     1.0,
+     32.5,
+     32.5,
+     32.5,
+     32.7,
+     32.7,
+     32.7,
+     32.7,
+     32.7,
+     32.7,
+     32.7,
+     28.9
+    ],
+    "n_steps": 11,
+    "machine_channels": [
+     "Fx",
+     "Fy",
+     "Fz",
+     "Tx",
+     "Ty",
+     "Tz",
+     "Δx",
+     "Δy",
+     "Δz",
+     "θx",
+     "θy",
+     "θz"
+    ],
+    "companion_files": [
+     "synchronized_DIC_machine_data.csv"
+    ],
+    "companion_notes": []
+   },
+   "solver_data": {
+    "layout": "Layout A (nodes) — one .mat per load step, read by vfm_data_io",
+    "conversion": "Vic-3D → plate theory: κₓₓ = −2 cxx, κᵧᵧ = −2 cyy, κₓᵧ = +2 cxy (Vic-3D cxx = ½ ∂²w/∂x², cxy = −∂²w/∂x∂y; solver κₓₓ = −∂²w/∂x², κₓᵧ = −2 ∂²w/∂x∂y). Strains: εₓₓ = exx, εᵧᵧ = eyy, γₓᵧ = 2 exy (Vic-3D exy is tensor shear).",
+    "facets_per_step": 7096,
+    "steps": 11,
+    "fields": [
+     "F",
+     "F_labels",
+     "SE1grid",
+     "SE2grid",
+     "SE3grid",
+     "SK1grid",
+     "SK2grid",
+     "SK3grid",
+     "U",
+     "V",
+     "W",
+     "X",
+     "Y",
+     "Z",
+     "nodes"
+    ],
+    "force_vector": [
+     "Tx",
+     "Ty",
+     "Tz"
+    ],
+    "note": "values are absolute per frame, as the Import-steps dialog writes them; the solver works with increments relative to its reference step"
+   },
+   "deformation": {
+    "reference_step": 1,
+    "final_step_analysed": 11,
+    "final_step_rule": "step with the largest change of the dominant machine moment",
+    "dominant_machine_moment": "Ty",
+    "dominant_machine_rotation": "θy",
+    "dominant_curvature_component": "kyy",
+    "interior_mean_dk_at_final_step_inv_mm": {
+     "kxx": -0.002399,
+     "kyy": 0.008921,
+     "kxy": -0.0008593
+    },
+    "secondary_to_dominant_curvature_ratios": {
+     "kxx": -0.269,
+     "kxy": -0.0963
+    },
+    "curvature_linearity_vs_load": {
+     "kxx": {
+      "slope_per_load_unit": -7.17e-05,
+      "r2": 0.97976
+     },
+     "kyy": {
+      "slope_per_load_unit": 0.0002623,
+      "r2": 0.9809
+     },
+     "kxy": {
+      "slope_per_load_unit": -2.82e-05,
+      "r2": 0.83986
+     }
+    },
+    "w_quadratic_fit_final_step": {
+     "tilt_about_y_deg": 0.283,
+     "tilt_about_x_deg": -9.48,
+     "kxx_from_W_inv_mm": -0.002294,
+     "kyy_from_W_inv_mm": 0.008802,
+     "kxy_from_W_inv_mm": -0.0004582,
+     "note": "quadratic fit of the final-step ΔW; agreement in sign and size with the mean Δκ checks that the curvature convention and the displacement field tell the same story"
+    },
+    "curvature_frame_check": {
+     "image_axes": "image x → +X, image y → −Y",
+     "image_axes_rotated_90deg": false,
+     "kxx_kyy_from_W_inv_mm": [
+      -0.002294,
+      0.008802
+     ],
+     "kxx_kyy_from_vic_mean_inv_mm": [
+      -0.002501,
+      0.008939
+     ],
+     "relative_mismatch_as_exported": 0.0234,
+     "relative_mismatch_xx_yy_swapped": 1.28,
+     "verdict": "consistent: the Vic curvature tensor matches the ΔW surface as exported",
+     "solver_data_note": "solver arrays are built with the standard conversion used by the VFM Studio importer; nothing is re-oriented automatically"
+    },
+    "bands_along_y_at_final_step": [
+     {
+      "band": "bottom",
+      "facets": 1393,
+      "width_mm": 8.89,
+      "mean_dkxx_inv_mm": -0.0022,
+      "mean_dkyy_inv_mm": 0.008564,
+      "mean_dkxy_inv_mm": -0.0009339,
+      "mean_dW_mm": -0.1576
+     },
+     {
+      "band": "lower",
+      "facets": 1419,
+      "width_mm": 8.89,
+      "mean_dkxx_inv_mm": -0.00279,
+      "mean_dkyy_inv_mm": 0.009122,
+      "mean_dkxy_inv_mm": -0.001011,
+      "mean_dW_mm": -0.6822
+     },
+     {
+      "band": "middle",
+      "facets": 1404,
+      "width_mm": 9.1,
+      "mean_dkxx_inv_mm": -0.002909,
+      "mean_dkyy_inv_mm": 0.008578,
+      "mean_dkxy_inv_mm": -0.0009192,
+      "mean_dW_mm": -1.588
+     },
+     {
+      "band": "upper",
+      "facets": 1468,
+      "width_mm": 9.3,
+      "mean_dkxx_inv_mm": -0.002697,
+      "mean_dkyy_inv_mm": 0.008997,
+      "mean_dkxy_inv_mm": -0.0002934,
+      "mean_dW_mm": -2.865
+     },
+     {
+      "band": "top",
+      "facets": 1412,
+      "width_mm": 9.3,
+      "mean_dkxx_inv_mm": -0.001896,
+      "mean_dkyy_inv_mm": 0.009426,
+      "mean_dkxy_inv_mm": -0.001001,
+      "mean_dW_mm": -4.496
+     }
+    ],
+    "steps": [
+     {
+      "step": 1,
+      "file": "exp-00000059_0.csv",
+      "dic_frame": 59,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": -0.1954,
+       "Fy": 0.02933,
+       "Fz": 0.01083,
+       "Tx": -0.4001,
+       "Ty": 0.05512,
+       "Tz": 2.716,
+       "Δx": -14.99,
+       "Δy": 0.0009091,
+       "Δz": 5.993,
+       "θx": 0.003509,
+       "θy": -0.000749,
+       "θz": 0.0005859
+      },
+      "mean_dkxx_inv_mm": 0.0,
+      "mean_dkyy_inv_mm": 0.0,
+      "mean_dkxy_inv_mm": 0.0,
+      "mean_dexx": 0.0,
+      "mean_deyy": 0.0,
+      "mean_dgxy": 0.0,
+      "mean_dU_mm": 0.0,
+      "mean_dV_mm": 0.0,
+      "mean_dW_mm": 0.0,
+      "dW_p2_p98_mm": [
+       0.0,
+       0.0
+      ]
+     },
+     {
+      "step": 2,
+      "file": "exp-00000315_0.csv",
+      "dic_frame": 315,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": 0.003981,
+       "Fy": 0.0937,
+       "Fz": -0.09491,
+       "Tx": 0.2329,
+       "Ty": 7.312,
+       "Tz": -0.6376,
+       "Δx": -14.91,
+       "Δy": -0.02929,
+       "Δz": 4.521,
+       "θx": -0.007173,
+       "θy": -1.983,
+       "θz": 0.03637
+      },
+      "mean_dkxx_inv_mm": -0.0004311,
+      "mean_dkyy_inv_mm": 0.0008912,
+      "mean_dkxy_inv_mm": 4.104e-05,
+      "mean_dexx": 9.198e-05,
+      "mean_deyy": 0.0002148,
+      "mean_dgxy": -8.99e-06,
+      "mean_dU_mm": 0.0002629,
+      "mean_dV_mm": 0.003312,
+      "mean_dW_mm": -0.09818,
+      "dW_p2_p98_mm": [
+       -0.3257,
+       -0.0005184
+      ]
+     },
+     {
+      "step": 3,
+      "file": "exp-00000571_0.csv",
+      "dic_frame": 571,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": 0.01747,
+       "Fy": 0.07591,
+       "Fz": -0.09638,
+       "Tx": 0.2379,
+       "Ty": 11.19,
+       "Tz": -1.181,
+       "Δx": -14.91,
+       "Δy": -0.07311,
+       "Δz": 2.651,
+       "θx": 0.01294,
+       "θy": -3.987,
+       "θz": -0.2795
+      },
+      "mean_dkxx_inv_mm": -0.0008566,
+      "mean_dkyy_inv_mm": 0.001817,
+      "mean_dkxy_inv_mm": -2.35e-05,
+      "mean_dexx": 0.0002438,
+      "mean_deyy": 0.0004062,
+      "mean_dgxy": -1.214e-05,
+      "mean_dU_mm": -0.00402,
+      "mean_dV_mm": 0.002434,
+      "mean_dW_mm": -0.2977,
+      "dW_p2_p98_mm": [
+       -0.8633,
+       -0.003643
+      ]
+     },
+     {
+      "step": 4,
+      "file": "exp-00000827_0.csv",
+      "dic_frame": 827,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": 0.001394,
+       "Fy": 0.07782,
+       "Fz": -0.09159,
+       "Tx": 0.347,
+       "Ty": 14.97,
+       "Tz": 2.576,
+       "Δx": -14.85,
+       "Δy": -0.1032,
+       "Δz": 0.7439,
+       "θx": 0.0319,
+       "θy": -5.99,
+       "θz": -0.3563
+      },
+      "mean_dkxx_inv_mm": -0.001102,
+      "mean_dkyy_inv_mm": 0.002698,
+      "mean_dkxy_inv_mm": -0.0001047,
+      "mean_dexx": 0.0003544,
+      "mean_deyy": 0.0005939,
+      "mean_dgxy": -0.0001065,
+      "mean_dU_mm": -0.004555,
+      "mean_dV_mm": -0.001247,
+      "mean_dW_mm": -0.493,
+      "dW_p2_p98_mm": [
+       -1.387,
+       -0.005648
+      ]
+     },
+     {
+      "step": 5,
+      "file": "exp-00001083_0.csv",
+      "dic_frame": 1083,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": -0.03179,
+       "Fy": 0.07343,
+       "Fz": -0.0774,
+       "Tx": 0.242,
+       "Ty": 18.13,
+       "Tz": 0.927,
+       "Δx": -14.72,
+       "Δy": -0.1413,
+       "Δz": -1.147,
+       "θx": 0.05453,
+       "θy": -7.992,
+       "θz": -0.3911
+      },
+      "mean_dkxx_inv_mm": -0.001331,
+      "mean_dkyy_inv_mm": 0.003581,
+      "mean_dkxy_inv_mm": -0.0001596,
+      "mean_dexx": 0.0003399,
+      "mean_deyy": 0.00082,
+      "mean_dgxy": -8.79e-05,
+      "mean_dU_mm": -0.006016,
+      "mean_dV_mm": -0.007803,
+      "mean_dW_mm": -0.6998,
+      "dW_p2_p98_mm": [
+       -1.931,
+       -0.01033
+      ]
+     },
+     {
+      "step": 6,
+      "file": "exp-00001339_0.csv",
+      "dic_frame": 1339,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": 0.01312,
+       "Fy": 0.09567,
+       "Fz": -0.06815,
+       "Tx": 0.5218,
+       "Ty": 21.44,
+       "Tz": 4.846,
+       "Δx": -14.52,
+       "Δy": -0.1778,
+       "Δz": -3.033,
+       "θx": 0.09137,
+       "θy": -10.0,
+       "θz": -0.4729
+      },
+      "mean_dkxx_inv_mm": -0.001495,
+      "mean_dkyy_inv_mm": 0.004427,
+      "mean_dkxy_inv_mm": -0.000205,
+      "mean_dexx": 0.0004366,
+      "mean_deyy": 0.00103,
+      "mean_dgxy": -9.773e-05,
+      "mean_dU_mm": -0.00854,
+      "mean_dV_mm": -0.01954,
+      "mean_dW_mm": -0.9257,
+      "dW_p2_p98_mm": [
+       -2.512,
+       -0.01641
+      ]
+     },
+     {
+      "step": 7,
+      "file": "exp-00001595_0.csv",
+      "dic_frame": 1595,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": -0.05204,
+       "Fy": 0.0352,
+       "Fz": -0.0204,
+       "Tx": 0.2327,
+       "Ty": 23.39,
+       "Tz": 0.3591,
+       "Δx": -14.3,
+       "Δy": -0.2236,
+       "Δz": -4.895,
+       "θx": 0.1057,
+       "θy": -11.98,
+       "θz": -0.5342
+      },
+      "mean_dkxx_inv_mm": -0.001764,
+      "mean_dkyy_inv_mm": 0.005377,
+      "mean_dkxy_inv_mm": -0.0002834,
+      "mean_dexx": 0.000465,
+      "mean_deyy": 0.001195,
+      "mean_dgxy": -0.0001289,
+      "mean_dU_mm": -0.008832,
+      "mean_dV_mm": -0.03294,
+      "mean_dW_mm": -1.156,
+      "dW_p2_p98_mm": [
+       -3.102,
+       -0.02228
+      ]
+     },
+     {
+      "step": 8,
+      "file": "exp-00001859_0.csv",
+      "dic_frame": 1859,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": 0.04549,
+       "Fy": 0.08005,
+       "Fz": 0.02655,
+       "Tx": 0.4117,
+       "Ty": 25.29,
+       "Tz": 2.581,
+       "Δx": -13.98,
+       "Δy": -0.2363,
+       "Δz": -6.793,
+       "θx": 0.1482,
+       "θy": -13.99,
+       "θz": -0.5722
+      },
+      "mean_dkxx_inv_mm": -0.002127,
+      "mean_dkyy_inv_mm": 0.006325,
+      "mean_dkxy_inv_mm": -0.0003722,
+      "mean_dexx": 0.0005475,
+      "mean_deyy": 0.001407,
+      "mean_dgxy": -0.0001118,
+      "mean_dU_mm": -0.009417,
+      "mean_dV_mm": -0.05231,
+      "mean_dW_mm": -1.386,
+      "dW_p2_p98_mm": [
+       -3.694,
+       -0.02739
+      ]
+     },
+     {
+      "step": 9,
+      "file": "exp-00002111_0.csv",
+      "dic_frame": 2111,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": 0.0001994,
+       "Fy": 0.03543,
+       "Fz": 0.02233,
+       "Tx": 0.01899,
+       "Ty": 29.47,
+       "Tz": 0.4188,
+       "Δx": -13.52,
+       "Δy": -0.1537,
+       "Δz": -8.645,
+       "θx": 0.1725,
+       "θy": -15.99,
+       "θz": -0.5668
+      },
+      "mean_dkxx_inv_mm": -0.002183,
+      "mean_dkyy_inv_mm": 0.007264,
+      "mean_dkxy_inv_mm": -0.0005594,
+      "mean_dexx": 0.0005485,
+      "mean_deyy": 0.00162,
+      "mean_dgxy": -0.0001706,
+      "mean_dU_mm": -0.01028,
+      "mean_dV_mm": -0.07361,
+      "mean_dW_mm": -1.589,
+      "dW_p2_p98_mm": [
+       -4.239,
+       -0.03237
+      ]
+     },
+     {
+      "step": 10,
+      "file": "exp-00002375_0.csv",
+      "dic_frame": 2375,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": 0.08134,
+       "Fy": 0.07943,
+       "Fz": 0.01852,
+       "Tx": -0.3774,
+       "Ty": 33.41,
+       "Tz": 1.282,
+       "Δx": -13.04,
+       "Δy": -0.1384,
+       "Δz": -10.49,
+       "θx": 0.1859,
+       "θy": -18.0,
+       "θz": -0.565
+      },
+      "mean_dkxx_inv_mm": -0.002492,
+      "mean_dkyy_inv_mm": 0.008163,
+      "mean_dkxy_inv_mm": -0.0008637,
+      "mean_dexx": 0.0006133,
+      "mean_deyy": 0.001831,
+      "mean_dgxy": -0.0002369,
+      "mean_dU_mm": -0.01317,
+      "mean_dV_mm": -0.09788,
+      "mean_dW_mm": -1.788,
+      "dW_p2_p98_mm": [
+       -4.77,
+       -0.03545
+      ]
+     },
+     {
+      "step": 11,
+      "file": "exp-00002699_0.csv",
+      "dic_frame": 2699,
+      "campaign_step": null,
+      "time_s": null,
+      "machine": {
+       "Fx": 0.009148,
+       "Fy": 0.06326,
+       "Fz": 0.02201,
+       "Tx": 0.02003,
+       "Ty": 37.49,
+       "Tz": 2.732,
+       "Δx": -12.55,
+       "Δy": -0.1281,
+       "Δz": -12.21,
+       "θx": 0.2259,
+       "θy": -19.99,
+       "θz": -0.6352
+      },
+      "mean_dkxx_inv_mm": -0.002501,
+      "mean_dkyy_inv_mm": 0.008939,
+      "mean_dkxy_inv_mm": -0.0008272,
+      "mean_dexx": 0.0005577,
+      "mean_deyy": 0.001979,
+      "mean_dgxy": -0.0002034,
+      "mean_dU_mm": -0.01102,
+      "mean_dV_mm": -0.1206,
+      "mean_dW_mm": -1.969,
+      "dW_p2_p98_mm": [
+       -5.236,
+       -0.04023
+      ]
+     }
+    ]
+   },
+   "noise": {
+    "available": true,
+    "estimator": "pointwise temporal residual: at every facet, each curvature component is regressed on {1, T, T²} across the 11 steps and the residual scatter is taken (8 degrees of freedom per facet), divided by 0.958 (median of sqrt(chi2/dof)) so that medians compare like for like with the calibration, which used 35-frame static stacks. Anything the quadratic in load cannot follow (slip, local damage, re-correlation jumps) also counts as noise, so this is an upper bound on sensor noise.",
+    "load_variable": "machine channel Ty [N·mm]",
+    "residual_dof_per_facet": 8,
+    "components": {
+     "kxx": {
+      "measured_median_inv_mm": 0.0006107,
+      "model_median_inv_mm": 0.0004801,
+      "measured_to_model_ratio": 1.27,
+      "measured_interior_median_inv_mm": 0.0005146,
+      "model_interior_median_inv_mm": 0.0004801,
+      "measured_edge_median_inv_mm": 0.001632,
+      "model_edge_median_inv_mm": 0.001476,
+      "measured_edge_amplification": 3.17,
+      "model_edge_amplification": 3.07,
+      "pointwise_map_correlation": 0.804,
+      "campaign_region_median_floor_inv_mm": 0.0005278,
+      "measured_to_campaign_floor_ratio": 1.16,
+      "legacy_envelope_inv_mm": 0.001436,
+      "legacy_to_measured_ratio": 2.35,
+      "radial_profile_measured_inv_mm": [
+       0.001986,
+       0.001634,
+       0.001393,
+       0.001215,
+       0.0009898,
+       0.0007945,
+       0.0006387,
+       0.0005417,
+       0.0005021,
+       0.0005175,
+       0.0005225,
+       0.0005044,
+       0.0005147
+      ],
+      "radial_profile_model_inv_mm": [
+       0.001961,
+       0.001476,
+       0.001152,
+       0.0009268,
+       0.000764,
+       0.0006432,
+       0.0005513,
+       0.0004801,
+       0.0004801,
+       0.0004801,
+       0.0004801,
+       0.0004801,
+       0.0004801
+      ]
+     },
+     "kyy": {
+      "measured_median_inv_mm": 0.0007219,
+      "model_median_inv_mm": 0.0005082,
+      "measured_to_model_ratio": 1.42,
+      "measured_interior_median_inv_mm": 0.0006542,
+      "model_interior_median_inv_mm": 0.0005082,
+      "measured_edge_median_inv_mm": 0.001056,
+      "model_edge_median_inv_mm": 0.0006406,
+      "measured_edge_amplification": 1.61,
+      "model_edge_amplification": 1.26,
+      "pointwise_map_correlation": 0.716,
+      "campaign_region_median_floor_inv_mm": 0.0005388,
+      "measured_to_campaign_floor_ratio": 1.34,
+      "legacy_envelope_inv_mm": 0.001046,
+      "legacy_to_measured_ratio": 1.45,
+      "radial_profile_measured_inv_mm": [
+       0.001173,
+       0.001053,
+       0.0009437,
+       0.0008531,
+       0.0007587,
+       0.000707,
+       0.0006626,
+       0.0006589,
+       0.0006718,
+       0.0006629,
+       0.0006519,
+       0.0006456,
+       0.0006539
+      ],
+      "radial_profile_model_inv_mm": [
+       0.0006546,
+       0.0006236,
+       0.0005973,
+       0.0005747,
+       0.000555,
+       0.0005376,
+       0.0005221,
+       0.0005082,
+       0.0005082,
+       0.0005082,
+       0.0005082,
+       0.0005082,
+       0.0005082
+      ]
+     },
+     "kxy": {
+      "measured_median_inv_mm": 0.0006376,
+      "model_median_inv_mm": 0.0005152,
+      "measured_to_model_ratio": 1.24,
+      "measured_interior_median_inv_mm": 0.0005398,
+      "model_interior_median_inv_mm": 0.0005152,
+      "measured_edge_median_inv_mm": 0.001422,
+      "model_edge_median_inv_mm": 0.0009815,
+      "measured_edge_amplification": 2.63,
+      "model_edge_amplification": 1.91,
+      "pointwise_map_correlation": 0.764,
+      "campaign_region_median_floor_inv_mm": 0.000559,
+      "measured_to_campaign_floor_ratio": 1.14,
+      "legacy_envelope_inv_mm": 0.001606,
+      "legacy_to_measured_ratio": 2.52,
+      "radial_profile_measured_inv_mm": [
+       0.001633,
+       0.001398,
+       0.001176,
+       0.0009962,
+       0.0008101,
+       0.0006841,
+       0.0006029,
+       0.0005624,
+       0.0005418,
+       0.0005214,
+       0.000505,
+       0.0005198,
+       0.0005526
+      ],
+      "radial_profile_model_inv_mm": [
+       0.001151,
+       0.0009815,
+       0.0008537,
+       0.0007545,
+       0.0006757,
+       0.0006118,
+       0.0005592,
+       0.0005152,
+       0.0005152,
+       0.0005152,
+       0.0005152,
+       0.0005152,
+       0.0005152
+      ]
+     }
+    },
+    "model_prediction_on_this_mask": {
+     "kxx": {
+      "median_inv_mm": 0.0004801,
+      "interior_inv_mm": 0.0004801,
+      "edge_median_inv_mm": 0.001476
+     },
+     "kyy": {
+      "median_inv_mm": 0.0005082,
+      "interior_inv_mm": 0.0005082,
+      "edge_median_inv_mm": 0.0006406
+     },
+     "kxy": {
+      "median_inv_mm": 0.0005152,
+      "interior_inv_mm": 0.0005152,
+      "edge_median_inv_mm": 0.0009815
+     }
+    },
+    "signal_to_noise_at_max_load": {
+     "kxx": 3.93,
+     "kyy": 12.4,
+     "kxy": 1.35
+    }
+   },
+   "dic_parameters": {
+    "recorded_in_export": {
+     "facet_step_px": 7,
+     "facet_pitch_mm": {
+      "x": 0.2067,
+      "y": 0.2009
+     },
+     "image_scale_mm_per_px": {
+      "x": 0.02953,
+      "y": 0.0287
+     },
+     "not_in_export": "subset size, strain/curvature filter size and weighting, correlation criterion and interpolation are not written to the raw facet export; they are inferred below"
+    },
+    "subset": {
+     "method": "spatial autocorrelation of the per-facet temporal residual of U, V, W (the same load-polynomial residual the noise estimator uses), high-passed per step by subtracting a local quadratic over 31×31 facets (removes rigid-body jitter and other smooth motion the load polynomial cannot follow). Overlapping subsets share pixels, so their displacement errors correlate roughly in proportion to the shared area; for a uniformly weighted square subset that falls to 0.5 at a separation of half a subset, so subset ≈ 2 × (half-correlation lag) × facet step",
+     "lags_facets": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+     ],
+     "autocorrelation": {
+      "U_along_x": [
+       1.0,
+       0.759,
+       0.366,
+       0.0321,
+       -0.0913,
+       -0.0923,
+       -0.0754,
+       -0.0569,
+       -0.0376,
+       -0.028,
+       -0.0257
+      ],
+      "U_along_y": [
+       1.0,
+       0.818,
+       0.46,
+       0.168,
+       0.0384,
+       0.00347,
+       -0.0123,
+       -0.0254,
+       -0.0347,
+       -0.0382,
+       -0.0323
+      ],
+      "V_along_x": [
+       1.0,
+       0.792,
+       0.431,
+       0.118,
+       -0.0195,
+       -0.0534,
+       -0.0707,
+       -0.0874,
+       -0.0967,
+       -0.0949,
+       -0.0808
+      ],
+      "V_along_y": [
+       1.0,
+       0.793,
+       0.411,
+       0.121,
+       0.0116,
+       -0.00447,
+       -0.0104,
+       -0.0197,
+       -0.0315,
+       -0.0446,
+       -0.0536
+      ],
+      "W_along_x": [
+       1.0,
+       0.772,
+       0.382,
+       0.059,
+       -0.0592,
+       -0.0656,
+       -0.0557,
+       -0.0493,
+       -0.0451,
+       -0.0413,
+       -0.0404
+      ],
+      "W_along_y": [
+       1.0,
+       0.79,
+       0.385,
+       0.0637,
+       -0.0629,
+       -0.077,
+       -0.0717,
+       -0.0674,
+       -0.066,
+       -0.0677,
+       -0.0697
+      ]
+     },
+     "half_correlation_lag_facets": {
+      "U_along_x": 1.66,
+      "U_along_y": 1.89,
+      "V_along_x": 1.81,
+      "V_along_y": 1.77,
+      "W_along_x": 1.7,
+      "W_along_y": 1.72
+     },
+     "subset_size_estimate_px": 25.0,
+     "estimate_from": "median of the U and V half-correlation lags along X and Y",
+     "caveat": "an estimate, not a recorded setting: subset weighting, interpolation and correlated speckle or lighting changes shift it by about a facet step either way"
+    },
+    "curvature_filter": {
+     "available": true,
+     "method": "the final-step ΔW is re-fitted with a local quadratic over every candidate window (5…31 facets; uniform and gaussian weights), truncated at the facet mask, and the resulting Δκ is compared with the exported Δκ on facets whose full window lies inside the mask. mismatch = RMS(refit − exported) / SD(exported); 0 is an exact reproduction, 1 means the refit explains none of the exported scatter",
+     "best": {
+      "filter_size_facets": 15,
+      "weighting": "gaussian, edge weight 5% of centre",
+      "edge_weight": 0.05,
+      "gaussian_sigma_facets": 2.86,
+      "gaussian_sigma_mm": 0.583,
+      "window_mm": {
+       "x": 3.1,
+       "y": 3.01
+      },
+      "mismatch_mean": 0.273,
+      "mismatch": {
+       "kxx": 0.226,
+       "kyy": 0.199,
+       "kxy": 0.394
+      },
+      "explained_variance_fraction": 0.926
+     },
+     "next_best": [
+      {
+       "filter_size_facets": 13,
+       "weighting": "gaussian, edge weight 20% of centre",
+       "edge_weight": 0.2,
+       "gaussian_sigma_facets": 3.34,
+       "gaussian_sigma_mm": 0.682,
+       "window_mm": {
+        "x": 2.69,
+        "y": 2.61
+       },
+       "mismatch_mean": 0.31
+      },
+      {
+       "filter_size_facets": 17,
+       "weighting": "gaussian, edge weight 2% of centre",
+       "edge_weight": 0.02,
+       "gaussian_sigma_facets": 2.86,
+       "gaussian_sigma_mm": 0.583,
+       "window_mm": {
+        "x": 3.51,
+        "y": 3.42
+       },
+       "mismatch_mean": 0.312
+      },
+      {
+       "filter_size_facets": 13,
+       "weighting": "gaussian, edge weight 10% of centre",
+       "edge_weight": 0.1,
+       "gaussian_sigma_facets": 2.8,
+       "gaussian_sigma_mm": 0.57,
+       "window_mm": {
+        "x": 2.69,
+        "y": 2.61
+       },
+       "mismatch_mean": 0.339
+      }
+     ],
+     "best_uniform": {
+      "filter_size_facets": 11,
+      "weighting": "uniform",
+      "edge_weight": 1.0,
+      "gaussian_sigma_facets": null,
+      "gaussian_sigma_mm": null,
+      "window_mm": {
+       "x": 2.27,
+       "y": 2.21
+      },
+      "mismatch_mean": 0.505
+     },
+     "noise_model_assumption": {
+      "filter_size_facets": 15,
+      "weighting": "uniform",
+      "edge_weight": 1.0,
+      "gaussian_sigma_facets": null,
+      "gaussian_sigma_mm": null,
+      "window_mm": {
+       "x": 3.1,
+       "y": 3.01
+      },
+      "mismatch_mean": 0.751
+     },
+     "verdict": "reproduced closely",
+     "note": "size and weighting trade off along a valley (a wider window with faster decay smooths like a narrower uniform one); the gaussian sigma is better determined than the size",
+     "mismatch_by_size": {
+      "filter_sizes": [
+       5,
+       7,
+       9,
+       11,
+       13,
+       15,
+       17,
+       19,
+       21,
+       23,
+       25,
+       27,
+       29,
+       31
+      ],
+      "uniform": [
+       4.31,
+       2.18,
+       0.986,
+       0.505,
+       0.588,
+       0.751,
+       0.854,
+       0.913,
+       0.946,
+       0.966,
+       0.979,
+       0.986,
+       0.99,
+       0.991
+      ],
+      "gaussian, edge weight 50% of centre": [
+       4.59,
+       2.44,
+       1.14,
+       0.477,
+       0.451,
+       0.648,
+       0.785,
+       0.868,
+       0.916,
+       0.945,
+       0.964,
+       0.975,
+       0.982,
+       0.986
+      ],
+      "gaussian, edge weight 20% of centre": [
+       5.09,
+       2.93,
+       1.5,
+       0.638,
+       0.31,
+       0.489,
+       0.67,
+       0.788,
+       0.861,
+       0.906,
+       0.936,
+       0.955,
+       0.967,
+       0.974
+      ],
+      "gaussian, edge weight 10% of centre": [
+       5.57,
+       3.38,
+       1.86,
+       0.88,
+       0.339,
+       0.363,
+       0.565,
+       0.711,
+       0.805,
+       0.866,
+       0.907,
+       0.933,
+       0.95,
+       0.962
+      ],
+      "gaussian, edge weight 5% of centre": [
+       6.14,
+       3.88,
+       2.26,
+       1.18,
+       0.507,
+       0.273,
+       0.451,
+       0.62,
+       0.738,
+       0.817,
+       0.87,
+       0.905,
+       0.929,
+       0.945
+      ],
+      "gaussian, edge weight 2% of centre": [
+       7.0,
+       4.56,
+       2.85,
+       1.64,
+       0.831,
+       0.35,
+       0.312,
+       0.487,
+       0.632,
+       0.736,
+       0.809,
+       0.858,
+       0.892,
+       0.916
+      ]
+     }
+    },
+    "curvature_filter_sweep": {
+     "weighting": "gaussian, edge weight 5% of centre",
+     "identified_filter_size_facets": 15,
+     "dominant_component": "kyy",
+     "final_step_analysed": 11,
+     "noise_available": true,
+     "definitions": "each row re-fits ΔW with that filter size (weighting fixed at the identified one). noise: same temporal-residual estimator as the noise section, on the refitted curvature; interior = facets whose full window lies inside the mask; edge = ≤ 2 facets from a boundary. signal: interior mean Δκ of the dominant component at the final step; snr_interior = |signal| / interior noise. dW_fit_rms_misfit_um: median RMS residual of the local quadratic fit of the final-step ΔW; noise_only_fit_rms_misfit_um: the same fit applied to the temporal-residual W fields (noise alone); misfit_to_noise_ratio = their quotient (its absolute level depends on how the frames share noise, so only its change with size matters); smoothing_bias_index = that ratio divided by its value at the smallest size: 1 means the larger window follows ΔW as well as the smallest, a rise marks smoothing bias (the window is wider than the deformation features). white_noise_sigma_relative_to_identified: noise ratio expected if W noise were uncorrelated between facets",
+     "noise_vs_size_exponent_measured": -1.83,
+     "noise_vs_size_exponent_white_noise": -3.18,
+     "refit_to_export_interior_noise_ratio": {
+      "kxx": 0.951,
+      "kyy": 0.968,
+      "kxy": 0.931
+     },
+     "rows": [
+      {
+       "filter_size_facets": 5,
+       "window_mm": {
+        "x": 1.03,
+        "y": 1.0
+       },
+       "full_window_facet_fraction": 0.882,
+       "unfittable_facet_fraction": 0.000564,
+       "mismatch_to_export": 6.14,
+       "signal_interior_mean_inv_mm": 0.008814,
+       "dW_fit_rms_misfit_um": 0.217,
+       "noise_only_fit_rms_misfit_um": 0.0928,
+       "misfit_to_noise_ratio": 2.34,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.004578,
+        "kyy": 0.004815,
+        "kxy": 0.005392
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.004749,
+        "kyy": 0.005009,
+        "kxy": 0.005548
+       },
+       "edge_amplification": {
+        "kxx": 1.38,
+        "kyy": 1.44,
+        "kxy": 1.24
+       },
+       "snr_interior": 1.83,
+       "smoothing_bias_index": 1.0,
+       "white_noise_sigma_relative_to_identified": 37.5
+      },
+      {
+       "filter_size_facets": 7,
+       "window_mm": {
+        "x": 1.45,
+        "y": 1.41
+       },
+       "full_window_facet_fraction": 0.827,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 3.88,
+       "signal_interior_mean_inv_mm": 0.008871,
+       "dW_fit_rms_misfit_um": 0.398,
+       "noise_only_fit_rms_misfit_um": 0.17,
+       "misfit_to_noise_ratio": 2.34,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.00282,
+        "kyy": 0.002943,
+        "kxy": 0.003188
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.00296,
+        "kyy": 0.003107,
+        "kxy": 0.003374
+       },
+       "edge_amplification": {
+        "kxx": 1.52,
+        "kyy": 1.58,
+        "kxy": 1.56
+       },
+       "snr_interior": 3.01,
+       "smoothing_bias_index": 1.0,
+       "white_noise_sigma_relative_to_identified": 11.5
+      },
+      {
+       "filter_size_facets": 9,
+       "window_mm": {
+        "x": 1.86,
+        "y": 1.81
+       },
+       "full_window_facet_fraction": 0.772,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 2.26,
+       "signal_interior_mean_inv_mm": 0.008869,
+       "dW_fit_rms_misfit_um": 0.556,
+       "noise_only_fit_rms_misfit_um": 0.235,
+       "misfit_to_noise_ratio": 2.37,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.00173,
+        "kyy": 0.001815,
+        "kxy": 0.00188
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.001881,
+        "kyy": 0.001949,
+        "kxy": 0.002042
+       },
+       "edge_amplification": {
+        "kxx": 1.84,
+        "kyy": 1.7,
+        "kxy": 1.93
+       },
+       "snr_interior": 4.89,
+       "smoothing_bias_index": 1.01,
+       "white_noise_sigma_relative_to_identified": 5.05
+      },
+      {
+       "filter_size_facets": 11,
+       "window_mm": {
+        "x": 2.27,
+        "y": 2.21
+       },
+       "full_window_facet_fraction": 0.718,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 1.18,
+       "signal_interior_mean_inv_mm": 0.008855,
+       "dW_fit_rms_misfit_um": 0.674,
+       "noise_only_fit_rms_misfit_um": 0.281,
+       "misfit_to_noise_ratio": 2.4,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.00108,
+        "kyy": 0.001165,
+        "kxy": 0.001157
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.001224,
+        "kyy": 0.001273,
+        "kxy": 0.00129
+       },
+       "edge_amplification": {
+        "kxx": 2.31,
+        "kyy": 1.74,
+        "kxy": 2.24
+       },
+       "snr_interior": 7.6,
+       "smoothing_bias_index": 1.03,
+       "white_noise_sigma_relative_to_identified": 2.65
+      },
+      {
+       "filter_size_facets": 13,
+       "window_mm": {
+        "x": 2.69,
+        "y": 2.61
+       },
+       "full_window_facet_fraction": 0.666,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 0.507,
+       "signal_interior_mean_inv_mm": 0.00884,
+       "dW_fit_rms_misfit_um": 0.758,
+       "noise_only_fit_rms_misfit_um": 0.313,
+       "misfit_to_noise_ratio": 2.42,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.0007105,
+        "kyy": 0.000818,
+        "kxy": 0.000748
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.000819,
+        "kyy": 0.0009033,
+        "kxy": 0.0008562
+       },
+       "edge_amplification": {
+        "kxx": 2.83,
+        "kyy": 1.68,
+        "kxy": 2.46
+       },
+       "snr_interior": 10.8,
+       "smoothing_bias_index": 1.03,
+       "white_noise_sigma_relative_to_identified": 1.57
+      },
+      {
+       "filter_size_facets": 15,
+       "window_mm": {
+        "x": 3.1,
+        "y": 3.01
+       },
+       "full_window_facet_fraction": 0.615,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 0.273,
+       "signal_interior_mean_inv_mm": 0.008826,
+       "dW_fit_rms_misfit_um": 0.819,
+       "noise_only_fit_rms_misfit_um": 0.336,
+       "misfit_to_noise_ratio": 2.44,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.0004901,
+        "kyy": 0.0006351,
+        "kxy": 0.0005046
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.0005825,
+        "kyy": 0.0007005,
+        "kxy": 0.0005975
+       },
+       "edge_amplification": {
+        "kxx": 3.31,
+        "kyy": 1.6,
+        "kxy": 2.68
+       },
+       "snr_interior": 13.9,
+       "smoothing_bias_index": 1.04,
+       "white_noise_sigma_relative_to_identified": 1.0
+      },
+      {
+       "filter_size_facets": 17,
+       "window_mm": {
+        "x": 3.51,
+        "y": 3.42
+       },
+       "full_window_facet_fraction": 0.565,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 0.451,
+       "signal_interior_mean_inv_mm": 0.00882,
+       "dW_fit_rms_misfit_um": 0.867,
+       "noise_only_fit_rms_misfit_um": 0.353,
+       "misfit_to_noise_ratio": 2.46,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.0003637,
+        "kyy": 0.0005365,
+        "kxy": 0.0003607
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.0004362,
+        "kyy": 0.000583,
+        "kxy": 0.0004373
+       },
+       "edge_amplification": {
+        "kxx": 3.63,
+        "kyy": 1.49,
+        "kxy": 2.79
+       },
+       "snr_interior": 16.4,
+       "smoothing_bias_index": 1.05,
+       "white_noise_sigma_relative_to_identified": 0.677
+      },
+      {
+       "filter_size_facets": 19,
+       "window_mm": {
+        "x": 3.93,
+        "y": 3.82
+       },
+       "full_window_facet_fraction": 0.516,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 0.62,
+       "signal_interior_mean_inv_mm": 0.008821,
+       "dW_fit_rms_misfit_um": 0.905,
+       "noise_only_fit_rms_misfit_um": 0.366,
+       "misfit_to_noise_ratio": 2.47,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.0002854,
+        "kyy": 0.0004825,
+        "kxy": 0.0002684
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.0003434,
+        "kyy": 0.0005175,
+        "kxy": 0.0003314
+       },
+       "edge_amplification": {
+        "kxx": 3.8,
+        "kyy": 1.37,
+        "kxy": 2.88
+       },
+       "snr_interior": 18.3,
+       "smoothing_bias_index": 1.06,
+       "white_noise_sigma_relative_to_identified": 0.48
+      },
+      {
+       "filter_size_facets": 21,
+       "window_mm": {
+        "x": 4.34,
+        "y": 4.22
+       },
+       "full_window_facet_fraction": 0.469,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 0.738,
+       "signal_interior_mean_inv_mm": 0.008823,
+       "dW_fit_rms_misfit_um": 0.936,
+       "noise_only_fit_rms_misfit_um": 0.375,
+       "misfit_to_noise_ratio": 2.5,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.0002361,
+        "kyy": 0.0004518,
+        "kxy": 0.000209
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.0002815,
+        "kyy": 0.0004732,
+        "kxy": 0.0002602
+       },
+       "edge_amplification": {
+        "kxx": 3.78,
+        "kyy": 1.29,
+        "kxy": 2.92
+       },
+       "snr_interior": 19.5,
+       "smoothing_bias_index": 1.07,
+       "white_noise_sigma_relative_to_identified": 0.352
+      },
+      {
+       "filter_size_facets": 23,
+       "window_mm": {
+        "x": 4.75,
+        "y": 4.62
+       },
+       "full_window_facet_fraction": 0.422,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 0.817,
+       "signal_interior_mean_inv_mm": 0.008824,
+       "dW_fit_rms_misfit_um": 0.963,
+       "noise_only_fit_rms_misfit_um": 0.382,
+       "misfit_to_noise_ratio": 2.52,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.0002051,
+        "kyy": 0.000432,
+        "kxy": 0.000171
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.0002398,
+        "kyy": 0.0004519,
+        "kxy": 0.0002105
+       },
+       "edge_amplification": {
+        "kxx": 3.62,
+        "kyy": 1.2,
+        "kxy": 2.85
+       },
+       "snr_interior": 20.4,
+       "smoothing_bias_index": 1.08,
+       "white_noise_sigma_relative_to_identified": 0.266
+      },
+      {
+       "filter_size_facets": 25,
+       "window_mm": {
+        "x": 5.17,
+        "y": 5.02
+       },
+       "full_window_facet_fraction": 0.377,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 0.87,
+       "signal_interior_mean_inv_mm": 0.008824,
+       "dW_fit_rms_misfit_um": 0.985,
+       "noise_only_fit_rms_misfit_um": 0.39,
+       "misfit_to_noise_ratio": 2.53,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.0001844,
+        "kyy": 0.0004209,
+        "kxy": 0.0001442
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.0002127,
+        "kyy": 0.0004329,
+        "kxy": 0.000177
+       },
+       "edge_amplification": {
+        "kxx": 3.29,
+        "kyy": 1.15,
+        "kxy": 2.74
+       },
+       "snr_interior": 21.0,
+       "smoothing_bias_index": 1.08,
+       "white_noise_sigma_relative_to_identified": 0.206
+      },
+      {
+       "filter_size_facets": 27,
+       "window_mm": {
+        "x": 5.58,
+        "y": 5.42
+       },
+       "full_window_facet_fraction": 0.332,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 0.905,
+       "signal_interior_mean_inv_mm": 0.008822,
+       "dW_fit_rms_misfit_um": 1.01,
+       "noise_only_fit_rms_misfit_um": 0.396,
+       "misfit_to_noise_ratio": 2.54,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.0001712,
+        "kyy": 0.0004115,
+        "kxy": 0.000125
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.0001948,
+        "kyy": 0.00042,
+        "kxy": 0.0001532
+       },
+       "edge_amplification": {
+        "kxx": 2.88,
+        "kyy": 1.12,
+        "kxy": 2.61
+       },
+       "snr_interior": 21.4,
+       "smoothing_bias_index": 1.09,
+       "white_noise_sigma_relative_to_identified": 0.163
+      },
+      {
+       "filter_size_facets": 29,
+       "window_mm": {
+        "x": 6.0,
+        "y": 5.83
+       },
+       "full_window_facet_fraction": 0.289,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 0.929,
+       "signal_interior_mean_inv_mm": 0.00882,
+       "dW_fit_rms_misfit_um": 1.02,
+       "noise_only_fit_rms_misfit_um": 0.401,
+       "misfit_to_noise_ratio": 2.55,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.0001631,
+        "kyy": 0.0004036,
+        "kxy": 0.0001122
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.0001807,
+        "kyy": 0.0004074,
+        "kxy": 0.0001366
+       },
+       "edge_amplification": {
+        "kxx": 2.49,
+        "kyy": 1.08,
+        "kxy": 2.44
+       },
+       "snr_interior": 21.9,
+       "smoothing_bias_index": 1.09,
+       "white_noise_sigma_relative_to_identified": 0.131
+      },
+      {
+       "filter_size_facets": 31,
+       "window_mm": {
+        "x": 6.41,
+        "y": 6.23
+       },
+       "full_window_facet_fraction": 0.248,
+       "unfittable_facet_fraction": 0.0,
+       "mismatch_to_export": 0.945,
+       "signal_interior_mean_inv_mm": 0.008818,
+       "dW_fit_rms_misfit_um": 1.04,
+       "noise_only_fit_rms_misfit_um": 0.405,
+       "misfit_to_noise_ratio": 2.55,
+       "noise_interior_median_inv_mm": {
+        "kxx": 0.0001587,
+        "kyy": 0.0003938,
+        "kxy": 0.0001041
+       },
+       "noise_all_facets_median_inv_mm": {
+        "kxx": 0.0001697,
+        "kyy": 0.0003957,
+        "kxy": 0.0001237
+       },
+       "edge_amplification": {
+        "kxx": 2.16,
+        "kyy": 1.06,
+        "kxy": 2.22
+       },
+       "snr_interior": 22.4,
+       "smoothing_bias_index": 1.09,
+       "white_noise_sigma_relative_to_identified": 0.107
+      }
+     ]
+    }
+   },
+   "read_quality": {
+    "facets_union": 7097,
+    "facets_in_every_step": 7096,
+    "facets_lost_in_some_step": 1,
+    "per_step": [
+     {
+      "step": 1,
+      "facets": 7097,
+      "vic_sigma_median_px": 0.007331,
+      "vic_sigma_p95_px": 0.008696,
+      "sigma_z_median_mm": 0.000731
+     },
+     {
+      "step": 2,
+      "facets": 7097,
+      "vic_sigma_median_px": 0.007711,
+      "vic_sigma_p95_px": 0.009387,
+      "sigma_z_median_mm": 0.0007512
+     },
+     {
+      "step": 3,
+      "facets": 7097,
+      "vic_sigma_median_px": 0.008306,
+      "vic_sigma_p95_px": 0.01191,
+      "sigma_z_median_mm": 0.0007886
+     },
+     {
+      "step": 4,
+      "facets": 7097,
+      "vic_sigma_median_px": 0.008847,
+      "vic_sigma_p95_px": 0.0138,
+      "sigma_z_median_mm": 0.0008261
+     },
+     {
+      "step": 5,
+      "facets": 7097,
+      "vic_sigma_median_px": 0.009633,
+      "vic_sigma_p95_px": 0.01481,
+      "sigma_z_median_mm": 0.0008674
+     },
+     {
+      "step": 6,
+      "facets": 7097,
+      "vic_sigma_median_px": 0.01038,
+      "vic_sigma_p95_px": 0.01581,
+      "sigma_z_median_mm": 0.0009075
+     },
+     {
+      "step": 7,
+      "facets": 7097,
+      "vic_sigma_median_px": 0.01094,
+      "vic_sigma_p95_px": 0.01664,
+      "sigma_z_median_mm": 0.0009405
+     },
+     {
+      "step": 8,
+      "facets": 7097,
+      "vic_sigma_median_px": 0.01135,
+      "vic_sigma_p95_px": 0.01719,
+      "sigma_z_median_mm": 0.0009697
+     },
+     {
+      "step": 9,
+      "facets": 7097,
+      "vic_sigma_median_px": 0.01171,
+      "vic_sigma_p95_px": 0.01767,
+      "sigma_z_median_mm": 0.000993
+     },
+     {
+      "step": 10,
+      "facets": 7097,
+      "vic_sigma_median_px": 0.01195,
+      "vic_sigma_p95_px": 0.01816,
+      "sigma_z_median_mm": 0.001012
+     },
+     {
+      "step": 11,
+      "facets": 7096,
+      "vic_sigma_median_px": 0.01217,
+      "vic_sigma_p95_px": 0.01845,
+      "sigma_z_median_mm": 0.001025
+     }
+    ],
+    "vic_sigma_specimen_median_px": 0.01036,
+    "zones": [
+     {
+      "zone": "bottom-left",
+      "facets": 403,
+      "area_fraction": 0.0568,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.00859,
+      "noise_to_model_ratio": 1.42,
+      "final_mean_dkxx_inv_mm": -0.002288,
+      "final_mean_dkyy_inv_mm": 0.008498,
+      "final_mean_dkxy_inv_mm": 0.000232,
+      "final_mean_dW_mm": -0.1631,
+      "flags": []
+     },
+     {
+      "zone": "bottom-centre",
+      "facets": 495,
+      "area_fraction": 0.0697,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.00808,
+      "noise_to_model_ratio": 1.3,
+      "final_mean_dkxx_inv_mm": -0.001732,
+      "final_mean_dkyy_inv_mm": 0.008597,
+      "final_mean_dkxy_inv_mm": -0.0007808,
+      "final_mean_dW_mm": -0.1626,
+      "flags": []
+     },
+     {
+      "zone": "bottom-right",
+      "facets": 495,
+      "area_fraction": 0.0697,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.00768,
+      "noise_to_model_ratio": 1.3,
+      "final_mean_dkxx_inv_mm": -0.002595,
+      "final_mean_dkyy_inv_mm": 0.008584,
+      "final_mean_dkxy_inv_mm": -0.002036,
+      "final_mean_dW_mm": -0.1482,
+      "flags": []
+     },
+     {
+      "zone": "lower-left",
+      "facets": 429,
+      "area_fraction": 0.0604,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.00881,
+      "noise_to_model_ratio": 1.32,
+      "final_mean_dkxx_inv_mm": -0.00261,
+      "final_mean_dkyy_inv_mm": 0.009273,
+      "final_mean_dkxy_inv_mm": -0.0005681,
+      "final_mean_dW_mm": -0.6946,
+      "flags": []
+     },
+     {
+      "zone": "lower-centre",
+      "facets": 495,
+      "area_fraction": 0.0697,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.00839,
+      "noise_to_model_ratio": 1.34,
+      "final_mean_dkxx_inv_mm": -0.002457,
+      "final_mean_dkyy_inv_mm": 0.009036,
+      "final_mean_dkxy_inv_mm": -0.001145,
+      "final_mean_dW_mm": -0.6908,
+      "flags": []
+     },
+     {
+      "zone": "lower-right",
+      "facets": 495,
+      "area_fraction": 0.0697,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.0087,
+      "noise_to_model_ratio": 1.22,
+      "final_mean_dkxx_inv_mm": -0.003279,
+      "final_mean_dkyy_inv_mm": 0.009078,
+      "final_mean_dkxy_inv_mm": -0.001261,
+      "final_mean_dW_mm": -0.6629,
+      "flags": []
+     },
+     {
+      "zone": "middle-left",
+      "facets": 444,
+      "area_fraction": 0.0626,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.0113,
+      "noise_to_model_ratio": 1.29,
+      "final_mean_dkxx_inv_mm": -0.002236,
+      "final_mean_dkyy_inv_mm": 0.008413,
+      "final_mean_dkxy_inv_mm": -0.00106,
+      "final_mean_dW_mm": -1.61,
+      "flags": []
+     },
+     {
+      "zone": "middle-centre",
+      "facets": 480,
+      "area_fraction": 0.0676,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.011,
+      "noise_to_model_ratio": 1.17,
+      "final_mean_dkxx_inv_mm": -0.002542,
+      "final_mean_dkyy_inv_mm": 0.008573,
+      "final_mean_dkxy_inv_mm": -0.0008716,
+      "final_mean_dW_mm": -1.595,
+      "flags": []
+     },
+     {
+      "zone": "middle-right",
+      "facets": 480,
+      "area_fraction": 0.0676,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.0107,
+      "noise_to_model_ratio": 1.05,
+      "final_mean_dkxx_inv_mm": -0.003898,
+      "final_mean_dkyy_inv_mm": 0.008735,
+      "final_mean_dkxy_inv_mm": -0.0008362,
+      "final_mean_dW_mm": -1.56,
+      "flags": []
+     },
+     {
+      "zone": "upper-left",
+      "facets": 479,
+      "area_fraction": 0.0675,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.0119,
+      "noise_to_model_ratio": 1.25,
+      "final_mean_dkxx_inv_mm": -0.001781,
+      "final_mean_dkyy_inv_mm": 0.009015,
+      "final_mean_dkxy_inv_mm": -0.0003133,
+      "final_mean_dW_mm": -2.894,
+      "flags": []
+     },
+     {
+      "zone": "upper-centre",
+      "facets": 495,
+      "area_fraction": 0.0697,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.012,
+      "noise_to_model_ratio": 1.06,
+      "final_mean_dkxx_inv_mm": -0.002383,
+      "final_mean_dkyy_inv_mm": 0.009049,
+      "final_mean_dkxy_inv_mm": -0.0004177,
+      "final_mean_dW_mm": -2.869,
+      "flags": []
+     },
+     {
+      "zone": "upper-right",
+      "facets": 495,
+      "area_fraction": 0.0697,
+      "dropout_fraction": 0.00202,
+      "vic_sigma_median_px": 0.0133,
+      "noise_to_model_ratio": 1.24,
+      "final_mean_dkxx_inv_mm": -0.003901,
+      "final_mean_dkyy_inv_mm": 0.008928,
+      "final_mean_dkxy_inv_mm": -0.0001495,
+      "final_mean_dW_mm": -2.832,
+      "flags": []
+     },
+     {
+      "zone": "top-left",
+      "facets": 471,
+      "area_fraction": 0.0664,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.0117,
+      "noise_to_model_ratio": 1.19,
+      "final_mean_dkxx_inv_mm": -0.002125,
+      "final_mean_dkyy_inv_mm": 0.009477,
+      "final_mean_dkxy_inv_mm": -0.001897,
+      "final_mean_dW_mm": -4.51,
+      "flags": []
+     },
+     {
+      "zone": "top-centre",
+      "facets": 480,
+      "area_fraction": 0.0676,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.0119,
+      "noise_to_model_ratio": 1.08,
+      "final_mean_dkxx_inv_mm": -0.001669,
+      "final_mean_dkyy_inv_mm": 0.009112,
+      "final_mean_dkxy_inv_mm": -0.001087,
+      "final_mean_dW_mm": -4.513,
+      "flags": []
+     },
+     {
+      "zone": "top-right",
+      "facets": 461,
+      "area_fraction": 0.065,
+      "dropout_fraction": 0.0,
+      "vic_sigma_median_px": 0.0125,
+      "noise_to_model_ratio": 1.14,
+      "final_mean_dkxx_inv_mm": -0.001898,
+      "final_mean_dkyy_inv_mm": 0.009701,
+      "final_mean_dkxy_inv_mm": 4.655e-06,
+      "final_mean_dW_mm": -4.465,
+      "flags": []
+     }
+    ],
+    "flagged_zones": [],
+    "zone_layout": "5 bands along Y (bottom→top) × 3 along X (left→right), on the bounding box of the measured region"
+   },
+   "figures": {
+    "fields": "figures/Specimen_A1_PB_fields.png",
+    "response": "figures/Specimen_A1_PB_response.png",
+    "noise_maps": "figures/Specimen_A1_PB_noise_maps.png",
+    "noise_profile": "figures/Specimen_A1_PB_noise_profile.png",
+    "quality": "figures/Specimen_A1_PB_quality.png",
+    "filter_sweep": "figures/Specimen_A1_PB_filter_sweep.png"
+   },
+   "summary": {
+    "duration_s": null,
+    "machine_channel_ranges": {
+     "Fx": {
+      "first": -0.1954,
+      "last": 0.009148,
+      "min": -0.1954,
+      "max": 0.08134
+     },
+     "Fy": {
+      "first": 0.02933,
+      "last": 0.06326,
+      "min": 0.02933,
+      "max": 0.09567
+     },
+     "Fz": {
+      "first": 0.01083,
+      "last": 0.02201,
+      "min": -0.09638,
+      "max": 0.02655
+     },
+     "Tx": {
+      "first": -0.4001,
+      "last": 0.02003,
+      "min": -0.4001,
+      "max": 0.5218
+     },
+     "Ty": {
+      "first": 0.05512,
+      "last": 37.49,
+      "min": 0.05512,
+      "max": 37.49
+     },
+     "Tz": {
+      "first": 2.716,
+      "last": 2.732,
+      "min": -1.181,
+      "max": 4.846
+     },
+     "Δx": {
+      "first": -14.99,
+      "last": -12.55,
+      "min": -14.99,
+      "max": -12.55
+     },
+     "Δy": {
+      "first": 0.0009091,
+      "last": -0.1281,
+      "min": -0.2363,
+      "max": 0.0009091
+     },
+     "Δz": {
+      "first": 5.993,
+      "last": -12.21,
+      "min": -12.21,
+      "max": 5.993
+     },
+     "θx": {
+      "first": 0.003509,
+      "last": 0.2259,
+      "min": -0.007173,
+      "max": 0.2259
+     },
+     "θy": {
+      "first": -0.000749,
+      "last": -19.99,
+      "min": -19.99,
+      "max": -0.000749
+     },
+     "θz": {
+      "first": 0.0005859,
+      "last": -0.6352,
+      "min": -0.6352,
+      "max": 0.03637
+     }
+    },
+    "noise_interior_measured_to_model": {
+     "kxx": 1.0718600291605915,
+     "kyy": 1.2872884691066508,
+     "kxy": 1.047748447204969
+    },
+    "vic_sigma_first_last_px": [
+     0.007331,
+     0.01217
+    ],
+    "vic_sigma_p95_first_last_px": [
+     0.008696,
+     0.01845
+    ],
+    "sigma_z_first_last_mm": [
+     0.000731,
+     0.001025
+    ],
+    "zone_noise_ratio_range": [
+     1.05,
+     1.42
+    ],
+    "worst_zone_dropout": {
+     "zone": "upper-right",
+     "fraction": 0.00202
+    },
+    "facets_lost_fraction": 0.0001409046075806679,
+    "dic_parameters": {
+     "subset_size_estimate_px": 25.0,
+     "inferred_filter_size_facets": 15,
+     "inferred_filter_weighting": "gaussian, edge weight 5% of centre",
+     "inferred_filter_mismatch": 0.273,
+     "noise_model_stencil_mismatch": 0.751,
+     "noise_model_stencil_mismatch_minus_inferred": 0.478,
+     "at_inferred_filter": {
+      "snr_interior": 13.9,
+      "noise_interior_median_inv_mm": {
+       "kxx": 0.0004901,
+       "kyy": 0.0006351,
+       "kxy": 0.0005046
+      },
+      "full_window_facet_fraction": 0.615,
+      "smoothing_bias_index": 1.04
+     },
+     "smallest_filter_with_snr_at_least": {
+      "3": 7,
+      "10": 13
+     },
+     "smallest_filter_with_smoothing_bias_above": {
+      "1.1": null
+     },
+     "smallest_filter_with_full_window_fraction_below": {
+      "0.5": 21
+     },
+     "sweep_range": {
+      "filter_sizes_facets": [
+       5,
+       31
+      ],
+      "snr_interior": [
+       1.83,
+       22.4
+      ],
+      "full_window_facet_fraction": [
+       0.882,
+       0.248
+      ],
+      "smoothing_bias_index": [
+       1.0,
+       1.09
+      ]
+     }
+    }
+   },
+   "automatic_checks": [
+    {
+     "check": "signal",
+     "observation": "κxy signal-to-noise at the final step is 1.35",
+     "value": 1.35,
+     "threshold": 3.0
+    },
+    {
+     "check": "deformation",
+     "observation": "κxx is -0.27× the dominant κyy",
+     "value": -0.269,
+     "threshold": 0.25
+    },
+    {
+     "check": "curvature filter",
+     "observation": "the noise model's stencil (uniform 15 facets) reproduces the exported curvature with mismatch 0.75, against 0.27 for the inferred filter (15 facets, gaussian, edge weight 5% of centre)",
+     "value": 0.478,
+     "threshold": 0.2
+    }
+   ]
+  }
+ ],
+ "exported_with": [
+  "exp-00000059_0",
+  "exp-00000315_0",
+  "exp-00000571_0",
+  "exp-00000827_0",
+  "exp-00001083_0",
+  "exp-00001339_0",
+  "exp-00001595_0",
+  "exp-00001859_0",
+  "exp-00002111_0",
+  "exp-00002375_0",
+  "exp-00002699_0"
+ ]
+}

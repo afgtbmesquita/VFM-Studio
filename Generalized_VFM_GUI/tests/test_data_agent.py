@@ -144,6 +144,19 @@ def test_machine_data_is_used_only_when_the_user_submits_it(raw_test, tmp_path):
     assert match.only_dic == (10 + 20 * len(LOADS),)
     assert mismatched.groups[0].companions.step_map_file is None
 
+    recorded = tmp_path / "full_recording.csv"
+    header, body = rows[0], rows[1:]
+    extras = [f"{int(row.split(',')[0]) + 1},0,0" for row in body]
+    recorded.write_text("\n".join([header, *body, *extras]) + "\n", encoding="utf-8")
+    covered = prepare_submission([*exports, recorded])
+    match = frame_match(covered.groups[0])
+    assert match.ready
+    assert match.only_dic == ()
+    assert match.machine_count == len(LOADS)
+    assert match.only_machine == tuple(int(row.split(",")[0]) + 1 for row in body)
+    loads = covered.groups[0].companions.loads_for(10 + 20 * len(LOADS))
+    assert loads["Ty"] == LOADS[-1]
+
 
 def test_step_map_does_not_order_files_unless_it_was_submitted(tmp_path):
     folder = tmp_path / "OutOfOrder"

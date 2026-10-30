@@ -565,7 +565,7 @@ class DataAgentWindow(QMainWindow):
             return
         if self._loose_machines:
             names = ", ".join(item.sync_file.name for item in self._loose_machines if item.sync_file)
-            self._refuse([f"{names} does not match one test. The DIC frames and the machine frames have to be the same set."])
+            self._refuse([f"{names} does not match one test. Each DIC frame needs a row in that machine file."])
             return
         groups = [group for group in self.groups() if group.files]
         reasons = validate_groups(groups)
@@ -868,7 +868,7 @@ class DataAgentWindow(QMainWindow):
             self._requirement_row(None, "DIC exports", "exp-<frame>_<camera>.csv", "Required", WARN, "dic", None)
             self._requirement_row(None, "Machine data", SYNC_NAME, "Required", WARN, "machine", None)
             self._requirement_row(
-                None, "Frame match", "The same DIC frame numbers in both files", "Waiting", WARN, "match", None
+                None, "Frame match", "A machine row for each DIC frame", "Waiting", WARN, "match", None
             )
             self._block_reason = "Add the DIC exports and the machine data."
             return

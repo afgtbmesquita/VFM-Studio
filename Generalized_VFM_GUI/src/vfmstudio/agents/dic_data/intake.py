@@ -1,9 +1,11 @@
 """Group raw DIC files into tests, and accept machine data only when the user submits it.
 
 Nothing is read from beside a DIC export. A test is usable only when the user has
-submitted both the Vic-3D exports and a machine-data file, and the DIC frame
-numbers on the two sides are the same set. ``step_DIC_file_map.csv`` is optional
-and is used only when the user submits that file too. Everything is read-only.
+submitted both the Vic-3D exports and a machine-data file, and that file has a
+row for every submitted DIC frame. Other rows in the machine file are a recording
+of frames that were not exported, and they are ignored. ``step_DIC_file_map.csv``
+is optional and is used only when the user submits that file too. Everything is
+read-only.
 """
 
 from __future__ import annotations
@@ -316,7 +318,11 @@ class FrameMatch:
 
 
 def frame_match(group: TestGroup) -> FrameMatch:
-    """Ready only when both file types were submitted and their DIC frame numbers are equal."""
+    """Ready when every submitted DIC frame has a row in the machine file.
+
+    Rows for frames that were not exported are left unread. A DIC export with
+    no machine row is still a mismatch.
+    """
     companions = group.companions
     dic_numbers = [info.dic_number for info in group.files]
     named = [number for number in dic_numbers if number is not None]
@@ -339,17 +345,15 @@ def frame_match(group: TestGroup) -> FrameMatch:
     duplicates = tuple(sorted(number for number, count in Counter(named).items() if count > 1))
     if duplicates:
         problems.append("DIC frame " + _list_frames(duplicates) + " is listed more than once.")
-    only_dic = tuple(sorted(set(named) - set(machine_frames)))
-    only_machine = tuple(sorted(set(machine_frames) - set(named)))
+    named_set = set(named)
+    only_dic = tuple(sorted(named_set - set(machine_frames)))
+    only_machine = tuple(sorted(set(machine_frames) - named_set))
     if companions.sync_file is not None and companions.machine_rows and not unnamed and not duplicates:
         if only_dic:
             problems.append("DIC frames " + _list_frames(only_dic) + " are not in the machine data.")
-        if only_machine:
-            problems.append("Machine frames " + _list_frames(only_machine) + " have no DIC export.")
     if (
         companions.sync_file is not None
         and not only_dic
-        and not only_machine
         and named
         and not duplicates
         and not unnamed
@@ -365,7 +369,7 @@ def frame_match(group: TestGroup) -> FrameMatch:
     return FrameMatch(
         ready=not problems and bool(group.files),
         dic_count=len(named),
-        machine_count=len(machine_frames),
+        machine_count=len(named_set & set(machine_frames)),
         only_dic=only_dic,
         only_machine=only_machine,
         problems=tuple(problems),
@@ -468,6 +472,12 @@ def _pick_index(group: TestGroup, items: Sequence[FolderCompanions], used: set[i
         return equal[0]
     if equal:
         return None
+    if machine and frames:
+        covering = [
+            index for index in candidates if frames <= set(items[index].machine_rows)
+        ]
+        if len(covering) == 1:
+            return covering[0]
     folder = _single_folder(group)
     same = [index for index in candidates if folder is not None and items[index].folder == folder]
     if len(same) == 1:
@@ -483,8 +493,10 @@ def assign_companions(
     """Attach submitted files onto tests. Returns the machine files and step maps left over.
 
     A file already stored on a test is left there. Exact frame-set matches are
-    attached first, then a file that sits in the test's own folder. One leftover
-    file and one test still waiting are attached so a mismatch can be shown.
+    attached first, then a machine file that contains every DIC frame of the
+    test (extra rows are ignored), then a file that sits in the test's own
+    folder. One leftover file and one test still waiting are attached so a
+    mismatch can be shown.
     """
     held_machines = {
         group.companions.sync_file.resolve()
@@ -546,7 +558,7 @@ class PreparedSubmission:
             name = machine.sync_file.name if machine.sync_file is not None else "A machine file"
             reasons.append(
                 f"{name} was submitted but does not belong to one test. "
-                "Each test needs its own machine file, with the same DIC frame numbers as its exports."
+                "Each test needs its own machine file, with a row for every DIC frame of its exports."
             )
         return reasons
 

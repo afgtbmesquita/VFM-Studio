@@ -4,7 +4,7 @@
                                         [--export-mat DIR]
 
 Each folder is one test. A folder is used only when it contains both the raw
-exports and synchronized_DIC_machine_data.csv, and the DIC frame numbers match.
+exports and synchronized_DIC_machine_data.csv, with a machine row for each DIC frame.
 Pass the machine file yourself when you pass individual exports. Raw files are
 only read. Writes facts.json, report.md and figures/ to --out (default: a new
 temp folder). Exit codes: 0 done, 2 refused, 1 other failure.
