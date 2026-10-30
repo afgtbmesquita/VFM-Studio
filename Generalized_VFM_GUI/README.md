@@ -28,6 +28,17 @@ document; `vfm_project.run_project` is the only identification entry point.
 
 ## Install
 
+On Windows, double-click `launch_vfmstudio.bat` in the parent `VFM Studio`
+folder, or run it from a terminal. The script finds Python 3.10 or newer,
+creates `.venv` in this folder on first use, and installs the application.
+Every path is relative to that script, so a downloaded copy runs on any
+machine. Python itself must already be installed
+(https://www.python.org/downloads/, with "Add python.exe to PATH").
+If the project path is too long for a virtual environment, the script uses
+`%LOCALAPPDATA%\vfmstudio\venv` instead.
+
+To install by hand:
+
 ```text
 cd Generalized_VFM_GUI
 python -m venv .venv
@@ -36,7 +47,8 @@ pip install -e ".[dev]"
 ```
 
 Requires the sibling folder `Generalized VFM` next to this one (or set
-`GVFM_CORE_PATH`).
+`GVFM_CORE_PATH`). An existing interpreter can be forced with
+`VFMSTUDIO_PYTHON` set to the full path of `python.exe`.
 
 ## Architecture
 
