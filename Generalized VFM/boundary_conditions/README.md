@@ -20,6 +20,13 @@ Valid DOF labels for the plate editor:
 Valid edge labels:
     left, right, bottom, top
 
+`LINKING` entries normally tie one named DOF to the same value at all selected
+nodes. Programmatic callers may additionally set `relation="rigid_affine"`,
+use `dof="W"`, provide `slopeDof` (`W_X` or `W_Y`), and select an `x` or `y`
+`sortDirection`. This adds homogeneous multipoint rows enforcing
+`W_i - W_0 - (s_i - s_0) W_,s(0) = 0`. Pair it with an ordinary linking entry
+for `slopeDof` to leave only rigid edge translation and rotation.
+
 External-work groups: each entry in the `EXTERNAL` list may carry an
 optional `value` key (the applied force or moment magnitude that pairs
 with the virtual displacement from this group).  Use it when the

@@ -258,7 +258,23 @@ def _report(ident_result) -> None:
         print("  vfm_gls_identification.jackknife_parameters for an empirical")
         print("  interval.")
     print()
-    print(f"  Weighting          : {ident_result.weighting}")
+    settings = getattr(ident_result, "gls_settings", None)
+    if settings is not None and getattr(settings, "two_stage", False):
+        load_step, experiment = settings.resolved_stages()
+        print(f"  Load-step estimator : {load_step}")
+        print(f"  Experiment estimator: {experiment}")
+        if experiment != "gls":
+            print("  NOTE: the +/- above is NOT a covariance with this "
+                  "experiment estimator; use the jackknife.")
+        print()
+        print("  Per-experiment estimates that stage 2 combined:")
+        for report in ident_result.experiments:
+            if report.reduced_estimate is None:
+                continue
+            values = "  ".join(f"{v:10.4f}" for v in report.reduced_estimate)
+            print(f"    {report.label:<28s} {values}")
+    else:
+        print(f"  Weighting          : {ident_result.weighting}")
     print(f"  Iterations executed: {ident_result.iterations_completed}")
     print(f"  Converged          : {ident_result.converged}")
     if ident_result.history:

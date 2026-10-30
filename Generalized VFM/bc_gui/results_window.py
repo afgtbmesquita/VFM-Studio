@@ -67,6 +67,19 @@ def _reduced_chi_square(result) -> Optional[dict]:
         return None
 
 
+def _weighting_summary(result) -> str:
+    """How the load steps and the experiments were combined.
+
+    A bare "weighting = gls" hides the two-stage choice entirely, and the
+    whole point of that choice is that it should be visible on the result.
+    """
+    settings = getattr(result, "gls_settings", None)
+    if settings is not None and getattr(settings, "two_stage", False):
+        load_step, experiment = settings.resolved_stages()
+        return f"load steps = {load_step}, experiments = {experiment}"
+    return f"weighting = {getattr(result, 'weighting', 'gls')}"
+
+
 class ResultsWindow(QMainWindow):
     """Identification results, with the caveats attached."""
 
@@ -124,7 +137,7 @@ class ResultsWindow(QMainWindow):
         status = ("converged" if result.converged
                   else "DID NOT CONVERGE — max iterations reached")
         pieces = [f"{status} in {result.iterations_completed} iterations",
-                  f"weighting = {getattr(result, 'weighting', 'gls')}"]
+                  _weighting_summary(result)]
         if self._goodness is not None:
             pieces.append(f"chi2/dof = {self._goodness['reduced']:.0f}")
         subtitle = QLabel("N.mm   |   " + "   |   ".join(pieces))

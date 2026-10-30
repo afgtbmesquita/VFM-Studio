@@ -19,9 +19,9 @@ from vfmstudio.core.document import (
 from vfmstudio.core.parameter_space import (
     ParameterSpaceResult,
     assign_highlight_groups,
-    compute_parameter_space,
     mask_for_experiment_ids,
     resolve_plot_axes,
+    space_from_document,
 )
 from vfmstudio.gui.results.plot_style import (
     INK_MUTED,
@@ -73,6 +73,7 @@ class ParameterSpacePanel(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         apply_matplotlib_style()
+        self.setObjectName("plotPage")
         self._title = QLabel("Parameter space")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._title.setWordWrap(True)
@@ -88,7 +89,7 @@ class ParameterSpacePanel(QWidget):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 10)
+        layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
         layout.addWidget(self._title)
         layout.addWidget(self._subtitle)
@@ -112,19 +113,7 @@ class ParameterSpacePanel(QWidget):
         document: Optional[SessionDocument],
         result: Any,
     ) -> None:
-        names = None
-        labels = None
-        if document is not None:
-            labels = document.material.labels()
-            names = {
-                int(experiment.experiment_id): (
-                    experiment.name or f"Experiment {experiment.experiment_id}"
-                )
-                for experiment in document.experiments
-            }
-        self._space = compute_parameter_space(
-            result, labels=labels, experiment_names=names
-        )
+        self._space = space_from_document(result, document)
         if document is not None:
             self._selected_ids = [
                 int(experiment.experiment_id)

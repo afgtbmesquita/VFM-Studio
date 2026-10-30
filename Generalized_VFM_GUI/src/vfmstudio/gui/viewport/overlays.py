@@ -483,14 +483,18 @@ def add_dic_points(
         name="dic",
     )
     if values is not None:
-        scalars = np.asarray(values, dtype=float).ravel()[: cloud.n_points]
-        cloud[scalar_name] = scalars
-        finite = scalars[np.isfinite(scalars)]
-        kwargs.update(scalars=scalar_name, cmap="coolwarm", show_scalar_bar=True)
-        if finite.size:
-            lo, hi = np.percentile(finite, [2.0, 98.0])
-            if hi > lo:
-                kwargs["clim"] = [float(lo), float(hi)]
+        scalars = np.asarray(values, dtype=float).ravel()
+        if scalars.size >= cloud.n_points > 0:
+            scalars = scalars[: cloud.n_points]
+            cloud[scalar_name] = scalars
+            finite = scalars[np.isfinite(scalars)]
+            kwargs.update(scalars=scalar_name, cmap="coolwarm", show_scalar_bar=True)
+            if finite.size:
+                lo, hi = np.percentile(finite, [2.0, 98.0])
+                if hi > lo:
+                    kwargs["clim"] = [float(lo), float(hi)]
+        else:
+            kwargs.update(color=color, show_scalar_bar=False)
     else:
         kwargs.update(color=color, show_scalar_bar=False)
     try:
@@ -1572,27 +1576,87 @@ def add_element_point_counts(
     return n
 
 
-def add_cid_cloud(plotter, pv, identifiability: Any) -> int:
-    """Overlay the first-case CID map if identifiability results exist."""
+def cid_point_scalars(cid, n_points: int) -> np.ndarray:
+    """Reduce stored CID to one value per DIC point.
+
+    Identification writes ``CID`` as ``(n_parameters, n_points)``.  A 1-D
+    slice along the parameter axis is six (or eight) numbers, which VTK
+    then refuses to paint on the point cloud.  Sum over parameters so the
+    overlay is total constitutive information density at each point.
+    ``(n_points, n_parameters)`` is accepted as well.
+    """
+    arr = np.asarray(cid, dtype=float)
+    n = int(n_points)
+    if arr.ndim == 0:
+        return np.zeros(0, dtype=float)
+    if arr.ndim == 1:
+        return arr.ravel()
+    if arr.ndim == 2:
+        if n > 0 and arr.shape[1] == n:
+            return np.sum(arr, axis=0)
+        if n > 0 and arr.shape[0] == n:
+            return np.sum(arr, axis=1)
+        if arr.shape[1] >= arr.shape[0]:
+            return np.sum(arr, axis=0)
+        return np.sum(arr, axis=1)
+    return arr.ravel()
+
+
+def _cid_case(
+    identifiability: Any,
+    *,
+    experiment_name: Optional[str] = None,
+    n_points: Optional[int] = None,
+):
+    cases = list(getattr(identifiability, "cases", None) or [])
+    if not cases:
+        return None
+    key = str(experiment_name or "").strip().lower()
+    if key:
+        for case in cases:
+            label = str(getattr(case, "label", "") or "")
+            head = label.split(":")[0].strip().lower()
+            if head == key or label.lower().startswith(key + ":"):
+                return case
+    if n_points:
+        want = int(n_points)
+        for case in cases:
+            points = np.asarray(getattr(case, "points", None), dtype=float)
+            if points.ndim == 2 and points.shape[0] == want:
+                return case
+    return cases[0]
+
+
+def add_cid_cloud(
+    plotter,
+    pv,
+    identifiability: Any,
+    *,
+    experiment_name: Optional[str] = None,
+) -> int:
+    """Overlay a CID map for the selected experiment, if results exist."""
     if identifiability is None:
         return 0
-    cases = getattr(identifiability, "cases", None) or []
-    if not cases:
+    case = _cid_case(identifiability, experiment_name=experiment_name)
+    if case is None:
         return 0
-    case = cases[0]
     points = np.asarray(getattr(case, "points"), dtype=float)
-    cid = np.asarray(getattr(case, "CID"), dtype=float)
-    if cid.ndim > 1:
-        cid = cid[:, 0]
-    cid = cid.ravel()
     if points.ndim != 2 or points.shape[0] == 0:
         return 0
-    xyz = points if points.shape[1] >= 3 else np.column_stack(
-        [points[:, 0], points[:, 1], np.zeros(points.shape[0])]
-    )
-    cloud = pv.PolyData(xyz[:, :3])
-    n = min(xyz.shape[0], cid.size)
-    cloud["CID"] = cid[:n]
+    cid = cid_point_scalars(getattr(case, "CID"), points.shape[0])
+    n = min(int(points.shape[0]), int(cid.size))
+    if n == 0:
+        return 0
+    xyz = points[:n]
+    if xyz.shape[1] < 3:
+        xyz = np.column_stack(
+            [xyz[:, 0], xyz[:, 1], np.zeros(n, dtype=float)]
+        )
+    else:
+        xyz = np.asarray(xyz[:, :3], dtype=float)
+    scalars = np.asarray(cid[:n], dtype=float)
+    cloud = pv.PolyData(xyz)
+    cloud["CID"] = scalars
     plotter.add_mesh(
         cloud,
         scalars="CID",

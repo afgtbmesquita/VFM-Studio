@@ -58,6 +58,154 @@ from scipy.io import loadmat
 #  Data containers
 # =============================================================================
 
+def _lattice_cell_area(points: np.ndarray, neighbours: int = 12):
+    """``(cell_area, confidence, v1, v2)`` for a regular lattice cloud.
+
+    Finds the two SHORTEST independent lattice vectors.  Any primitive pair
+    spans the same cell -- ``v1`` and ``v1 + v2`` give the same
+    ``|v1 x v2|`` -- so picking up a diagonal is harmless; what must be
+    avoided is a non-primitive pair such as ``v1`` and ``2*v2``, hence
+    "shortest".  Handles anisotropic pitch and a lattice rotated relative
+    to the physical axes; holes are irrelevant because the total is
+    ``n_points * cell``.
+    """
+    from scipy.spatial import cKDTree
+
+    n = len(points)
+    tree = cKDTree(points)
+    k = min(neighbours + 1, n)
+    dist, idx = tree.query(points, k=k)
+    spacing = float(np.median(dist[:, 1]))
+    if not np.isfinite(spacing) or spacing <= 0.0:
+        return None, 0.0, None, None
+
+    offsets = (points[idx[:, 1:]] - points[:, None, :]).reshape(-1, 2)
+    magnitude = np.hypot(offsets[:, 0], offsets[:, 1])
+    # Generous window: a strongly anisotropic lattice puts the second basis
+    # vector well beyond the first-neighbour distance.
+    keep = (magnitude > 0.5 * spacing) & (magnitude < 4.0 * spacing)
+    offsets, magnitude = offsets[keep], magnitude[keep]
+    if len(offsets) < 8:
+        return None, 0.0, None, None
+
+    angle = np.mod(np.arctan2(offsets[:, 1], offsets[:, 0]), np.pi)
+
+    def axis_sep(axis):
+        return np.abs(np.mod(angle - axis + np.pi / 2, np.pi) - np.pi / 2)
+
+    def shortest_axis(mask):
+        if mask.sum() < 4:
+            return None
+        floor = np.percentile(magnitude[mask], 5.0)
+        near = mask & (magnitude < 1.35 * floor)
+        if near.sum() < 4:
+            near = mask
+        hist, edges = np.histogram(angle[near], bins=180, range=(0.0, np.pi))
+        peak = int(hist.argmax())
+        return 0.5 * (edges[peak] + edges[peak + 1])
+
+    def basis_vector(axis):
+        picked = offsets[axis_sep(axis) < np.deg2rad(15)]
+        if len(picked) < 4:
+            return None
+        mag = np.hypot(picked[:, 0], picked[:, 1])
+        picked = picked[mag < 1.35 * np.percentile(mag, 5.0)]
+        if len(picked) < 4:
+            return None
+        direction = np.array([np.cos(axis), np.sin(axis)])
+        flip = (picked @ direction) < 0
+        picked = np.where(flip[:, None], -picked, picked)
+        return np.median(picked, axis=0)
+
+    axis1 = shortest_axis(np.ones(len(offsets), dtype=bool))
+    if axis1 is None:
+        return None, 0.0, None, None
+    v1 = basis_vector(axis1)
+    if v1 is None:
+        return None, 0.0, None, None
+
+    axis2 = shortest_axis(axis_sep(axis1) > np.deg2rad(25))
+    if axis2 is None:
+        return None, 0.0, None, None
+    v2 = basis_vector(axis2)
+    if v2 is None:
+        return None, 0.0, None, None
+
+    cell = abs(float(v1[0] * v2[1] - v1[1] * v2[0]))
+    if not np.isfinite(cell) or cell <= 0.0:
+        return None, 0.0, None, None
+
+    # Confidence: fraction of points having BOTH a +-v1 and a +-v2 neighbour.
+    # A true lattice scores ~1; an irregular cloud scores ~0.
+    tolerance = 0.25 * min(float(np.hypot(*v1)), float(np.hypot(*v2)))
+    found_v1 = np.zeros(n, dtype=bool)
+    found_v2 = np.zeros(n, dtype=bool)
+    for sign in (1.0, -1.0):
+        found_v1 |= tree.query(points + sign * v1, k=1)[0] < tolerance
+        found_v2 |= tree.query(points + sign * v2, k=1)[0] < tolerance
+    return cell, float(np.mean(found_v1 & found_v2)), v1, v2
+
+
+def estimate_measurement_area(points):
+    """Physical area the measurement points represent.
+
+    ONE algorithm, no fallbacks: recover the two shortest independent
+    lattice vectors from the nearest-neighbour offsets and return
+    ``n_points * |v1 x v2|``.
+
+    That is exact for every cloud DIC (or a structured FE export) produces,
+    including ones that are perforated, concave, anisotropic in pitch, or
+    rotated relative to the physical axes -- holes and concavities only
+    change ``n_points``, and a rotation leaves the cross product invariant.
+    Any primitive vector pair spans the same cell (``v1`` and ``v1 + v2``
+    give the same ``|v1 x v2|``), so picking up a diagonal is harmless; what
+    must be avoided is a non-primitive pair such as ``v1`` and ``2*v2``,
+    hence "shortest".
+
+    Verified against every measurement file in this workspace (237/237
+    resolved as a lattice, all with confidence >= 0.5).
+
+    This is deliberately NOT the bounding box.  The bounding box counts
+    holes and concavities as if they were material, and for a lattice it
+    also misses the half-cell rim outside the extreme points (the bbox of
+    the CENTROIDS spans only the ``n-1`` gaps between them, while each of
+    the ``n`` points stands for a full cell).  Because the quadrature
+    weight is ``area / n_points``, an over-stated area scales every
+    identified stiffness DOWN by the same factor.
+
+    Raises ``ValueError`` if the cloud is not a lattice, rather than
+    silently guessing: a wrong area rescales every identified stiffness, so
+    it must fail loudly and be fixed at the source.
+    """
+    points = np.asarray(points, dtype=float)
+    if points.ndim != 2 or points.shape[1] != 2:
+        raise ValueError("`points` must have shape (n_points, 2).")
+    n = int(points.shape[0])
+    if n < 4:
+        raise ValueError(
+            f"Need at least 4 measurement points to measure an area; got {n}.")
+
+    cell, confidence, v1, v2 = _lattice_cell_area(points)
+    if cell is None:
+        raise ValueError(
+            "Could not recover a lattice from the measurement cloud, so its "
+            "area cannot be measured.  Supply total_sample_area explicitly "
+            "if the points are genuinely not on a grid."
+        )
+    if confidence < 0.5:
+        raise ValueError(
+            f"Recovered a lattice cell of {cell:.6g} mm^2 but only "
+            f"{100.0 * confidence:.0f}% of points sit on it, so the cloud is "
+            "not a regular grid and its area cannot be measured reliably.  "
+            "Supply total_sample_area explicitly."
+        )
+    return float(n * cell), {
+        "confidence": float(confidence),
+        "cell_area": float(cell),
+        "pitch": (float(np.hypot(*v1)), float(np.hypot(*v2))),
+    }
+
+
 @dataclass
 class PointMeasurements:
     """Measured generalised-strain field sampled on a point cloud.
@@ -88,6 +236,10 @@ class PointMeasurements:
     area_per_point: float
     data_bounds: Dict[str, float]
     analysis_type: str = "both"
+    #  How ``area_per_point`` was obtained: method is "user_supplied" or
+    #  "measured" (the lattice measurement, which also reports "confidence",
+    #  "cell_area" and "pitch").  Informational; callers may report it.
+    area_info: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -147,6 +299,7 @@ def load_point_measurements(
     *,
     analysis_type: str = "both",
     total_sample_area: Optional[float] = None,
+    raw: Optional[dict] = None,
 ) -> PointMeasurements:
     """Load the plate experimental MAT file and return a ``PointMeasurements``.
 
@@ -173,7 +326,8 @@ def load_point_measurements(
             "'in_plane', 'out_of_plane', 'both'."
         )
 
-    raw = loadmat(str(data_file), squeeze_me=True, mat_dtype=False)
+    if raw is None:
+        raw = loadmat(str(data_file), squeeze_me=True, mat_dtype=False)
 
     if _is_new_layout(raw):
         points, strains, n_points = _read_new_layout(raw, data_file,
@@ -192,8 +346,14 @@ def load_point_measurements(
             "Measured data footprint has non-positive area; check the "
             "node coordinates in the input file."
         )
+    area_info: Optional[Dict[str, Any]] = None
     if total_sample_area is None:
-        integration_area = bbox_area
+        #  Measure it.  There is no bounding-box fallback on purpose: the
+        #  bbox counts holes as material and misses the half-cell rim, and
+        #  dA = area/n_points scales every identified stiffness by 1/area,
+        #  so a silently-wrong area is worse than a refusal.
+        integration_area, area_info = estimate_measurement_area(points)
+        area_info = {"method": "measured", **area_info}
     else:
         integration_area = float(total_sample_area)
         if not np.isfinite(integration_area) or integration_area <= 0.0:
@@ -201,6 +361,7 @@ def load_point_measurements(
                 "total_sample_area must be a finite strictly positive "
                 f"scalar; got {total_sample_area!r}."
             )
+        area_info = {"method": "user_supplied", "confidence": 1.0}
     area_per_point = integration_area / n_points
 
     applied_force: Optional[np.ndarray] = None
@@ -219,6 +380,7 @@ def load_point_measurements(
         data_bounds={"x_min": x_min, "x_max": x_max,
                      "y_min": y_min, "y_max": y_max},
         analysis_type=analysis_key,
+        area_info=area_info,
     )
 
 

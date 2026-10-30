@@ -24,7 +24,7 @@ from vfmstudio.gui.results.plot_style import (
     style_heatmap_axis,
 )
 
-WORK = "#2a78d6"
+WORK = "#0072B2"
 ROBUST = "#1baf7a"
 CR3 = "#eb6834"
 

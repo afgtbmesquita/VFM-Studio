@@ -35,46 +35,6 @@ def finite_xy(x, y) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     return xs[ok], ys[ok], index
 
 
-def occupancy_sample_area(
-    x,
-    y,
-    *,
-    fill_threshold: float = 0.9,
-) -> Optional[float]:
-    """Return ``n · h²`` when the cloud does not fill its bounding box.
-
-    Identification weights every DIC point by ``sample_area_total / n``.  The
-    loader's default is the axis-aligned bounding box, which is correct for a
-    filled rectangle and ~1.3× too large for a plus-shaped plate (the empty
-    corners between the tabs are not material).  When the raster occupancy is
-    below ``fill_threshold`` of that box, this returns the facet area
-    ``n · h · h`` instead.  A filled rectangle yields ``None`` so existing
-    coupon projects keep the bbox default.
-
-    Prefer :func:`vfmstudio.core.sample_area.estimate_sample_area` for new
-    GUI prefill: it uses a filtered Delaunay cell area and is exact when
-    ``dx ≠ dy``.  This helper remains as a cheap occupancy fallback.
-    """
-    xs, ys, _ = finite_xy(x, y)
-    n = int(xs.size)
-    if n < 2:
-        return None
-    span_x = float(np.max(xs) - np.min(xs))
-    span_y = float(np.max(ys) - np.min(ys))
-    bbox = span_x * span_y
-    if not np.isfinite(bbox) or bbox <= 0.0:
-        return None
-    h = median_nearest_neighbour(np.column_stack([xs, ys]))
-    if h <= 0.0:
-        return None
-    occupied = float(n) * h * h
-    if not np.isfinite(occupied) or occupied <= 0.0:
-        return None
-    if occupied >= float(fill_threshold) * bbox:
-        return None
-    return occupied
-
-
 def median_nearest_neighbour(xy: np.ndarray) -> float:
     """Median nearest-neighbour distance of a 2-D cloud, or 0 if undefined."""
     points = np.asarray(xy, dtype=float)

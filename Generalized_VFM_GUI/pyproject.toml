@@ -47,6 +47,7 @@ packaging = [
 
 [project.scripts]
 vfmstudio = "vfmstudio.__main__:main"
+vfmstudio-dic-report = "vfmstudio.agents.dic_data.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -56,6 +57,8 @@ vfmstudio = [
     "gui/style/*.qss",
     "resources/icons/*.svg",
     "resources/*",
+    "agents/writing/*.md",
+    "agents/model_build/bc_library.json",
 ]
 
 [tool.pytest.ini_options]

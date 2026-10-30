@@ -395,6 +395,13 @@ class SolverModel(BaseModel):
     weighting: str = "gls"
     spatial_correction: bool = False
     covariance_tolerance: float = 1.0e-4
+    #  Two-axis noise weighting.  Empty string = "use the single rule above",
+    #  which reproduces the historical behaviour bit-for-bit.  Load steps of
+    #  one test are repeat measurements of the SAME specimen and are strongly
+    #  correlated, so combining them is a different job from combining
+    #  independent tests; one rule cannot be right for both.
+    load_step_weighting: str = ""
+    experiment_weighting: str = ""
 
 
 class SessionDocument(BaseModel):
@@ -545,6 +552,10 @@ def document_from_vfm_project(project: Any) -> SessionDocument:
             ),
             basis_degree=int(getattr(project, "basis_degree", 6)),
             weighting=str(getattr(project, "weighting", "gls")),
+            load_step_weighting=str(
+                getattr(project, "load_step_weighting", "") or ""),
+            experiment_weighting=str(
+                getattr(project, "experiment_weighting", "") or ""),
             spatial_correction=bool(getattr(project, "spatial_correction", False)),
             covariance_tolerance=float(
                 getattr(project, "covariance_tolerance", 1.0e-4)
@@ -602,6 +613,8 @@ def document_to_vfm_project(document: SessionDocument):
         convergence_tolerance=document.solver.convergence_tolerance,
         basis_degree=document.solver.basis_degree,
         weighting=document.solver.weighting,
+        load_step_weighting=(document.solver.load_step_weighting or None),
+        experiment_weighting=(document.solver.experiment_weighting or None),
         spatial_correction=document.solver.spatial_correction,
         covariance_tolerance=document.solver.covariance_tolerance,
         description=document.description,

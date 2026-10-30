@@ -141,6 +141,164 @@ class ExperimentReport:
     covariance_diagnostics: Dict[str, float] = field(default_factory=dict)
     step_labels: List[str] = field(default_factory=list)
     step_estimates: Optional[np.ndarray] = None   # (T, p) per-step U_t
+    #  Two-stage mode only (None otherwise).  reduced_estimate is this
+    #  experiment's own theta_i after its load steps were combined, and
+    #  reduced_covariance is its covariance V_i -- the pair that stage 2
+    #  actually weights.  Reporting them is the point of the two-stage form:
+    #  every coupon has a quotable number a reviewer can check.
+    reduced_estimate: Optional[np.ndarray] = None       # (p,)
+    reduced_covariance: Optional[np.ndarray] = None     # (p, p)
+
+
+@dataclass
+class GlsStepLinearization:
+    """Frozen data needed to reverse one load-step block of the global H."""
+    case_index: int
+    experiment_id: int
+    step_label: str
+    row_start: int
+    row_stop: int
+    nodal_fields: np.ndarray
+    element_dofs_all: np.ndarray
+    B_all: np.ndarray
+    basis_matrices: np.ndarray
+    mapped_mask: np.ndarray
+    n_measurement_points: int
+    area_per_point: float
+    element_ids: np.ndarray = field(
+        default_factory=lambda: np.empty(0, dtype=np.int64)
+    )
+    local_coordinates: np.ndarray = field(
+        default_factory=lambda: np.empty((0, 2), dtype=float)
+    )
+    measured_strains: np.ndarray = field(
+        default_factory=lambda: np.empty((0, 0), dtype=float)
+    )
+    flat_indices: np.ndarray = field(
+        default_factory=lambda: np.empty(0, dtype=np.int64)
+    )
+    n_virtual_dofs: int = 0
+
+
+@dataclass
+class GlsLinearization:
+    """Converged FGLS system with covariance and virtual fields frozen.
+
+    The topology optimizer deliberately does not differentiate the covariance
+    estimate or the optimal-field solves.  It differentiates the actual
+    stacked design matrix at this snapshot.  ``vjp_measurements`` is the public
+    reverse operation from dJ/dH to the generalized strains/curvatures supplied
+    by each input ``IdentificationCase``.
+    """
+    design_matrix: np.ndarray
+    rhs_vector: np.ndarray
+    covariance: np.ndarray
+    covariance_cholesky: np.ndarray
+    parameters: np.ndarray
+    steps: List[GlsStepLinearization] = field(default_factory=list)
+    #  False in two-stage mode.  The aggregate system above is exact and
+    #  everything built only from it (identifiability determinants, the
+    #  parameter covariance, reassemble_design_matrix) stays valid; what is
+    #  gone is the per-LOAD-STEP row map, because the two-stage design has
+    #  one block per EXPERIMENT.  vjp_measurements refuses rather than
+    #  returning an empty list, which would look like a zero gradient.
+    per_step_map_available: bool = True
+
+    def reassemble_design_matrix(
+        self, measurements: Sequence[np.ndarray]
+    ) -> np.ndarray:
+        """Rebuild H for new generalized strains with all fields frozen.
+
+        ``measurements[case_index]`` has shape ``(n_generalised, n_points)``.
+        This is the forward counterpart of :meth:`vjp_measurements` and is
+        intended for local finite-difference checks of the topology adjoint.
+        """
+        if not self.steps:
+            return np.asarray(self.design_matrix, dtype=float).copy()
+        rebuilt = np.zeros_like(self.design_matrix, dtype=float)
+        for step in self.steps:
+            if step.case_index >= len(measurements):
+                raise ValueError(
+                    f"No measurements supplied for case {step.case_index}."
+                )
+            values = np.asarray(measurements[step.case_index], dtype=float)
+            expected = (step.B_all.shape[1], step.n_measurement_points)
+            if values.shape != expected:
+                raise ValueError(
+                    f"Case {step.case_index} measurements have shape "
+                    f"{values.shape}; expected {expected}."
+                )
+            mapped = values[:, step.mapped_mask]
+            local_a = step.area_per_point * np.einsum(
+                "pai,jab,bp->pij",
+                step.B_all,
+                step.basis_matrices,
+                mapped,
+            )
+            n_dofs = step.nodal_fields.shape[0]
+            global_a = np.zeros(
+                (n_dofs, self.design_matrix.shape[1]), dtype=float
+            )
+            np.add.at(global_a, step.element_dofs_all, local_a)
+            rebuilt[step.row_start:step.row_stop, :] = \
+                step.nodal_fields.T @ global_a
+        return rebuilt
+
+    def identify_with_frozen_fields(
+        self, measurements: Sequence[np.ndarray]
+    ) -> np.ndarray:
+        """Solve the fixed-covariance GLS system for perturbed measurements."""
+        h_matrix = self.reassemble_design_matrix(measurements)
+        whitened_h = np.linalg.solve(self.covariance_cholesky, h_matrix)
+        whitened_b = np.linalg.solve(
+            self.covariance_cholesky, self.rhs_vector
+        )
+        normal = whitened_h.T @ whitened_h
+        rhs = whitened_h.T @ whitened_b
+        return np.linalg.solve(normal, rhs)
+
+    def vjp_measurements(self, design_gradient: np.ndarray) -> List[np.ndarray]:
+        gradient = np.asarray(design_gradient, dtype=float)
+        if gradient.shape != self.design_matrix.shape:
+            raise ValueError(
+                f"design_gradient has shape {gradient.shape}; expected "
+                f"{self.design_matrix.shape}."
+            )
+        if not self.per_step_map_available:
+            raise RuntimeError(
+                "This linearization has no per-load-step row map, so the "
+                "measurement adjoint cannot be formed.  It was produced in "
+                "TWO-STAGE mode (load_step_weighting / experiment_weighting), "
+                "where each experiment contributes ONE block to the design "
+                "matrix instead of one per load step.  The aggregate system "
+                "(design_matrix, covariance, parameters) is exact and may be "
+                "used; for per-measurement gradients re-run with the legacy "
+                "single-axis `weighting`."
+            )
+        if not self.steps:
+            return []
+        n_cases = 1 + max(step.case_index for step in self.steps)
+        output: List[Optional[np.ndarray]] = [None] * n_cases
+        for step in self.steps:
+            block = gradient[step.row_start:step.row_stop, :]
+            # H_t = U_t^T A_t, so dJ/dA_t = U_t dJ/dH_t.
+            gradient_a = step.nodal_fields @ block
+            local_gradient_a = gradient_a[step.element_dofs_all]
+            mapped_gradient = step.area_per_point * np.einsum(
+                "pij,pai,jab->bp",
+                local_gradient_a,
+                step.B_all,
+                step.basis_matrices,
+            )
+            n_generalised = step.B_all.shape[1]
+            full = np.zeros(
+                (n_generalised, step.n_measurement_points), dtype=float
+            )
+            full[:, step.mapped_mask] = mapped_gradient
+            output[step.case_index] = full
+        if any(value is None for value in output):
+            raise RuntimeError("The FGLS linearization is missing an input case.")
+        return [np.asarray(value) for value in output]
 
 
 @dataclass
@@ -158,6 +316,7 @@ class GlsIdentificationResult(IdentificationResult):
     parameter_covariance: Optional[np.ndarray] = None
     covariance_delta: float = float("nan")
     gls_settings: Optional[GlsSettings] = None
+    linearization: Optional[GlsLinearization] = None
 
     @property
     def parameter_std(self) -> Optional[np.ndarray]:
@@ -376,11 +535,13 @@ class _PreparedExperiment:
         """
         n_parameters = model.number_of_parameters
         nodal_fields: List[np.ndarray] = []
+        payloads: List = []
         blocks_h: List[np.ndarray] = []
         blocks_b: List[np.ndarray] = []
         field_results = None
 
         for step in range(self.n_steps):
+            payload = self.payload_for(step)
             results = solve_optimal_virtual_fields(
                 measurements=self.cases[step].measurements,
                 mesh_pkg=self.mesh_pkg,
@@ -388,7 +549,7 @@ class _PreparedExperiment:
                 constitutive_model=model,
                 options=options,
                 mapping=self.mapping,
-                payload=self.payload_for(step),
+                payload=payload,
             )
             if field_results is None:
                 field_results = results
@@ -396,6 +557,7 @@ class _PreparedExperiment:
             a_matrix = results[0].A
             nodal = np.column_stack([r.nodal_variables_k for r in results])
             nodal_fields.append(nodal)
+            payloads.append(payload)
             blocks_h.append(nodal.T @ a_matrix)
 
             displacement = self.external_work_matrix.T @ nodal
@@ -404,6 +566,8 @@ class _PreparedExperiment:
                 if displacement.ndim == 2
                 else np.zeros(n_parameters))
 
+        self.last_nodal_fields = nodal_fields
+        self.last_payloads = payloads
         return nodal_fields, blocks_h, blocks_b, field_results
 
 
@@ -481,9 +645,24 @@ def run_gls_identification_cases(
             order.append(exp_id)
         grouped[exp_id].append(case)
 
+    two_stage = gls_settings.two_stage
+    load_step_rule, experiment_rule = gls_settings.resolved_stages()
+
     if verbose:
-        print(f"[VFM-GLS] {len(cases)} load steps in {len(order)} "
-              f"experiment(s); weighting = {gls_settings.weighting!r}")
+        if two_stage:
+            print(f"[VFM-GLS] {len(cases)} load steps in {len(order)} "
+                  f"experiment(s); TWO-STAGE weighting: "
+                  f"load steps = {load_step_rule!r}, "
+                  f"experiments = {experiment_rule!r}")
+            print("[VFM-GLS]   stage 1 collapses each experiment to one "
+                  "estimate; stage 2 combines the experiments.")
+            if experiment_rule != "gls":
+                print("[VFM-GLS]   NOTE: experiment_weighting is not 'gls', "
+                      "so the eq. (20) parameter covariance is NOT a "
+                      "covariance -- quote the jackknife instead.")
+        else:
+            print(f"[VFM-GLS] {len(cases)} load steps in {len(order)} "
+                  f"experiment(s); weighting = {gls_settings.weighting!r}")
 
     experiments = [
         _PreparedExperiment(
@@ -538,6 +717,7 @@ def run_gls_identification_cases(
             #  with a test-frame Gamma and corrupt the weighting silently.
             experiment_model = experiment.model_in_test_frame(
                 constitutive_model)
+            experiment.last_model = experiment_model
             nodal_fields, blocks_h, blocks_b, field_results = \
                 experiment.solve_step_blocks(experiment_model, options)
             if index == 0:
@@ -545,12 +725,23 @@ def run_gls_identification_cases(
                 optimal_nodal_history.append(
                     [r.nodal_variables_k.copy() for r in field_results])
 
+            #  In two-stage mode this must be the FULL dense covariance,
+            #  whatever `weighting` says.  _reduce_experiment degrades it
+            #  itself to build the load-step WEIGHTS, but it also needs the
+            #  undegraded C to compute V_i = L C L', the true covariance of
+            #  the reduced estimate that stage 2 weights by.  Passing a
+            #  pre-degraded C here would make V_i a covariance of a noise
+            #  model nobody asked for -- with weighting='ols' it would be the
+            #  identity, and every experiment would end up weighted by L L'
+            #  instead of by what its data actually supports.  So the legacy
+            #  `weighting` field is deliberately ignored once either two-stage
+            #  axis is set; the GUI greys it out to match.
             covariance = equation_covariance(
                 gram_tensor=experiment.gram_tensor,
                 material_matrix=experiment_model.material_matrix,
                 noise=experiment.noise,
                 nodal_fields=nodal_fields,
-                weighting=gls_settings.weighting,
+                weighting=("gls" if two_stage else gls_settings.weighting),
             )
             experiment.last_covariance = covariance
             experiment.last_estimates = np.vstack(blocks_b)
@@ -561,9 +752,37 @@ def run_gls_identification_cases(
             rhs_blocks.append(experiment.last_rhs)
             covariance_blocks.append(covariance)
 
-        design = np.vstack(design_blocks)
-        rhs = np.concatenate(rhs_blocks)
-        global_covariance = _block_diagonal(covariance_blocks)
+        if two_stage:
+            #  Stage 1: each experiment collapses to one estimate + its
+            #  covariance.  Stage 2 then combines those, so the global system
+            #  has one p x p block per EXPERIMENT rather than one per load
+            #  step -- which is exactly what "average within, weight across"
+            #  means, written out.
+            reduced_estimates = []
+            reduced_covariances = []
+            for experiment, exp_design, exp_rhs, exp_cov in zip(
+                    experiments, design_blocks, rhs_blocks, covariance_blocks):
+                estimate, reduced_cov = _reduce_experiment(
+                    exp_design, exp_rhs, exp_cov,
+                    experiment.n_steps, load_step_rule)
+                experiment.last_reduced_estimate = estimate
+                experiment.last_reduced_covariance = reduced_cov
+                reduced_estimates.append(estimate)
+                reduced_covariances.append(reduced_cov)
+
+            weight_blocks = _experiment_weight_covariance(
+                reduced_covariances, experiment_rule)
+            for experiment, block in zip(experiments, weight_blocks):
+                experiment.last_weight_covariance = block
+
+            identity_block = np.eye(n_parameters)
+            design = np.vstack([identity_block] * len(experiments))
+            rhs = np.concatenate(reduced_estimates)
+            global_covariance = _block_diagonal(weight_blocks)
+        else:
+            design = np.vstack(design_blocks)
+            rhs = np.concatenate(rhs_blocks)
+            global_covariance = _block_diagonal(covariance_blocks)
 
         whitened_design, whitened_rhs = _whiten(
             design, rhs, global_covariance)
@@ -655,7 +874,64 @@ def run_gls_identification_cases(
                                     if covariance is not None else {}),
             step_labels=experiment.step_labels,
             step_estimates=getattr(experiment, "last_estimates", None),
+            reduced_estimate=getattr(
+                experiment, "last_reduced_estimate", None),
+            reduced_covariance=getattr(
+                experiment, "last_reduced_covariance", None),
         ))
+
+    # Public frozen snapshot for topology/experimental-design adjoints.  The
+    # Cholesky factor is the same whitening operation used by the final solve.
+    #
+    # IN TWO-STAGE MODE the aggregate system below is still exact and is
+    # returned, but WITHOUT the per-step list: GlsStepLinearization addresses
+    # the design matrix by LOAD-STEP row ranges (row_start/row_stop), and the
+    # two-stage design has one block per EXPERIMENT, so those ranges do not
+    # exist.  Handing back indices into a differently-shaped matrix would
+    # corrupt any adjoint built on them, so `steps` is empty and
+    # `per_step_map_available` is False -- vjp_measurements then raises
+    # instead of returning an empty list that would read as a zero gradient.
+    # Consumers that only need the aggregate system (identifiability
+    # determinants, parameter covariance) keep working unchanged.
+    linearization = None
+    case_index_by_identity = {id(case): index for index, case in enumerate(cases)}
+    linearization_steps: List[GlsStepLinearization] = []
+    row_offset = 0
+    for experiment in experiments:
+        for local_step, case in enumerate(experiment.cases):
+            payload = experiment.last_payloads[local_step]
+            linearization_steps.append(GlsStepLinearization(
+                case_index=case_index_by_identity[id(case)],
+                experiment_id=experiment.experiment_id,
+                step_label=experiment.step_labels[local_step],
+                row_start=row_offset,
+                row_stop=row_offset + n_parameters,
+                nodal_fields=experiment.last_nodal_fields[local_step].copy(),
+                element_dofs_all=payload.element_dofs_all.copy(),
+                B_all=payload.B_all.copy(),
+                basis_matrices=experiment.last_model.basis_matrices.copy(),
+                mapped_mask=experiment.mapping.mapped_mask.copy(),
+                n_measurement_points=int(case.measurements.points.shape[0]),
+                area_per_point=float(case.measurements.area_per_point),
+                element_ids=experiment.mapping.element_ids.copy(),
+                local_coordinates=experiment.mapping.local_xy.copy(),
+                measured_strains=payload.measured_strains.copy(),
+                flat_indices=payload.flat_idx.copy(),
+                n_virtual_dofs=int(payload.n_dofs),
+            ))
+            row_offset += n_parameters
+    linearization = GlsLinearization(
+        design_matrix=design.copy(),
+        rhs_vector=rhs.copy(),
+        covariance=global_covariance.copy(),
+        covariance_cholesky=cholesky(global_covariance, lower=True),
+        parameters=current_parameters.copy(),
+        steps=([] if two_stage else linearization_steps),
+        per_step_map_available=not two_stage,
+    )
+    if two_stage and verbose:
+        print("[VFM-GLS]   linearization: aggregate system only; the "
+              "per-load-step adjoint map does not exist in two-stage mode.")
 
     return GlsIdentificationResult(
         initial_parameters=initial_parameters,
@@ -684,12 +960,118 @@ def run_gls_identification_cases(
         parameter_covariance=parameter_covariance,
         covariance_delta=covariance_delta,
         gls_settings=gls_settings,
+        linearization=linearization,
     )
 
 
 # =============================================================================
 #  Linear algebra helpers
 # =============================================================================
+
+def _load_step_weight_covariance(covariance: np.ndarray,
+                                 rule: str,
+                                 n_steps: int) -> np.ndarray:
+    """The covariance whose inverse is used to WEIGHT the load steps.
+
+    This is not the covariance of the data -- that is always the full
+    ``covariance`` argument, and it is what stage 2 propagates.  This is only
+    the matrix that decides the relative weights inside one experiment, so
+    dropping structure here is a modelling choice, not an approximation of
+    the data.
+
+        'gls'             the full dense C (cross-step correlation kept)
+        'block_diagonal'  only the t == s blocks
+        'diagonal'        only the diagonal entries
+        'ols'             the identity -> every load step weighted equally
+    """
+    if rule == "ols":
+        return np.eye(covariance.shape[0])
+    if rule == "gls":
+        return covariance
+    if rule == "diagonal":
+        return np.diag(np.diag(covariance))
+    if rule == "block_diagonal":
+        size = covariance.shape[0] // n_steps
+        out = np.zeros_like(covariance)
+        for t in range(n_steps):
+            lo, hi = t * size, (t + 1) * size
+            out[lo:hi, lo:hi] = covariance[lo:hi, lo:hi]
+        return out
+    raise ValueError(f"unknown load_step_weighting {rule!r}")
+
+
+def _reduce_experiment(design: np.ndarray,
+                       rhs: np.ndarray,
+                       covariance: np.ndarray,
+                       n_steps: int,
+                       load_step_rule: str):
+    """Collapse ONE experiment's load steps to a single estimate.
+
+    Stage 1 of the two-stage estimator.  With the weighting matrix
+    ``P = C_w^-1`` chosen by ``load_step_rule``:
+
+        L       = (H' P H)^-1 H' P              (p x T*m)
+        theta_i = L b                           the experiment's estimate
+        V_i     = L C L'                        its covariance
+
+    ``V_i`` uses the FULL measured covariance C, never ``C_w``: the weights
+    may ignore the cross-step correlation, but the uncertainty of the result
+    may not.  When ``load_step_rule == 'gls'`` the two coincide and this
+    reduces to the textbook GLS block, ``V_i = (H' C^-1 H)^-1``.
+
+    Nothing here assumes ``H = I``; the speciality condition makes it so in
+    practice, but the algebra does not depend on it.
+    """
+    weight_cov = _load_step_weight_covariance(
+        covariance, load_step_rule, n_steps)
+    #  X = P H, formed by a solve so P is never inverted explicitly.
+    if load_step_rule == "ols":
+        scatter = design
+    else:
+        try:
+            scatter = np.linalg.solve(weight_cov, design)
+        except np.linalg.LinAlgError as error:
+            raise np.linalg.LinAlgError(
+                "The load-step weighting matrix is singular for "
+                f"load_step_weighting={load_step_rule!r}.  With 'gls' this "
+                "usually means two load steps carry almost the same "
+                "information; try 'ols' on the load-step axis, a lower "
+                "gls.basis_degree, or drop a redundant load step."
+            ) from error
+    information = design.T @ scatter
+    reducer = np.linalg.solve(information, scatter.T)      # L
+    estimate = reducer @ rhs
+    reduced_cov = reducer @ covariance @ reducer.T
+    return estimate, 0.5 * (reduced_cov + reduced_cov.T)
+
+
+def _experiment_weight_covariance(reduced: Sequence[np.ndarray],
+                                  rule: str) -> List[np.ndarray]:
+    """Stage 2: what each experiment's covariance block becomes.
+
+        'gls'       V_i itself -> inverse-covariance weighting, eq. (20) exact
+        'diagonal'  diag(V_i)  -> per-parameter inverse-variance only
+        'ols'       a common multiple of I -> every experiment counts equally
+
+    For 'diagonal' and 'ols' the weights are no longer the inverse of the
+    covariance they act on, so the eq. (20) parameter covariance stops being
+    a covariance.  That is the same caveat the legacy 'diagonal' / 'ols'
+    weightings already carry; the scale for 'ols' is chosen as the mean trace
+    so the whitened system stays well scaled rather than to make eq. (20)
+    meaningful.
+    """
+    if rule == "gls":
+        return [np.array(v, dtype=float) for v in reduced]
+    if rule == "diagonal":
+        return [np.diag(np.diag(v)) for v in reduced]
+    if rule == "ols":
+        size = reduced[0].shape[0]
+        scale = float(np.mean([np.trace(v) / v.shape[0] for v in reduced]))
+        if not np.isfinite(scale) or scale <= 0.0:
+            scale = 1.0
+        return [scale * np.eye(size) for _ in reduced]
+    raise ValueError(f"unknown experiment_weighting {rule!r}")
+
 
 def _block_diagonal(blocks: Sequence[np.ndarray]) -> np.ndarray:
     """blockdiag(C_1, ..., C_NE) -- eq. (13), cross-experiment independence."""

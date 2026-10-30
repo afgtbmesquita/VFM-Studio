@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 from PySide6.QtCore import QEvent, QEventLoop, Qt, QSize, QThreadPool, QTimer
 from PySide6.QtGui import QAction, QCloseEvent, QColor, QKeySequence, QPalette, QShortcut
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
     QSizePolicy,
     QToolBar,
     QToolButton,
+    QWidget,
 )
 
 from vfmstudio import __version__
@@ -33,7 +35,7 @@ from vfmstudio.core.fields import sync_mesh_bounds_from_file
 from vfmstudio.core.jobs import validate_document
 from vfmstudio.core.mesh_convert import build_experiment_mesh, mesh_quads, mesh_xyz
 from vfmstudio.core.parameter_space import selected_experiment_ids
-from vfmstudio.core.paths import campaign_project_path, samples_ab_all_project_path
+from vfmstudio.core.paths import campaign_project_path, samples_ab_all_project_path, workspace_root
 from vfmstudio.gui.actions import ActionRegistry
 from vfmstudio.gui.dialogs import (
     AddBcDialog,
@@ -44,6 +46,7 @@ from vfmstudio.gui.dialogs import (
     SolverSettingsDialog,
     WorkflowDialog,
 )
+from vfmstudio.gui.docks.agent_chat import AgentChatPanel
 from vfmstudio.gui.docks.job_monitor import JobMonitorDock
 from vfmstudio.gui.docks.message_log import MessageLogDock
 from vfmstudio.gui.docks.model_tree import ModelTreeDock
@@ -100,6 +103,11 @@ def _mark_toolbar_buttons(bar: QToolBar) -> None:
         child.setAutoRaise(False)
 
 
+ASSISTANT_WIDTH = 440
+# Bump when the default dock arrangement changes; saved layouts from older versions are ignored.
+LAYOUT_VERSION = 2
+
+
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -141,6 +149,7 @@ class MainWindow(QMainWindow):
         self.props = PropertyEditorDock()
         self.log = MessageLogDock()
         self.jobs = JobMonitorDock()
+        self.agent_chat = AgentChatPanel()
         self._history = DocumentHistory(self._restore_document)
         self._history.capture(self.session.document)
 
@@ -159,6 +168,20 @@ class MainWindow(QMainWindow):
         self.resizeDocks([self.dock_model], [320], Qt.Orientation.Horizontal)
         self.setDockNestingEnabled(True)
         self.resizeDocks([self.dock_log], [140], Qt.Orientation.Vertical)
+        self.dock_agent = self._add_dock(
+            "Assistant", self.agent_chat, Qt.DockWidgetArea.RightDockWidgetArea
+        )
+        self.splitDockWidget(self.dock_props, self.dock_agent, Qt.Orientation.Horizontal)
+        self.dock_agent.setMinimumWidth(320)
+        self.dock_agent.hide()
+        self.dock_agent.topLevelChanged.connect(lambda _floating: self._queue_assistant_corner())
+        self.dock_agent.dockLocationChanged.connect(lambda _area: self._queue_assistant_corner())
+        self.agent_chat.set_context_provider(self._agent_context)
+        self.agent_chat.set_workdir_provider(self._agent_workdir)
+        self.agent_chat.log_message.connect(self.log.log)
+        self.agent_chat.launcher_requested.connect(self._open_agent_launcher)
+        self.data_agent_window: Optional[QMainWindow] = None
+        self.model_agent_window: Optional[QMainWindow] = None
 
         self.tree.selection_changed.connect(self._on_tree_selection)
         self.props.document_changed.connect(self._on_document_edited)
@@ -198,6 +221,7 @@ class MainWindow(QMainWindow):
         self._build_toolbars()
         self.statusBar().showMessage("Ready")
         self._restore_ui()
+        self._queue_assistant_corner()
         self._refresh_all()
         self._sync_bottom_docks()
         QTimer.singleShot(0, self._rebuild_recent_menu)
@@ -706,7 +730,7 @@ class MainWindow(QMainWindow):
         if geometry is not None:
             self.restoreGeometry(geometry)
         if state is not None:
-            self.restoreState(state)
+            self.restoreState(state, LAYOUT_VERSION)
         fill = make_settings().value("plotsFillCentral", False)
         if isinstance(fill, str):
             fill = fill.lower() in {"1", "true", "yes"}
@@ -724,8 +748,171 @@ class MainWindow(QMainWindow):
     def _persist_ui(self) -> None:
         if not ui_persist_enabled():
             return
-        save_window(self.saveGeometry(), self.saveState())
+        save_window(self.saveGeometry(), self.saveState(LAYOUT_VERSION))
         make_settings().setValue("plotsFillCentral", self.session.plots_fill_central)
+
+    def _queue_assistant_corner(self) -> None:
+        # setCorner while QMainWindow is mid-way through a dock layout change crashes Qt.
+        QTimer.singleShot(0, self, self._sync_assistant_corner)
+
+    def _sync_assistant_corner(self) -> None:
+        """While the Assistant is docked and open, the right column takes the full window height."""
+        dock = self.dock_agent
+        full_height = (
+            not dock.isHidden()
+            and not dock.isFloating()
+            and self.dockWidgetArea(dock) == Qt.DockWidgetArea.RightDockWidgetArea
+        )
+        self.setCorner(
+            Qt.Corner.BottomRightCorner,
+            Qt.DockWidgetArea.RightDockWidgetArea if full_height else Qt.DockWidgetArea.BottomDockWidgetArea,
+        )
+
+    def _widen_assistant(self) -> None:
+        dock = self.dock_agent
+        if dock.isVisible() and not dock.isFloating() and dock.width() < ASSISTANT_WIDTH - 40:
+            self.resizeDocks([dock], [ASSISTANT_WIDTH], Qt.Orientation.Horizontal)
+
+    def _on_assistant_visibility(self, visible: bool) -> None:
+        self._queue_assistant_corner()
+        if visible:
+            QTimer.singleShot(0, self, self._widen_assistant)
+            self.agent_chat.focus_input()
+
+    def _open_agent_launcher(self, launcher: str) -> None:
+        if launcher == "dic_data":
+            self._open_data_agent()
+        elif launcher == "model_build":
+            self._open_model_agent()
+
+    def _open_data_agent(self) -> None:
+        window = self.data_agent_window
+        if window is None:
+            from vfmstudio.platform.scipy_wdac import prepare_scipy_native_imports
+
+            prepare_scipy_native_imports()
+            from vfmstudio.gui.data_agent_window import DataAgentWindow
+
+            window = DataAgentWindow(self, pool=self.pool)
+            window.log_message.connect(self.log.log)
+            window.refused.connect(self._on_data_agent_refused)
+            window.analysis_ready.connect(self._on_data_agent_ready)
+            window.exported.connect(self._on_data_agent_exported)
+            self.data_agent_window = window
+        self.dock_agent.show()
+        window.show()
+        window.raise_()
+        window.activateWindow()
+
+    def _open_model_agent(self) -> None:
+        from vfmstudio.agents.model_build.gate import refusal_reasons
+
+        reasons = refusal_reasons(self.session.document)
+        if reasons:
+            self.dock_agent.show()
+            self.agent_chat.post_message(
+                "error",
+                "The model build agent runs only after load steps are imported. " + " ".join(reasons),
+            )
+            return
+        window = self.model_agent_window
+        if window is None:
+            from vfmstudio.gui.model_agent_window import ModelAgentWindow
+
+            window = ModelAgentWindow(self)
+            window.set_document_provider(lambda: self.session.document)
+            window.log_message.connect(self.log.log)
+            window.refused.connect(self._on_model_agent_refused)
+            window.ready.connect(self._on_model_agent_ready)
+            window.applied.connect(self._on_model_agent_applied)
+            self.model_agent_window = window
+        self.dock_agent.show()
+        window.show()
+        window.raise_()
+        window.activateWindow()
+        if window.run is None and not window.busy:
+            window.start()
+
+    def _on_model_agent_refused(self, text: str) -> None:
+        self.dock_agent.show()
+        self.agent_chat.post_message("error", text)
+
+    def _on_model_agent_ready(self, run) -> None:
+        from vfmstudio.agents.model_build.session import agent_request
+
+        prompt, display = agent_request(run)
+        self.dock_agent.show()
+        report = [("report", run.report_markdown)]
+        if not self.agent_chat.start_task(
+            "model_build", prompt, display, run.workdir, attachments=report, figures=run.figures
+        ):
+            self.agent_chat.post_message(*report[0])
+
+    def _on_model_agent_applied(self, text: str) -> None:
+        self._commit_document_edit("Build virtual model")
+        self.session.mark_dirty()
+        self._refresh_all()
+        self.dock_agent.show()
+        self.agent_chat.post_message("tool", text)
+        self.log.log("Model build agent: wrote the virtual model into the project")
+
+    def _on_data_agent_refused(self, text: str) -> None:
+        self.dock_agent.show()
+        self.agent_chat.post_message("error", text)
+
+    def _on_data_agent_ready(self, run) -> None:
+        from vfmstudio.agents.dic_data.session import agent_request
+
+        prompt, display = agent_request(run)
+        self.dock_agent.show()
+        report = [("report", run.report_markdown)]
+        if not self.agent_chat.start_task(
+            "dic_data", prompt, display, run.workdir, attachments=report, figures=run.figures
+        ):
+            self.agent_chat.post_message(*report[0])
+
+    def _on_data_agent_exported(self, run, written) -> None:
+        from vfmstudio.agents.dic_data.session import add_exported_experiments
+
+        document = self.session.document
+        try:
+            created = add_exported_experiments(
+                document, run, written, analysis_type=document.material.analysis_type
+            )
+        except Exception as exc:
+            self.log.log(f"DIC data agent: exported files were not added as experiments: {exc}")
+            QMessageBox.warning(self, "Add experiments", f"The .mat files were written but not added:\n{exc}")
+            return
+        if not created:
+            return
+        self.session.selection = Selection(kind="experiment", experiment_id=created[0].experiment_id)
+        self._commit_document_edit("Data agent: add experiments")
+        self._refresh_all()
+        summary = ", ".join(f"'{item.name}' ({len(item.steps)} steps)" for item in created)
+        self.log.log(f"DIC data agent: added {len(created)} experiment(s) from the export: {summary}")
+        self.dock_agent.show()
+        self.agent_chat.post_message("tool", f"Added {len(created)} experiment(s) from the exported .mat files: {summary}.")
+
+    def _agent_workdir(self) -> Path:
+        path = self.session.document.source_path
+        if not is_scratch_project_path(path):
+            return Path(path).parent
+        return workspace_root()
+
+    def _agent_context(self) -> str:
+        document = self.session.document
+        path = document.source_path
+        project = "unsaved" if is_scratch_project_path(path) else str(path)
+        names = ", ".join(
+            f"#{exp.experiment_id} {exp.name}".strip() for exp in document.experiments
+        )
+        lines = [
+            "Current VFM Studio session:",
+            f"- Project file: {project}",
+            f"- Active module: {self.session.module}",
+            f"- Experiments ({len(document.experiments)}): {names or 'none'}",
+        ]
+        return "\n".join(lines)
 
     def _build_menus(self) -> None:
         file_menu = self.menuBar().addMenu("&File")
@@ -780,6 +967,13 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self.dock_props.toggleViewAction())
         view_menu.addAction(self.dock_log.toggleViewAction())
         view_menu.addAction(self.dock_jobs.toggleViewAction())
+        assistant = self.dock_agent.toggleViewAction()
+        assistant.setText("Assistant")
+        assistant.setIcon(icon("assistant"))
+        assistant.setShortcut(QKeySequence("Ctrl+Shift+A"))
+        assistant.setToolTip("Open the Claude assistant panel (Ctrl+Shift+A).")
+        self.dock_agent.visibilityChanged.connect(self._on_assistant_visibility)
+        view_menu.addAction(assistant)
         view_menu.addSeparator()
         self.actions.add(
             "xy_axes",
@@ -916,6 +1110,20 @@ class MainWindow(QMainWindow):
         self._context.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.addToolBar(self._context)
         self._context.setMaximumHeight(40)
+
+        # Last toolbar in the row absorbs the spare width, so the spacer pins the button right.
+        self._assistant_bar = QToolBar("Assistant")
+        self._assistant_bar.setObjectName("assistantBar")
+        self._assistant_bar.setMovable(False)
+        self._assistant_bar.setIconSize(QSize(20, 20))
+        self._assistant_bar.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self._assistant_bar.setMaximumHeight(40)
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        self._assistant_bar.addWidget(spacer)
+        self._assistant_bar.addAction(self.dock_agent.toggleViewAction())
+        self.addToolBar(self._assistant_bar)
+        _mark_toolbar_buttons(self._assistant_bar)
 
         self._pick_action = QAction("Pick", self)
         self._pick_action.setCheckable(True)
@@ -1081,6 +1289,9 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:
         if self._maybe_save():
             self._persist_ui()
+            self.agent_chat.shutdown()
+            if self.data_agent_window is not None:
+                self.data_agent_window.close()
             event.accept()
         else:
             event.ignore()
@@ -1473,8 +1684,28 @@ class MainWindow(QMainWindow):
             if self.viewport.load_plot_visible():
                 self.viewport.hide_load_plot()
             self.post.show_kind(selection.kind)
-            if selection.kind == "post_stress_space":
+            if selection.kind == "post_parameter_space":
+                self._apply_parameter_space_view()
+            elif selection.kind == "post_stress_space":
                 self._apply_stress_space_view()
+            elif selection.kind == "post_experiment_check":
+                self.post.experiment_check.apply_display(
+                    visible=self.session.experiment_check_visible,
+                    colors=self.session.experiment_check_colors,
+                )
+            elif selection.kind == "post_identifiability_strength":
+                self.post.ident_strength.apply_baseline(
+                    self.session.identifiability_baseline,
+                    shift_scale=self.session.identifiability_shift_scale,
+                )
+            elif selection.kind in {
+                "post_uncertainty_cov",
+                "post_uncertainty_experiments",
+                "post_uncertainty_ab",
+                "post_uncertainty_info",
+                "post_uncertainty_loo",
+            }:
+                self._apply_post_plot_modes()
         self._apply_module_layout()
         self.viewport.refresh(self.session)
         self._update_status()
@@ -1520,40 +1751,54 @@ class MainWindow(QMainWindow):
             self._update_title()
             return
         if kind == "post_parameter_space":
-            self._apply_combination_view()
+            self._apply_parameter_space_view()
             self._update_title()
             return
-        self._apply_combination_view()
+        if kind == "post_stress_space":
+            self._apply_stress_space_view()
+            self._update_title()
+            return
+        if kind == "post_experiment_check":
+            self.post.experiment_check.apply_display(
+                visible=self.session.experiment_check_visible,
+                colors=self.session.experiment_check_colors,
+            )
+            self._update_title()
+            return
+        if kind == "post_identifiability_strength":
+            self.post.ident_strength.apply_baseline(
+                self.session.identifiability_baseline,
+                shift_scale=self.session.identifiability_shift_scale,
+            )
+            self._update_title()
+            return
+        if kind == "post_virtual_fields":
+            self.post.vf_panel.update_from(
+                self.session.document,
+                self.session.result,
+                warp_scale=self.session.warp_scale,
+                experiment_id=self.session.vf_experiment_id,
+                step_index=self.session.vf_step_index,
+                view_mode=self.session.vf_view_mode,
+                quantity=self.session.vf_quantity,
+            )
+            if self.session.show_virtual_field:
+                try:
+                    self.viewport.show_virtual_field(
+                        self.session, parameter_index=self.session.vf_parameter_index
+                    )
+                except Exception:
+                    pass
+            self._update_title()
+            return
+        if kind.startswith("post_uncertainty"):
+            self._apply_post_plot_modes()
+            self._update_title()
+            return
         try:
             self.viewport.refresh(self.session)
         except Exception:
             pass
-        self.post.experiment_check.apply_display(
-            visible=self.session.experiment_check_visible,
-            colors=self.session.experiment_check_colors,
-        )
-        self.post.ident_strength.apply_baseline(
-            self.session.identifiability_baseline,
-            shift_scale=self.session.identifiability_shift_scale,
-        )
-        self.post.vf_panel.update_from(
-            self.session.document,
-            self.session.result,
-            warp_scale=self.session.warp_scale,
-            experiment_id=self.session.vf_experiment_id,
-            step_index=self.session.vf_step_index,
-            view_mode=self.session.vf_view_mode,
-            quantity=self.session.vf_quantity,
-        )
-        if self.session.show_virtual_field:
-            try:
-                self.viewport.show_virtual_field(
-                    self.session, parameter_index=self.session.vf_parameter_index
-                )
-            except Exception:
-                pass
-        self._apply_post_plot_modes()
-        self._apply_stress_space_view()
         self._update_title()
         self._update_status()
 
@@ -1579,6 +1824,16 @@ class MainWindow(QMainWindow):
             available.append("CID")
         if not available:
             return
+        current = str(self.session.current_scalar or "")
+        # Identifiability is ready before the DIC cloud is enumerated.  If the
+        # combo would contain only CID, keep the kinematic field until the
+        # step data is loaded — otherwise load jumps to CID and crashes.
+        if (
+            available == ["CID"]
+            and current
+            and current.lower() != "cid"
+        ):
+            return
         self.field_combo.set_fields(available, current=self.session.current_scalar)
         selected = self.field_combo.currentData()
         if selected:
@@ -1586,6 +1841,7 @@ class MainWindow(QMainWindow):
 
     def _refresh_all(self) -> None:
         self.tree.rebuild(self.session)
+        kind = self.session.selection.kind
         self.post.set_results(
             self.session.document,
             self.session.result,
@@ -1596,17 +1852,8 @@ class MainWindow(QMainWindow):
             vf_step_index=self.session.vf_step_index,
             vf_view_mode=self.session.vf_view_mode,
             vf_quantity=self.session.vf_quantity,
+            kind=kind,
         )
-        self.post.experiment_check.apply_display(
-            visible=self.session.experiment_check_visible,
-            colors=self.session.experiment_check_colors,
-        )
-        self.post.ident_strength.apply_baseline(
-            self.session.identifiability_baseline,
-            shift_scale=self.session.identifiability_shift_scale,
-        )
-        self._apply_combination_view()
-        self._apply_stress_space_view()
         self._apply_selection()
         self._update_title()
         self._update_status()
@@ -1656,8 +1903,11 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Consistency", "No GLS consistency problems.")
 
     def _apply_combination_view(self) -> None:
-        ids = selected_experiment_ids(self.session.document)
         self.post.plots.apply_combination(self.session.document)
+        self._apply_parameter_space_view()
+
+    def _apply_parameter_space_view(self) -> None:
+        ids = selected_experiment_ids(self.session.document)
         self.post.parameter_space.set_selected_ids(ids)
         self.post.parameter_space.set_groups(self.session.parameter_space_groups)
         self.post.parameter_space.apply_axes(

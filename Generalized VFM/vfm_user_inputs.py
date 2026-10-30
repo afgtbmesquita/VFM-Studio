@@ -171,6 +171,53 @@ class GlsSettings:
         'ols'             C = I, i.e. ordinary least squares
         The last three exist so the estimator can be shown to reduce to the
         simpler ones; 'gls' is the method.
+
+        This is the SINGLE-AXIS control: it sets one rule that is applied both
+        to the load steps of a test and, through the resulting information
+        matrix, to the weighting between tests.  Those two jobs are not the
+        same job -- see load_step_weighting / experiment_weighting below.
+    load_step_weighting, experiment_weighting
+        The TWO-AXIS control.  Both default to None, which keeps the legacy
+        single-axis path above bit-for-bit.  Setting either one switches the
+        solver to the explicit two-stage estimator:
+
+            stage 1   theta_i = combine the load steps of experiment i
+            stage 2   theta   = combine the per-experiment theta_i
+
+        Why the split exists.  Because H_t = I, every load step already yields
+        a complete standalone estimate of all parameters, so the whole
+        identification is "combine N estimates of the same vector".  Load
+        steps of one test are repeat measurements of the SAME specimen and are
+        0.96-0.999 correlated, so a GLS combination of them is a DIFFERENCING
+        operation whose leverage rests entirely on a cross-step covariance
+        estimated from the same data.  Separate tests are independent and
+        carry genuinely different information, so a GLS combination of THEM is
+        ordinary inverse-variance weighting on solid ground.  One rule cannot
+        be right for both.
+
+        load_step_weighting  : 'gls' | 'block_diagonal' | 'diagonal' | 'ols'
+            How the load steps of ONE experiment are combined.  'ols' is a
+            plain average, which is the conservative choice and is guaranteed
+            to land inside the range of the per-step estimates.
+        experiment_weighting : 'gls' | 'diagonal' | 'ols'
+            How the per-experiment estimates are combined.  'gls' uses each
+            experiment's full covariance (recommended).  'diagonal' keeps only
+            per-parameter variances.  'ols' weights every experiment equally.
+            'block_diagonal' is NOT offered here: C is already block diagonal
+            between experiments, so it would be a synonym for 'gls'.
+
+        Unset axes fall back to `weighting` (load step) and 'gls'
+        (experiment); the resolved pair is echoed in verbose output.
+
+        WITH ONE LOAD STEP PER EXPERIMENT BOTH AXES ARE IRRELEVANT for stage
+        1 -- there is nothing to combine -- and every load_step_weighting
+        gives the identical answer.
+
+        REPORTED UNCERTAINTY.  With experiment_weighting='gls' the eq. (20)
+        parameter covariance is exact.  With 'diagonal' or 'ols' the weights
+        are not the inverse of the covariance they are applied to, so eq. (20)
+        is no longer a covariance -- the same caveat that already applies to
+        weighting='diagonal' / 'ols'.  Quote the jackknife instead.
     spatial_correction
         OFF BY DEFAULT, AND OFF FOR EVERY REPORTED RESULT.  The measured
         spatial correlation of the residual field is reported as a DIAGNOSTIC
@@ -196,6 +243,14 @@ class GlsSettings:
     weighting: str = "gls"
     spatial_correction: bool = False
     covariance_tolerance: float = 1.0e-4
+    load_step_weighting: Optional[str] = None
+    experiment_weighting: Optional[str] = None
+
+    #  Allowed values per axis.  'block_diagonal' is deliberately absent from
+    #  the experiment axis: C is already block diagonal between experiments,
+    #  so it would be an alias of 'gls' and only invite confusion.
+    LOAD_STEP_CHOICES = ("gls", "block_diagonal", "diagonal", "ols")
+    EXPERIMENT_CHOICES = ("gls", "diagonal", "ols")
 
     def __post_init__(self) -> None:
         self.weighting = str(self.weighting).strip().lower()
@@ -209,6 +264,57 @@ class GlsSettings:
         if self.basis_degree < 0:
             raise ValueError(
                 f"basis_degree must be >= 0; got {self.basis_degree}.")
+
+        def _clean(value, field_name, choices):
+            if value is None:
+                return None
+            text = str(value).strip().lower()
+            if not text or text == "auto":
+                return None
+            if text not in choices:
+                extra = ""
+                if field_name == "experiment_weighting" \
+                        and text == "block_diagonal":
+                    extra = ("  C is already block diagonal between "
+                             "experiments, so 'block_diagonal' would mean the "
+                             "same thing as 'gls' here; use 'gls'.")
+                raise ValueError(
+                    f"Unsupported {field_name} {text!r}; expected one of "
+                    f"{choices}.{extra}"
+                )
+            return text
+
+        self.load_step_weighting = _clean(
+            self.load_step_weighting, "load_step_weighting",
+            self.LOAD_STEP_CHOICES)
+        self.experiment_weighting = _clean(
+            self.experiment_weighting, "experiment_weighting",
+            self.EXPERIMENT_CHOICES)
+
+    @property
+    def two_stage(self) -> bool:
+        """True when the explicit two-stage estimator should be used.
+
+        False keeps the legacy single-`weighting` path, which stays
+        bit-for-bit unchanged.
+        """
+        return (self.load_step_weighting is not None
+                or self.experiment_weighting is not None)
+
+    def resolved_stages(self) -> "tuple[str, str]":
+        """(load_step_weighting, experiment_weighting) with fallbacks applied.
+
+        An unset load-step axis falls back to `weighting`; an unset experiment
+        axis falls back to 'gls', which is the defensible default between
+        statistically independent experiments.
+        """
+        load_step = self.load_step_weighting or self.weighting
+        experiment = self.experiment_weighting or "gls"
+        if experiment not in self.EXPERIMENT_CHOICES:
+            #  Reachable only when `weighting` was 'block_diagonal' and the
+            #  experiment axis was left unset; 'gls' is its meaning here.
+            experiment = "gls"
+        return load_step, experiment
 
 
 @dataclass

@@ -97,7 +97,8 @@ def test_csv_dialog_converts_two_steps(qapp, tmp_path: Path):
     from vfmstudio.core import bridge
     from vfmstudio.core.fields import read_force_labels_from_file
 
-    force = bridge.load_point_measurements(steps[0].data_file, "out_of_plane")
+    force = bridge.load_point_measurements(
+        steps[0].data_file, "out_of_plane", total_sample_area=1.0)
     assert force.applied_force is not None
     assert force.applied_force.size == 2
     assert read_force_labels_from_file(steps[0].data_file) == ["Ty_sys1", "Ty_sys2"]

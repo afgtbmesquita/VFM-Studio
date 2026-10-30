@@ -1,0 +1,76 @@
+[
+  {
+    "case": "B3_PB",
+    "method": "current",
+    "initial_parameters": [
+      445.1982545907769,
+      108.61936653703592,
+      337.2945309257696,
+      116.54870572598502,
+      23.29287023764917,
+      23.29287023764918
+    ],
+    "max_iterations": 200,
+    "parameters": [
+      -0.004460913849500942,
+      0.048835611561755414,
+      427.29196170632645,
+      -0.3503916388430774,
+      -0.11516633692179602,
+      -1.627934283237814
+    ],
+    "converged": false,
+    "iterations": 200
+  },
+  {
+    "case": "B3_PB",
+    "method": "rho05",
+    "initial_parameters": [
+      445.1982545907769,
+      108.61936653703592,
+      337.2945309257696,
+      116.54870572598502,
+      23.29287023764917,
+      23.29287023764918
+    ],
+    "max_iterations": 200,
+    "parameters": [
+      -0.29922837654220774,
+      -0.14267510326018273,
+      426.5924183146819,
+      -11.734487643332088,
+      1.6718996237454413,
+      0.18412545557194543
+    ],
+    "converged": true,
+    "iterations": 26
+  },
+  {
+    "case": "A1_Twist",
+    "method": "current",
+    "initial_parameters": [
+      445.1982545907769,
+      108.61936653703592,
+      337.2945309257696,
+      116.54870572598502,
+      23.29287023764917,
+      23.29287023764918
+    ],
+    "max_iterations": 200,
+    "error": "The GLS equation-error covariance C is not positive definite, so it cannot be Cholesky-factorised.\n  min eigenvalue = -1.575036e-10\n  max eigenvalue = 3.270787e+02\n  asymmetry      = 0.000000e+00\nInvestigate rather than regularise: near-zero eigenvalues usually mean two load steps carry almost the same information, or that the smoothing basis absorbed the signal at some step.  Try a lower gls.basis_degree, or drop a redundant load step."
+  },
+  {
+    "case": "A1_Twist",
+    "method": "rho05",
+    "initial_parameters": [
+      445.1982545907769,
+      108.61936653703592,
+      337.2945309257696,
+      116.54870572598502,
+      23.29287023764917,
+      23.29287023764918
+    ],
+    "max_iterations": 200,
+    "error": "The GLS equation-error covariance C is not positive definite, so it cannot be Cholesky-factorised.\n  min eigenvalue = -2.461988e-11\n  max eigenvalue = 3.919415e+02\n  asymmetry      = 0.000000e+00\nInvestigate rather than regularise: near-zero eigenvalues usually mean two load steps carry almost the same information, or that the smoothing basis absorbed the signal at some step.  Try a lower gls.basis_degree, or drop a redundant load step."
+  }
+]

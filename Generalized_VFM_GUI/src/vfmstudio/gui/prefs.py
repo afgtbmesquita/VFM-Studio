@@ -78,3 +78,17 @@ def save_window(geometry: QByteArray, state: QByteArray, settings: Optional[QSet
     store = settings or make_settings()
     store.setValue("geometry", geometry)
     store.setValue("windowState", state)
+
+
+def claude_cli_path(settings: Optional[QSettings] = None) -> Optional[str]:
+    store = settings or make_settings()
+    value = store.value("agent/claudeCli", "")
+    return str(value) if value else None
+
+
+def set_claude_cli_path(path: Optional[str], settings: Optional[QSettings] = None) -> None:
+    store = settings or make_settings()
+    if path:
+        store.setValue("agent/claudeCli", str(path))
+    else:
+        store.remove("agent/claudeCli")

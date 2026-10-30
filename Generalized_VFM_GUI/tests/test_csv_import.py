@@ -131,7 +131,8 @@ def test_convert_vic3d_and_nm_to_nmm(tmp_path: Path):
 
     from vfmstudio.core import bridge
 
-    loaded = bridge.load_point_measurements(steps[0].data_file, "out_of_plane")
+    loaded = bridge.load_point_measurements(
+        steps[0].data_file, "out_of_plane", total_sample_area=1.0)
     assert loaded.points.shape == (3, 2)
     assert np.allclose(loaded.points[0], [1.0, 1.0])
     expected_kxx = CURVATURE_FACTORS[0] * 0.05
@@ -142,7 +143,8 @@ def test_convert_vic3d_and_nm_to_nmm(tmp_path: Path):
     assert labels == ["Ty_sys1", "Ty_sys2"]
     assert force_component_text(0, labels) == "Ty_sys1"
 
-    loaded_b = bridge.load_point_measurements(steps[1].data_file, "both")
+    loaded_b = bridge.load_point_measurements(
+        steps[1].data_file, "both", total_sample_area=1.0)
     assert loaded_b.strains.shape[0] == 6
     expected_gxy = STRAIN_FACTORS[2] * 0.0005
     assert np.allclose(loaded_b.strains[2], expected_gxy)

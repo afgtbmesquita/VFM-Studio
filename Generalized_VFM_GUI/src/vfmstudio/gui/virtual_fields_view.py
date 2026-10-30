@@ -30,6 +30,13 @@ from vfmstudio.gui.results.plot_style import (
     apply_matplotlib_style,
     heading_stylesheet,
 )
+from vfmstudio.gui.results.scene3d import (
+    fit_vtk_camera,
+    padded_span,
+    plate_z_scale,
+    show_vtk_axes,
+    size_vtk_interactor,
+)
 
 INK_PRIMARY = "#141413"
 INK_SECONDARY = "#52514e"
@@ -59,11 +66,11 @@ def _3d_gridspec_margins(n: int) -> dict[str, float]:
     """
     nrows, ncols = _tile_shape(n)
     return {
-        "left": 0.07,
+        "left": 0.11,
         "right": 0.90,
         "top": 0.90 if nrows > 1 else 0.88,
         "bottom": 0.16 if nrows > 1 else 0.14,
-        "wspace": 0.36 if ncols > 1 else 0.10,
+        "wspace": 0.36 if ncols > 1 else 0.12,
         "hspace": 0.46 if nrows > 1 else 0.18,
     }
 
@@ -138,6 +145,13 @@ QUANTITY_CBAR = {
     "kx*": r"$\kappa_x^{*}\ (\mathrm{mm}^{-1})$",
     "ky*": r"$\kappa_y^{*}\ (\mathrm{mm}^{-1})$",
     "kxy*": r"$\kappa_{xy}^{*}\ (\mathrm{mm}^{-1})$",
+}
+
+QUANTITY_AXIS = {
+    "w*": "w* (mm)",
+    "kx*": "kx* (1/mm)",
+    "ky*": "ky* (1/mm)",
+    "kxy*": "kxy* (1/mm)",
 }
 
 
@@ -401,22 +415,30 @@ def _set_3d_limits_and_box(axis, x, y, z) -> None:
     axis.set_zlim(zmin, zmax)
     xr = max(xmax - xmin, 1.0e-12)
     yr = max(ymax - ymin, 1.0e-12)
-    axis.view_init(elev=26, azim=-58)
+    axis.view_init(elev=28, azim=-58)
     axis.tick_params(axis="x", pad=1, labelsize=6.5)
     axis.tick_params(axis="y", pad=1, labelsize=6.5)
     axis.tick_params(axis="z", pad=1, labelsize=6.5)
     axis.xaxis.set_major_locator(MaxNLocator(nbins=4))
     axis.yaxis.set_major_locator(MaxNLocator(nbins=4))
     axis.zaxis.set_major_locator(MaxNLocator(nbins=4))
-    axis.xaxis.labelpad = 2
-    axis.yaxis.labelpad = 2
-    axis.zaxis.labelpad = 2
-    # Keep the 3D box inside its axes so labels stay on the canvas.
+    axis.xaxis.labelpad = 4
+    axis.yaxis.labelpad = 4
+    axis.zaxis.labelpad = 8
     try:
-        axis.set_box_aspect((xr, yr, 0.72 * max(xr, yr)), zoom=0.72)
+        axis.zaxis.set_rotate_label(False)
+    except Exception:
+        pass
+    try:
+        axis.zaxis.set_visible(True)
+    except Exception:
+        pass
+    # Visual plate: XY in data units, Z tall enough that the out-of-plane axis reads.
+    try:
+        axis.set_box_aspect((xr, yr, 0.62 * max(xr, yr)), zoom=0.70)
     except TypeError:
         try:
-            axis.set_box_aspect((xr, yr, 0.72 * max(xr, yr)))
+            axis.set_box_aspect((xr, yr, 0.62 * max(xr, yr)))
         except Exception:
             pass
     try:
@@ -474,6 +496,7 @@ class VirtualFieldTiledView(QWidget):
                 "ytick.labelsize": 7.5,
             }
         )
+        self.setObjectName("plotPage")
         self._title = QLabel("Optimal virtual fields")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._title.setStyleSheet(heading_stylesheet())
@@ -489,16 +512,20 @@ class VirtualFieldTiledView(QWidget):
         self._scroll = QScrollArea()
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll.setStyleSheet("background: #FFFFFF; border: none;")
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll.setWidget(self._canvas)
         self._stack = QStackedWidget()
         self._stack.addWidget(self._scroll)
         self._vtk_page = QWidget()
+        self._vtk_page.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         self._vtk_layout = QVBoxLayout(self._vtk_page)
         self._vtk_layout.setContentsMargins(0, 0, 0, 0)
         self._stack.addWidget(self._vtk_page)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 16)
+        layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
         layout.addWidget(self._title)
         layout.addWidget(self._stack, 1)
@@ -519,7 +546,7 @@ class VirtualFieldTiledView(QWidget):
             self._canvas.setMinimumHeight(0)
             return
         nrows, _ = _tile_shape(n)
-        self._canvas.setMinimumHeight(max(300, 290 * nrows))
+        self._canvas.setMinimumHeight(max(320, 310 * nrows))
 
     def _use_vtk_tiles(self) -> bool:
         from vfmstudio.gui.viewport.interactor import viewport_enabled
@@ -567,6 +594,7 @@ class VirtualFieldTiledView(QWidget):
         except TypeError:
             plotter = QtInteractor(self._vtk_page, shape=shape)
         interactor = getattr(plotter, "interactor", plotter)
+        size_vtk_interactor(interactor)
         self._vtk_layout.addWidget(interactor)
         self._vtk = plotter
         self._vtk_shape = shape
@@ -734,6 +762,7 @@ class VirtualFieldTiledView(QWidget):
         plotter = self._ensure_vtk(nrows, ncols)
         post = bridge.vfm_virtual_field_post()
         warp = self._warp_scale
+        xy = np.asarray(mesh_pkg.node_coords, dtype=float)
         scalars = []
         heights = []
         cbar_label = ""
@@ -743,6 +772,12 @@ class VirtualFieldTiledView(QWidget):
             scalars.append(np.asarray(scalar, dtype=float))
             heights.append(warp * np.asarray(cz, dtype=float))
         clim = _shared_clim(scalars)
+        all_z = np.concatenate([np.ravel(item) for item in heights]) if heights else np.zeros(1)
+        z_scale = plate_z_scale(xy[:, 0], xy[:, 1], all_z)
+        xlo, xhi = padded_span(xy[:, 0])
+        ylo, yhi = padded_span(xy[:, 1])
+        zlo, zhi = padded_span(all_z)
+        ztitle = QUANTITY_AXIS.get(normalize_quantity(quantity), "z")
         for index, (name, scalar, cz) in enumerate(zip(labels, scalars, heights)):
             row, col = divmod(index, ncols)
             plotter.subplot(row, col)
@@ -756,15 +791,23 @@ class VirtualFieldTiledView(QWidget):
                 show_scalar_bar=(index == n - 1),
             )
             if index == n - 1:
-                kwargs["scalar_bar_args"] = {"title": cbar_label}
+                kwargs["scalar_bar_args"] = {"title": ztitle}
             plotter.add_mesh(grid, **kwargs)
+            try:
+                plotter.set_scale(1.0, 1.0, z_scale)
+            except Exception:
+                pass
+            show_vtk_axes(
+                plotter,
+                "x (mm)",
+                "y (mm)",
+                ztitle,
+                axes_ranges=[xlo, xhi, ylo, yhi, zlo, zhi],
+            )
             overlays.add_plain_text(plotter, str(name), font_size=9)
+            fit_vtk_camera(plotter)
         try:
             plotter.link_views()
-        except Exception:
-            pass
-        try:
-            plotter.reset_camera()
         except Exception:
             pass
         try:
@@ -829,7 +872,7 @@ class VirtualFieldTiledView(QWidget):
                     )
             axis.set_xlabel("x (mm)")
             axis.set_ylabel("y (mm)")
-            axis.set_zlabel("")
+            axis.set_zlabel(cbar_label)
             _set_3d_title(title_ax, parameter_math_label(name))
             _style_3d(axis)
             _set_3d_limits_and_box(axis, surface_x, surface_y, surface_z)

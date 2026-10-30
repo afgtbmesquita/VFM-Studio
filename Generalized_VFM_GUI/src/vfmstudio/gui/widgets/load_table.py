@@ -447,8 +447,15 @@ class AppliedLoadEditor(QWidget):
         return width or n_groups
 
     def _rebuild_mapping(self, groups: Sequence) -> None:
+        # Called from a combo's own currentIndexChanged: deleting it synchronously crashes Qt.
         while self._map_form.rowCount():
-            self._map_form.removeRow(0)
+            row = self._map_form.takeRow(0)
+            for item in (row.labelItem, row.fieldItem):
+                widget = item.widget() if item is not None else None
+                if widget is not None:
+                    widget.blockSignals(True)
+                    widget.hide()
+                    widget.deleteLater()
         self._map_combos = []
         n_groups = len(groups)
         show = n_groups > 0

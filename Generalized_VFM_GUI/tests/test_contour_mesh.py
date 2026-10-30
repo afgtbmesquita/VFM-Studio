@@ -13,7 +13,6 @@ from scipy.spatial import Delaunay
 
 from vfmstudio.core.contour_mesh import (
     filtered_triangles,
-    occupancy_sample_area,
     triangle_centroids,
     void_triangle_mask,
 )
@@ -177,27 +176,18 @@ def test_area_weight_uses_sample_area_not_bbox(tmp_path):
             "F": np.array([1.0, 1.0]),
         },
     )
-    with_bbox = bridge.load_point_measurements(path, "out_of_plane")
+    auto = bridge.load_point_measurements(path, "out_of_plane")
     with_area = bridge.load_point_measurements(
         path, "out_of_plane", total_sample_area=true_area
     )
-    assert abs(with_bbox.area_per_point * xy.shape[0] - bbox) < 1.0e-9
+    #  With no area supplied the loader now MEASURES the cloud
+    #  (vfm_data_io.estimate_measurement_area) instead of falling back to the
+    #  bounding box, so the default already lands on n*dx*dy and matches an
+    #  explicitly supplied area.  The bbox would be ~1/fill-fraction too big.
+    assert abs(auto.area_per_point * xy.shape[0] - true_area) < 1.0e-9
     assert abs(with_area.area_per_point * xy.shape[0] - true_area) < 1.0e-9
-    assert with_area.area_per_point < with_bbox.area_per_point
-
-
-def test_occupancy_area_none_for_filled_rectangle():
-    xy = _grid(0.0, 4.0, 0.0, 3.0, 0.5)
-    assert occupancy_sample_area(xy[:, 0], xy[:, 1]) is None
-
-
-def test_occupancy_area_for_cruciform():
-    xy = _cruciform(0.5)
-    area = occupancy_sample_area(xy[:, 0], xy[:, 1])
-    bbox = (xy[:, 0].max() - xy[:, 0].min()) * (xy[:, 1].max() - xy[:, 1].min())
-    assert area is not None
-    assert area < 0.85 * bbox
-    assert abs(area - float(xy.shape[0]) * 0.5 * 0.5) < 1.0e-9
+    assert auto.area_per_point * xy.shape[0] < 0.85 * bbox
+    assert auto.area_info["method"] == "measured"
 
 
 def test_importing_plus_mat_sets_sample_area(tmp_path):

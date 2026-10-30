@@ -620,7 +620,16 @@ class ViewportWidget(QWidget):
         scalar_name = session.current_scalar
         if scalar_name.lower() == "cid":
             overlays.set_named_visible(self._plotter, "mesh", True)
-            return overlays.add_cid_cloud(self._plotter, self._pv, session.identifiability)
+            try:
+                return overlays.add_cid_cloud(
+                    self._plotter,
+                    self._pv,
+                    session.identifiability,
+                    experiment_name=getattr(experiment, "name", None),
+                )
+            except Exception as exc:
+                self._show_dic_error(f"Could not display CID:\n{exc}")
+                return 0
         data_path = _step_data_path(session)
         if data_path is None:
             overlays.set_named_visible(self._plotter, "mesh", True)

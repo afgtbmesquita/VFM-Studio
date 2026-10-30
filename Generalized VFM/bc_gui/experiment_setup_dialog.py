@@ -56,6 +56,7 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -76,6 +77,8 @@ from vfm_user_inputs import (
     PARAMETER_LABELS_BY_MODEL,
     parameter_labels_for,
 )
+
+from bc_gui.noise_model_help import show_noise_model_help
 
 _MATERIAL_TYPES = ("iso", "orthotropic", "anisotropic")
 
@@ -491,8 +494,9 @@ class ExperimentTab(QWidget):
                 f"x [{bounds.get('x_min', 0):.3f}, {bounds.get('x_max', 0):.3f}]"
                 f", y [{bounds.get('y_min', 0):.3f}, "
                 f"{bounds.get('y_max', 0):.3f}]"
-                + (f", sample area {self.sample_area_total:.3f} mm²"
-                   if self.sample_area_total else "")
+                + (f", sample area {self.sample_area_total:.3f} mm² (typed)"
+                   if self.sample_area_total
+                   else ", sample area auto-detected from the data")
                 + (f", material frame {self.material_orientation_deg:+.1f}°"
                    if self.material_orientation_deg else ""))
         else:
@@ -743,6 +747,20 @@ class ExperimentSetupDialog(QDialog):
         self.analysis_combo.currentIndexChanged.connect(self._rebuild_params)
         form.addRow("Analysis", self.analysis_combo)
 
+        help_row = QHBoxLayout()
+        help_row.addWidget(QLabel("<b>Noise model and weighting (Γ)</b>"))
+        help_row.addStretch(1)
+        self.noise_help_btn = QToolButton()
+        self.noise_help_btn.setText("?")
+        self.noise_help_btn.setToolTip(
+            "Explain the noise model: how Γ is built, what each setting "
+            "below does, and what happens when you change them.")
+        self.noise_help_btn.setFixedWidth(24)
+        self.noise_help_btn.clicked.connect(
+            lambda: show_noise_model_help(self))
+        help_row.addWidget(self.noise_help_btn)
+        form.addRow(help_row)
+
         self.basis_spin = QSpinBox()
         self.basis_spin.setRange(0, 20)
         self.basis_spin.setValue(6)
@@ -761,7 +779,71 @@ class ExperimentSetupDialog(QDialog):
             "a labelled sensitivity check only: kappa approximates eq. (1) "
             "and should not set a published error bar.")
         form.addRow("Spatial correction", self.spatial_check)
+
+        #  --- two-axis noise weighting -----------------------------------
+        #  Because H_t = I, every load step already gives a complete estimate
+        #  of all parameters, so identification is "combine N estimates of the
+        #  same vector".  Load steps of one test are repeat measurements of
+        #  the SAME specimen and are 0.96-0.999 correlated, so a GLS
+        #  combination of them DIFFERENCES them, leaning entirely on a
+        #  cross-step covariance estimated from the same data.  Separate tests
+        #  are independent and carry different information, so a GLS
+        #  combination of THEM is ordinary inverse-variance weighting.  One
+        #  rule cannot be right for both, hence two controls.
+        self.load_step_combo = QComboBox()
+        for text, key in (
+            ("Single rule below (legacy)", None),
+            ("OLS - plain average  (recommended)", "ols"),
+            ("GLS - full cross-step covariance", "gls"),
+            ("Block-diagonal - per step only", "block_diagonal"),
+            ("Diagonal - per step, per parameter", "diagonal"),
+        ):
+            self.load_step_combo.addItem(text, key)
+        self.load_step_combo.setToolTip(
+            "<p>How the <b>load steps of one test</b> are combined.</p>"
+            "<p>They are repeat measurements of the same specimen and are "
+            "0.96-0.999 correlated here, so <b>GLS</b> ends up differencing "
+            "them: its weights go negative and the answer can land outside "
+            "the range of the per-step estimates. <b>OLS</b> is a plain "
+            "average, which cannot do that.</p>"
+            "<p>With one load step per experiment this choice has no effect "
+            "at all - there is nothing to combine.</p>")
+        self.load_step_combo.setToolTipDuration(60000)
+        self.load_step_combo.currentIndexChanged.connect(
+            self._refresh_weighting_hint)
+        form.addRow("Load-step estimator", self.load_step_combo)
+
+        self.experiment_combo = QComboBox()
+        for text, key in (
+            ("Single rule below (legacy)", None),
+            ("GLS - inverse covariance  (recommended)", "gls"),
+            ("Diagonal - inverse variance per parameter", "diagonal"),
+            ("OLS - every experiment equal", "ols"),
+        ):
+            self.experiment_combo.addItem(text, key)
+        self.experiment_combo.setToolTip(
+            "<p>How the <b>separate experiments</b> are combined once each "
+            "has been reduced to one estimate.</p>"
+            "<p>Different tests are statistically independent and carry "
+            "genuinely different information, so <b>GLS</b> is on solid "
+            "ground here: it stops a coupon that knows nothing about a "
+            "parameter from voting on it at full weight. <b>OLS</b> lets it, "
+            "which is why equal weighting across tests fails badly.</p>"
+            "<p>'Block-diagonal' is not offered: C is already block diagonal "
+            "between experiments, so it would mean the same as GLS.</p>"
+            "<p>With anything other than GLS the reported +/- stops being a "
+            "covariance - quote the jackknife instead.</p>")
+        self.experiment_combo.setToolTipDuration(60000)
+        self.experiment_combo.currentIndexChanged.connect(
+            self._refresh_weighting_hint)
+        form.addRow("Experiment estimator", self.experiment_combo)
+
+        self.weighting_hint = QLabel()
+        self.weighting_hint.setWordWrap(True)
+        form.addRow("", self.weighting_hint)
+
         outer.addLayout(form)
+        self._refresh_weighting_hint()
 
         self.params_form = QFormLayout()
         params_box = QGroupBox("Initial guess")
@@ -769,6 +851,42 @@ class ExperimentSetupDialog(QDialog):
         outer.addWidget(params_box)
         outer.addStretch(1)
         return box
+
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _set_combo_key(combo, key) -> None:
+        """Select the entry whose userData is `key`, falling back to legacy."""
+        index = combo.findData(key if key else None)
+        combo.setCurrentIndex(index if index >= 0 else 0)
+
+    def _load_step_weighting(self) -> Optional[str]:
+        return self.load_step_combo.currentData()
+
+    def _experiment_weighting(self) -> Optional[str]:
+        return self.experiment_combo.currentData()
+
+    def _refresh_weighting_hint(self) -> None:
+        """Spell out, in one line, what the current pair actually does."""
+        load_step = self._load_step_weighting()
+        experiment = self._experiment_weighting()
+        if load_step is None and experiment is None:
+            self.weighting_hint.setText(
+                "One rule for both jobs (weighting='gls' unless a loaded "
+                "project says otherwise). This is the historical behaviour "
+                "and is reproduced bit-for-bit.")
+            return
+        resolved_load = load_step or "gls"
+        resolved_experiment = experiment or "gls"
+        text = (f"Two-stage: load steps combined by "
+                f"<b>{resolved_load}</b>, then experiments combined by "
+                f"<b>{resolved_experiment}</b>.")
+        if resolved_load == "ols" and resolved_experiment == "gls":
+            text += (" This is the recommended pairing - average the repeat "
+                     "measurements, weight the independent ones.")
+        if resolved_experiment != "gls":
+            text += (" The reported +/- is no longer a covariance; use the "
+                     "jackknife.")
+        self.weighting_hint.setText(text)
 
     def _seed_from_defaults(self, defaults) -> None:
         index = self.material_combo.findData(
@@ -864,6 +982,10 @@ class ExperimentSetupDialog(QDialog):
             self.analysis_combo.setCurrentIndex(index)
         self.basis_spin.setValue(project.basis_degree)
         self.spatial_check.setChecked(project.spatial_correction)
+        self._set_combo_key(self.load_step_combo, project.load_step_weighting)
+        self._set_combo_key(self.experiment_combo,
+                            project.experiment_weighting)
+        self._refresh_weighting_hint()
         self._rebuild_params()
         for spin, value in zip(self._param_spins, project.initial_parameters):
             spin.setValue(float(value))
@@ -930,6 +1052,8 @@ class ExperimentSetupDialog(QDialog):
             initial_parameters=[s.value() for s in self._param_spins],
             basis_degree=self.basis_spin.value(),
             spatial_correction=self.spatial_check.isChecked(),
+            load_step_weighting=self._load_step_weighting(),
+            experiment_weighting=self._experiment_weighting(),
             experiment_names=names,
         )
         problems = check_experiment_consistency(project)

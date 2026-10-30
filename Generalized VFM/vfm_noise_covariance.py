@@ -388,12 +388,34 @@ def estimate_kinematic_covariance(points: np.ndarray,
 
     basis_q = _orthonormal_basis(points, basis_degree)
 
-    # R_{t} = M Y_{t},  M = I - Q Q^T.  Applied via Q to avoid forming M.
-    residuals = strain_stack - np.einsum(
-        "ij,tjc->tic", basis_q @ basis_q.T, strain_stack)
+    # R_t = (I - Q Q^T) Y_t.  Apply Q (Q^T Y) so we never form the N×N
+    # projector (N ~ 1e4–1e5 measurement points would be gigabytes).
+    qt_y = np.einsum("nd,tnc->tdc", basis_q, strain_stack)
+    residuals = strain_stack - np.einsum("nd,tdc->tnc", basis_q, qt_y)
 
-    correlation = measure_spatial_correlation(points, residuals, basis_q)
-    nu = correlation.nu if spatial_correction else correlation.nu_white
+    if spatial_correction:
+        correlation = measure_spatial_correlation(points, residuals, basis_q)
+        nu = correlation.nu
+    else:
+        n_points = points.shape[0]
+        n_basis = basis_q.shape[1]
+        nu_white = float(n_points - n_basis)
+        if nu_white <= 0.0:
+            raise ValueError(
+                "Too few measurement points remain to estimate a white "
+                f"kinematic covariance (N = {n_points}, d = {n_basis})."
+            )
+        correlation = SpatialCorrelation(
+            kappa=1.0,
+            nu=nu_white,
+            nu_white=nu_white,
+            nearest_rho=float("nan"),
+            point_spacing=float("nan"),
+            equivalent_length=float("nan"),
+            n_points=n_points,
+            n_basis=n_basis,
+        )
+        nu = nu_white
 
     # Z = [R_1 ... R_T] with (step, component) ordering, then Gamma = Z^T Z/nu
     z_matrix = residuals.transpose(1, 0, 2).reshape(n_points, n_steps * n_gen)

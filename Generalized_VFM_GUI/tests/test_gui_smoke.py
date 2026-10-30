@@ -155,7 +155,7 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     assert not window.viewport.isHidden()
     assert window.session.module == "results"
     assert window.post._stack.currentWidget() is window.post.plots
-    assert window.props._title.text() == "Coefficient Evolution"
+    assert window.props._title.text() == "Tests"
     assert hasattr(window.props, "_fit_tests_scroll")
     assert not hasattr(window.props, "_fit_tests_run")
     assert not hasattr(window.props, "request_identify")
@@ -166,13 +166,13 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     assert window.post.figure_for_kind("post_plots") is window.post.plots._figure
     window._on_tree_selection(Selection(kind="post_parameter_space"))
     assert window.post._stack.currentWidget() is window.post.parameter_space
-    assert window.props._title.text() == "Parameter space"
+    assert window.props._title.text() == "Axes"
     assert hasattr(window.props, "_ps_left_x")
     assert hasattr(window.props, "_ps_right_y")
     assert window.props._ps_export.text() == "Export"
     window._on_tree_selection(Selection(kind="post_stress_space"))
     assert window.post._stack.currentWidget() is window.post.stress_space
-    assert window.props._title.text() == "Stress resultant space"
+    assert window.props._title.text() == "View"
     assert hasattr(window.props, "_ss_2d_x")
     assert hasattr(window.props, "_ss_3d_z")
     assert hasattr(window.props, "_ss_experiment")
@@ -191,16 +191,16 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     assert window.props._ss_step.itemText(0) == "All load steps"
     window._on_tree_selection(Selection(kind="post_experiment_check"))
     assert window.post._stack.currentWidget() is window.post.experiment_check
-    assert window.props._title.text() == "Individual Experiment check"
+    assert window.props._title.text() == "Display"
     assert hasattr(window.props, "_exp_check_status")
     assert window.props._exp_check_export.text() == "Export"
     window._on_tree_selection(Selection(kind="post_identifiability"))
-    assert window.props._title.text() == "Identifiability"
+    assert window.props._title.text() == "Status"
     assert window.props._post_export.isHidden()
     assert window.post.figure_for_kind("post_identifiability") is None
     window._on_tree_selection(Selection(kind="post_identifiability_strength"))
     assert window.post._stack.currentWidget() is window.post.ident_strength
-    assert window.props._title.text() == "Identifiability strength"
+    assert window.props._title.text() == "Baseline"
     assert hasattr(window.props, "_ident_base_scroll")
     assert hasattr(window.props, "_ident_shift_scale")
     assert window.props._ident_strength_export.text() == "Export"
@@ -208,7 +208,7 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     assert not window.post.isHidden()
     assert not window.viewport.isHidden()
     assert window.post._stack.currentWidget() is window.post.vf_panel
-    assert window.props._title.text() == "Virtual fields"
+    assert window.props._title.text() == "View"
     assert hasattr(window.props, "_vf_experiment")
     assert hasattr(window.props, "_vf_step")
     assert hasattr(window.props, "_vf_mode")
@@ -218,7 +218,7 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     window._on_tree_selection(Selection(kind="post_uncertainty"))
     assert not window.post.isHidden()
     assert window.post._stack.currentWidget() is window.post.uq_landing
-    assert window.props._title.text() == "Uncertainty quantification"
+    assert window.props._title.text() == "Overview"
     assert "M ≥ p + 1" in window.post.uq_landing._verdict.text()
     assert window.props._uq_export.isHidden()
     assert [window.post.uq_info._mode.itemText(i) for i in range(window.post.uq_info._mode.count())] == [
@@ -229,20 +229,20 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     ]
     window._on_tree_selection(Selection(kind="post_uncertainty_cov"))
     assert window.post._stack.currentWidget() is window.post.uq_cov
-    assert window.props._title.text() == "Cov(θ)"
+    assert window.props._title.text() == "View"
     assert not window.props._uq_export.isHidden()
     window._on_tree_selection(Selection(kind="post_uncertainty_experiments"))
     assert window.post._stack.currentWidget() is window.post.uq_experiments
-    assert window.props._title.text() == "Experiment uncertainty"
+    assert window.props._title.text() == "View"
     window._on_tree_selection(Selection(kind="post_uncertainty_ab"))
     assert window.post._stack.currentWidget() is window.post.uq_ab
-    assert window.props._title.text() == "Matrices A and B"
+    assert window.props._title.text() == "View"
     window._on_tree_selection(Selection(kind="post_uncertainty_info"))
     assert window.post._stack.currentWidget() is window.post.uq_info
-    assert window.props._title.text() == "Information geometry"
+    assert window.props._title.text() == "View"
     window._on_tree_selection(Selection(kind="post_uncertainty_loo"))
     assert window.post._stack.currentWidget() is window.post.uq_loo
-    assert window.props._title.text() == "Leave-one-out"
+    assert window.props._title.text() == "View"
     assert window.props._uq_export.text() == "Export"
     assert hasattr(window.props, "_uq_kind")
     assert [window.props._uq_kind.itemText(i) for i in range(window.props._uq_kind.count())] == [
@@ -250,8 +250,11 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
         "CR3",
         "CR0",
     ]
+    from vfmstudio.gui.results.plot_style import SERIES_COLOUR
     from vfmstudio.gui.results.uncertainty_plots import CR3, ROBUST, WORK
 
+    assert "#F0E442" not in SERIES_COLOUR
+    assert "#2a78d6" not in SERIES_COLOUR
     assert WORK.startswith("#")
     assert ROBUST.startswith("#")
     assert CR3.startswith("#")
@@ -333,6 +336,48 @@ def test_post_processing_replaces_bottom_result_docks(qapp):
     window.close()
 
 
+def test_refresh_all_does_not_fill_hidden_result_pages(qapp, monkeypatch):
+    window = MainWindow()
+    ps, ss, vf = [], [], []
+    monkeypatch.setattr(
+        window.post.parameter_space,
+        "update_from",
+        lambda *args, **kwargs: ps.append(1),
+    )
+    monkeypatch.setattr(
+        window.post.stress_space,
+        "update_from",
+        lambda *args, **kwargs: ss.append(1),
+    )
+    monkeypatch.setattr(
+        window.post.vf_panel,
+        "update_from",
+        lambda *args, **kwargs: vf.append(1),
+    )
+    window._refresh_all()
+    assert ps == []
+    assert ss == []
+    assert vf == []
+    window._on_tree_selection(Selection(kind="post_parameter_space"))
+    assert ps == [1]
+    assert ss == []
+    assert vf == []
+    window._on_tree_selection(Selection(kind="post_stress_space"))
+    assert ss == [1]
+    assert vf == []
+    window._on_tree_selection(Selection(kind="post_virtual_fields"))
+    assert vf == [1]
+    window.close()
+
+
+def test_tree_rebuild_skips_when_structure_unchanged(qapp):
+    window = MainWindow()
+    first = window.tree.tree.topLevelItem(0)
+    window.tree.rebuild(window.session)
+    assert window.tree.tree.topLevelItem(0) is first
+    window.close()
+
+
 def test_virtual_fields_tiled_draw_all_parameters(qapp):
     from types import SimpleNamespace
 
@@ -371,6 +416,8 @@ def test_virtual_fields_tiled_draw_all_parameters(qapp):
     assert aspect is not None
     ax_r, ay_r, az_r = (float(v) for v in aspect)
     assert az_r / max(ax_r, ay_r) < 1.2
+    zlabels = [str(ax.get_zlabel() or "") for ax in axes_3d]
+    assert all(label.strip() for label in zlabels)
     # Bottom-row x-axis labels sit inside the figure, not under the Jobs dock.
     assert min(ax.get_position().y0 for ax in axes_3d) >= 0.12
     assert view._canvas.minimumHeight() >= 560
@@ -613,7 +660,7 @@ def test_parameter_space_properties_choose_axes(qapp):
     session = AppSession()
     dock = PropertyEditorDock()
     dock.show_selection(session, Selection(kind="post_parameter_space"))
-    assert dock._title.text() == "Parameter space"
+    assert dock._title.text() == "Axes"
     assert dock._ps_left_x.count() >= 2
     assert dock._ps_left_x.currentText()
     assert dock._ps_left_y.currentText()
@@ -715,6 +762,38 @@ def test_parameter_space_panel_draws_two_plots(qapp):
     )
     panel.refresh()
     assert int(np.sum(panel._assigned == 0)) == 4
+    panel.close()
+
+
+def test_parameter_space_panel_uses_space_from_document_cache(qapp):
+    import numpy as np
+
+    from vfmstudio.core.document import ExperimentModel, empty_document
+    from vfmstudio.core.parameter_space import space_from_document
+    from vfmstudio.core.uncertainty import system_from_blocks
+    from vfmstudio.gui.results.parameter_space import ParameterSpacePanel
+
+    rng = np.random.default_rng(3)
+    theta = np.array([1.0, 2.0, 3.0, 4.0])
+    designs, observations, covariances, names = [], [], [], []
+    for index in range(3):
+        design = np.eye(4) + 0.02 * rng.normal(size=(4, 4))
+        designs.append(design)
+        observations.append(design @ theta)
+        covariances.append(np.eye(4))
+        names.append(f"E{index + 1}")
+    system = system_from_blocks(
+        designs, observations, covariances, theta, ["D11", "D12", "D22", "D66"], names
+    )
+    document = empty_document()
+    document.experiments = [
+        ExperimentModel(experiment_id=index + 1, name=name)
+        for index, name in enumerate(names)
+    ]
+    panel = ParameterSpacePanel()
+    panel.update_from(document, system)
+    cached = space_from_document(system, document)
+    assert panel._space is cached
     panel.close()
 
 

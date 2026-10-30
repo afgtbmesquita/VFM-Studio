@@ -17,17 +17,15 @@ from PySide6.QtWidgets import (
 LINE_PALETTE = (
     "#0072B2",
     "#E69F00",
-    "#F0E442",
+    "#CC79A7",
     "#009E73",
     "#D55E00",
     "#000000",
-    "#CC79A7",
     "#56B4E9",
-    "#2a78d6",
+    "#C59B2D",
     "#eb6834",
     "#1baf7a",
     "#4a3aa7",
-    "#C59B2D",
     "#8f8e88",
     "#6B3FA0",
     "#3D5A40",
@@ -39,7 +37,7 @@ class ColorSwatchButton(QPushButton):
 
     colorChanged = Signal(str)
 
-    def __init__(self, color: str = "#2a78d6", parent=None) -> None:
+    def __init__(self, color: str = "#0072B2", parent=None) -> None:
         super().__init__(parent)
         self._color = QColor(color).name()
         self.setFixedSize(22, 22)

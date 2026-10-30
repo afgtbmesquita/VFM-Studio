@@ -17,7 +17,7 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import MaxNLocator
 from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtWidgets import QLabel, QSizePolicy, QSplitter, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QSizePolicy, QSplitter, QVBoxLayout, QWidget
 
 from vfmstudio.core.document import SessionDocument
 from vfmstudio.core.stress_space import (
@@ -35,11 +35,21 @@ from vfmstudio.gui.results.plot_style import (
     INK_MUTED,
     INK_PRIMARY,
     INK_SECONDARY,
+    UI_FONT_STACK,
     apply_matplotlib_style,
     empty_message,
     heading_stylesheet,
     pad_limits,
     style_axis,
+)
+from vfmstudio.gui.results.scene3d import (
+    cubic_display_xyz,
+    cubic_scales,
+    fit_vtk_camera,
+    padded_span,
+    set_cubic_box_aspect,
+    show_vtk_axes,
+    size_vtk_interactor,
 )
 
 MAX_MPL_POINTS = 40_000
@@ -79,16 +89,7 @@ def _finite_mask(*columns: Optional[np.ndarray]) -> Optional[np.ndarray]:
 
 
 def _span(values) -> tuple[float, float]:
-    finite = np.asarray(values, dtype=float)
-    finite = finite[np.isfinite(finite)]
-    if finite.size == 0:
-        return 0.0, 1.0
-    low, high = float(np.min(finite)), float(np.max(finite))
-    if high <= low:
-        pad = max(abs(high), 1.0) * 0.1
-        return low - pad, high + pad
-    span = high - low
-    return low - 0.08 * span, high + 0.08 * span
+    return padded_span(values)
 
 
 def _plain_label(analysis: str, key: str) -> str:
@@ -120,6 +121,7 @@ class StressSpacePanel(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         apply_matplotlib_style()
+        self.setObjectName("plotPage")
         self._title = QLabel("Stress resultant space")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._title.setWordWrap(True)
@@ -135,6 +137,9 @@ class StressSpacePanel(QWidget):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         self._vtk_page = QWidget()
+        self._vtk_page.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         self._vtk_layout = QVBoxLayout(self._vtk_page)
         self._vtk_layout.setContentsMargins(0, 0, 0, 0)
         self._vtk_page.setVisible(False)
@@ -144,11 +149,28 @@ class StressSpacePanel(QWidget):
         self._splitter.addWidget(self._vtk_page)
         self._splitter.setStretchFactor(0, 1)
         self._splitter.setStretchFactor(1, 1)
+        self._pane_headers = QWidget()
+        headers = QHBoxLayout(self._pane_headers)
+        headers.setContentsMargins(0, 2, 0, 0)
+        headers.setSpacing(0)
+        pane_title = (
+            f"color: {INK_PRIMARY}; font-size: 10pt; font-family: {UI_FONT_STACK}; "
+            "background: none;"
+        )
+        self._title_2d = QLabel("2D")
+        self._title_3d = QLabel("3D")
+        for label in (self._title_2d, self._title_3d):
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setStyleSheet(pane_title)
+        headers.addWidget(self._title_2d, 1)
+        headers.addWidget(self._title_3d, 1)
+        self._pane_headers.setVisible(False)
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 10)
+        layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
         layout.addWidget(self._title)
         layout.addWidget(self._subtitle)
+        layout.addWidget(self._pane_headers)
         layout.addWidget(self._splitter, 1)
 
         self._document: Optional[SessionDocument] = None
@@ -173,13 +195,16 @@ class StressSpacePanel(QWidget):
         self,
         document: Optional[SessionDocument],
         result: Any,
+        *,
+        paint: bool = True,
     ) -> None:
         self._document = document
         self._result = result
         self._cache_key = None
         self._cloud = None
         self._sync_axis_keys()
-        self.refresh()
+        if paint:
+            self.refresh()
 
     def apply_view(
         self,
@@ -302,6 +327,7 @@ class StressSpacePanel(QWidget):
         self._draw_matplotlib_combined(cloud, prepared_mpl)
 
     def _show_empty(self, text: str) -> None:
+        self._pane_headers.setVisible(False)
         self._set_vtk_visible(False)
         self._subtitle.setVisible(False)
         self._figure.clear()
@@ -357,7 +383,9 @@ class StressSpacePanel(QWidget):
             n_finite=n_finite,
         )
 
-    def _paint_2d(self, axis, analysis: str, prepared: _PreparedCloud):
+    def _paint_2d(
+        self, axis, analysis: str, prepared: _PreparedCloud, *, title: bool = True
+    ):
         style_axis(axis, grid="both")
         norm = None
         if prepared.vmin is not None and prepared.vmax is not None:
@@ -379,7 +407,10 @@ class StressSpacePanel(QWidget):
         pad_limits(axis, prepared.y2d, which="y")
         axis.set_xlabel(_math_label(analysis, self._x2d), labelpad=8)
         axis.set_ylabel(_math_label(analysis, self._y2d), labelpad=8)
-        axis.set_title("2D", color=INK_PRIMARY, pad=6)
+        if title:
+            axis.set_title("2D", color=INK_PRIMARY, pad=6)
+        else:
+            axis.set_title("")
         return scatter if prepared.colour is not None else None
 
     def _attach_colorbar(self, figure, mappable, axes, analysis: str) -> None:
@@ -390,6 +421,7 @@ class StressSpacePanel(QWidget):
         colorbar.outline.set_edgecolor(INK_MUTED)
 
     def _draw_matplotlib_combined(self, cloud: StressSpaceCloud, prepared: _PreparedCloud) -> None:
+        self._pane_headers.setVisible(False)
         self._set_vtk_visible(False)
         self._figure.clear()
         analysis = cloud.analysis_type
@@ -426,11 +458,12 @@ class StressSpacePanel(QWidget):
 
     def _draw_vtk_split(self, cloud: StressSpaceCloud, prepared: _PreparedCloud) -> None:
         analysis = cloud.analysis_type
+        self._pane_headers.setVisible(True)
         self._figure.clear()
         axis_2d = self._figure.add_subplot(1, 1, 1)
         right = 0.86 if prepared.colour is not None else 0.96
-        self._figure.subplots_adjust(left=0.16, right=right, top=0.90, bottom=0.16)
-        mappable = self._paint_2d(axis_2d, analysis, prepared)
+        self._figure.subplots_adjust(left=0.16, right=right, top=0.96, bottom=0.16)
+        mappable = self._paint_2d(axis_2d, analysis, prepared, title=False)
         if mappable is not None:
             self._attach_colorbar(self._figure, mappable, axis_2d, analysis)
         self._canvas.draw_idle()
@@ -439,8 +472,6 @@ class StressSpacePanel(QWidget):
         QTimer.singleShot(0, self._render_vtk)
 
     def _draw_vtk_cloud(self, analysis: str, prepared: _PreparedCloud) -> None:
-        from vfmstudio.gui.viewport import overlays
-
         plotter = self._ensure_vtk()
         view_key = (
             self._x3d,
@@ -448,6 +479,7 @@ class StressSpacePanel(QWidget):
             self._z3d,
             self._experiment_id,
             int(self._step_index),
+            "cube",
         )
         camera = None
         if view_key == self._vtk_view_key:
@@ -459,14 +491,14 @@ class StressSpacePanel(QWidget):
             plotter.clear()
         except Exception:
             pass
-        xyz = np.column_stack((prepared.x3d, prepared.y3d, prepared.z3d)).astype(
-            np.float32, copy=False
-        )
-        cloud = self._pv.PolyData(xyz)
         try:
             plotter.set_scale(1.0, 1.0, 1.0)
         except Exception:
             pass
+        xyz, axes_ranges, bounds = cubic_display_xyz(
+            prepared.x3d, prepared.y3d, prepared.z3d
+        )
+        cloud = self._pv.PolyData(xyz)
         mesh_kwargs = dict(
             style="points",
             render_points_as_spheres=False,
@@ -489,50 +521,17 @@ class StressSpacePanel(QWidget):
             color = POINT_COLOR
         _add_point_mesh(plotter, cloud, color=color, **mesh_kwargs)
         plotter.set_background("white")
-        try:
-            plotter.enable_parallel_projection()
-        except Exception:
-            pass
-        try:
-            sx, sy, sz = _cubic_scales(prepared.x3d, prepared.y3d, prepared.z3d)
-            plotter.set_scale(sx, sy, sz)
-        except Exception:
-            pass
         xlabel = _plain_label(analysis, self._x3d)
         ylabel = _plain_label(analysis, self._y3d)
         zlabel = _plain_label(analysis, self._z3d)
-        try:
-            plotter.show_bounds(
-                grid="front",
-                location="outer",
-                ticks="outside",
-                n_xlabels=4,
-                n_ylabels=4,
-                n_zlabels=4,
-                xtitle=xlabel,
-                ytitle=ylabel,
-                ztitle=zlabel,
-                font_size=9,
-                color=INK_SECONDARY,
-                fmt="%.3g",
-            )
-        except Exception:
-            try:
-                plotter.show_grid(
-                    xtitle=xlabel,
-                    ytitle=ylabel,
-                    ztitle=zlabel,
-                    color=INK_SECONDARY,
-                )
-            except Exception:
-                pass
-        overlays.add_plain_text(
+        show_vtk_axes(
             plotter,
-            "3D",
-            position="upper_edge",
-            font_size=10,
-            color=INK_PRIMARY,
-            name="ss_title",
+            xlabel,
+            ylabel,
+            zlabel,
+            bounds=bounds,
+            axes_ranges=axes_ranges,
+            location="all",
         )
         if camera is not None:
             try:
@@ -540,15 +539,7 @@ class StressSpacePanel(QWidget):
             except Exception:
                 camera = None
         if camera is None:
-            try:
-                plotter.reset_camera()
-                plotter.camera.azimuth = -58.0
-                plotter.camera.elevation = 22.0
-            except Exception:
-                try:
-                    plotter.view_isometric()
-                except Exception:
-                    pass
+            fit_vtk_camera(plotter, elevation=32.0, zoom=0.72)
         self._render_vtk()
         try:
             self._vtk_camera = plotter.camera_position
@@ -586,10 +577,7 @@ class StressSpacePanel(QWidget):
         except Exception:
             pass
         interactor = getattr(plotter, "interactor", plotter)
-        interactor.setMinimumSize(0, 0)
-        interactor.setSizePolicy(
-            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Ignored
-        )
+        size_vtk_interactor(interactor)
         self._vtk_layout.addWidget(interactor)
         self._vtk = plotter
         self._pv = pv
@@ -655,23 +643,14 @@ def _add_point_mesh(plotter, cloud, *, color=None, **kwargs) -> None:
 
 
 def _cubic_scales(x, y, z) -> tuple[float, float, float]:
-    """Scale each data axis so the VTK box is cubic, like matplotlib 3D."""
-
-    def _extent(values) -> float:
-        low, high = _span(values)
-        extent = high - low
-        return extent if extent > 0 else 1.0
-
-    sx, sy, sz = _extent(x), _extent(y), _extent(z)
-    target = max(sx, sy, sz, 1e-12)
-    return target / sx, target / sy, target / sz
+    return cubic_scales(x, y, z)
 
 
 def _style_3d_axis(axis, x, y, z) -> None:
     axis.set_xlim(*_span(x))
     axis.set_ylim(*_span(y))
     axis.set_zlim(*_span(z))
-    axis.view_init(elev=22, azim=-58)
+    axis.view_init(elev=28, azim=-58)
     axis.tick_params(axis="x", pad=1, labelsize=7, colors=INK_SECONDARY)
     axis.tick_params(axis="y", pad=1, labelsize=7, colors=INK_SECONDARY)
     axis.tick_params(axis="z", pad=1, labelsize=7, colors=INK_SECONDARY)
@@ -683,11 +662,20 @@ def _style_3d_axis(axis, x, y, z) -> None:
     axis.zaxis.label.set_color(INK_PRIMARY)
     axis.xaxis.labelpad = 4
     axis.yaxis.labelpad = 4
-    axis.zaxis.labelpad = 4
+    axis.zaxis.labelpad = 8
+    try:
+        axis.zaxis.set_rotate_label(False)
+    except Exception:
+        pass
+    try:
+        axis.zaxis.set_visible(True)
+    except Exception:
+        pass
     try:
         axis.set_proj_type("ortho")
     except Exception:
         pass
+    set_cubic_box_aspect(axis)
     try:
         pane_colour = (1.0, 1.0, 1.0, 1.0)
         axis.xaxis.set_pane_color(pane_colour)

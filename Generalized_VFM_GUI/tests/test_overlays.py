@@ -290,6 +290,83 @@ def test_node_highlight_geometry_selected_and_lattice():
     assert rest.shape == (3, 3)
 
 
+def test_cid_point_scalars_sums_parameter_axis():
+    from vfmstudio.gui.viewport.overlays import cid_point_scalars
+
+    cid = np.array(
+        [
+            [1.0, 2.0, 3.0],
+            [4.0, 5.0, 6.0],
+        ]
+    )
+    np.testing.assert_allclose(cid_point_scalars(cid, 3), [5.0, 7.0, 9.0])
+    np.testing.assert_allclose(cid_point_scalars(cid.T, 3), [5.0, 7.0, 9.0])
+    np.testing.assert_allclose(cid_point_scalars([0.1, 0.2, 0.3], 3), [0.1, 0.2, 0.3])
+
+
+def test_cid_case_matches_experiment_name():
+    from types import SimpleNamespace
+
+    from vfmstudio.gui.viewport.overlays import _cid_case
+
+    ident = SimpleNamespace(
+        cases=[
+            SimpleNamespace(label="A1_PB:A1_PB_step03", points=np.zeros((5809, 2))),
+            SimpleNamespace(label="Biaxial_bending:biax_step03", points=np.zeros((38848, 2))),
+        ]
+    )
+    case = _cid_case(ident, experiment_name="Biaxial_bending")
+    assert case.label.startswith("Biaxial_bending")
+    case = _cid_case(ident, n_points=5809)
+    assert case.label.startswith("A1_PB")
+
+
+def test_add_cid_cloud_assigns_one_scalar_per_point():
+    from types import SimpleNamespace
+
+    from vfmstudio.gui.viewport.overlays import add_cid_cloud
+
+    class _Cloud(dict):
+        def __init__(self, xyz):
+            super().__init__()
+            self.n_points = int(np.asarray(xyz).shape[0])
+
+        def __setitem__(self, key, value):
+            arr = np.asarray(value)
+            if arr.size not in {self.n_points, 0}:
+                raise ValueError(
+                    f"Number of scalars ({arr.size}) must match either the "
+                    f"number of points ({self.n_points}) or the number of "
+                    f"cells ({self.n_points})."
+                )
+            super().__setitem__(key, arr)
+
+    class _PV:
+        @staticmethod
+        def PolyData(xyz):
+            return _Cloud(xyz)
+
+    captured = {}
+
+    class _Plotter:
+        def add_mesh(self, cloud, **kwargs):
+            captured["cloud"] = cloud
+            captured["kwargs"] = kwargs
+
+    ident = SimpleNamespace(
+        cases=[
+            SimpleNamespace(
+                label="A1_PB:A1_PB_step03",
+                points=np.column_stack([np.arange(5.0), np.zeros(5)]),
+                CID=np.arange(30.0).reshape(6, 5),
+            )
+        ]
+    )
+    n = add_cid_cloud(_Plotter(), _PV(), ident, experiment_name="A1_PB")
+    assert n == 5
+    np.testing.assert_allclose(captured["cloud"]["CID"], np.arange(30.0).reshape(6, 5).sum(axis=0))
+
+
 def test_node_highlight_spec_preview_overrides_bc():
     from vfmstudio.core.document import BoundaryEntry, ExperimentModel
     from vfmstudio.gui.session import AppSession, Selection

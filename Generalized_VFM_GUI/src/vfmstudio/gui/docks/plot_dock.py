@@ -75,6 +75,7 @@ class PlotDock(QWidget):
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
         apply_matplotlib_style()
+        self.setObjectName("plotPage")
         self._title = QLabel("Coefficient evolution through the FGLS loop")
         self._title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._title.setWordWrap(True)
@@ -90,7 +91,7 @@ class PlotDock(QWidget):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 10)
+        layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
         layout.addWidget(self._title)
         layout.addWidget(self._subtitle)

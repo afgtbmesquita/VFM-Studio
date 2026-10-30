@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import os
 from types import SimpleNamespace
 
 import numpy as np
+
+os.environ.setdefault("VFMSTUDIO_NO_VISTA", "1")
 
 from vfmstudio.core import bridge
 from vfmstudio.core.document import empty_document
@@ -19,6 +22,29 @@ from vfmstudio.core.stress_space import (
 
 def _constitutive():
     return bridge.vfm_constitutive()
+
+
+def test_cubic_scales_make_a_visual_cube():
+    from vfmstudio.gui.results.scene3d import (
+        axis_extent,
+        cubic_display_xyz,
+        cubic_scales,
+        plate_z_scale,
+    )
+
+    x = np.array([0.0, 10.0])
+    y = np.array([0.0, 2.0])
+    z = np.array([0.0, 0.5])
+    sx, sy, sz = cubic_scales(x, y, z)
+    visual = [axis_extent(x) * sx, axis_extent(y) * sy, axis_extent(z) * sz]
+    np.testing.assert_allclose(visual, visual[0])
+    vis, ranges, bounds = cubic_display_xyz(x, y, z)
+    assert abs((bounds[1] - bounds[0]) - (bounds[5] - bounds[4])) < 1e-6
+    assert abs((bounds[3] - bounds[2]) - (bounds[5] - bounds[4])) < 1e-6
+    assert ranges[0] < ranges[1]
+    lift = plate_z_scale(x, y, z, fraction=0.55)
+    expected = 0.55 * max(axis_extent(x), axis_extent(y))
+    assert abs(axis_extent(z) * lift - expected) < 1e-12
 
 
 def test_available_resultants_follow_analysis_type():
@@ -172,6 +198,15 @@ def test_panel_draws_2d_and_3d_cloud():
     names = [getattr(axis, "name", "") for axis in panel._figure.axes]
     assert "3d" in names
     assert any(name != "3d" for name in names if name)
+    axes_3d = [axis for axis in panel._figure.axes if getattr(axis, "name", "") == "3d"]
+    assert axes_3d[0].get_zlabel()
+    aspect = axes_3d[0].get_box_aspect()
+    if aspect is not None:
+        ratios = [float(value) for value in aspect]
+        assert max(ratios) / min(ratios) < 1.05
     assert panel._vtk is None
+    assert not panel._pane_headers.isVisible()
+    assert panel._title_2d.text() == "2D"
+    assert panel._title_3d.text() == "3D"
     assert panel.figure_for_export() is panel._figure
     panel.close()

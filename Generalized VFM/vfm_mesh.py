@@ -836,6 +836,7 @@ def subset_measurements_to_mapped_mesh(
         area_per_point=float(measurements.area_per_point),
         data_bounds=dict(measurements.data_bounds),
         analysis_type=str(measurements.analysis_type),
+        area_info=measurements.area_info,
     )
     element_ids = np.asarray(mapping.element_ids, dtype=np.int64)[active]
     local_xy = np.asarray(mapping.local_xy, dtype=float)[active]
@@ -1156,13 +1157,68 @@ def build_kinematic_constraints(mesh_pkg: MeshPackage,
                 f"value={link_value}."
             )
 
-        dof_offset = _resolve_dof_component(group["dof"], analysis_type)
         node_ids = _resolve_group_nodes(group, mesh_pkg)
         node_ids = _sort_nodes(node_ids, mesh_pkg, group.get("sortDirection"))
 
         if node_ids.size <= 1:
             continue
 
+        relation = str(group.get("relation", "equal")).strip().lower()
+        if relation == "rigid_affine":
+            displacement_offset = _resolve_dof_component(
+                group["dof"], analysis_type
+            )
+            slope_offset = _resolve_dof_component(
+                group["slopeDof"], analysis_type
+            )
+            direction = str(group.get("sortDirection", "")).strip().lower()
+            if direction not in ("x", "y"):
+                raise ValueError(
+                    "A rigid-affine linking group requires sortDirection "
+                    "equal to 'x' or 'y'."
+                )
+            coordinate_axis = 0 if direction == "x" else 1
+            reference_node = int(node_ids[0])
+            reference_coordinate = float(
+                mesh_pkg.node_coords[reference_node, coordinate_axis]
+            )
+            reference_displacement = (
+                reference_node * mesh_pkg.n_dof_per_node
+                + displacement_offset
+            )
+            reference_slope = (
+                reference_node * mesh_pkg.n_dof_per_node + slope_offset
+            )
+            for follower_node in node_ids[1:]:
+                follower_node = int(follower_node)
+                follower_displacement = (
+                    follower_node * mesh_pkg.n_dof_per_node
+                    + displacement_offset
+                )
+                coordinate_delta = float(
+                    mesh_pkg.node_coords[follower_node, coordinate_axis]
+                    - reference_coordinate
+                )
+                # W_i - W_0 - (s_i - s_0) W_,s(0) = 0.  A separate
+                # ordinary linking group ties W_,s at every edge node, so
+                # these rows leave only rigid translation and rigid rotation.
+                rows_index.extend([row_counter, row_counter, row_counter])
+                cols_index.extend([
+                    follower_displacement,
+                    reference_displacement,
+                    reference_slope,
+                ])
+                values.extend([1.0, -1.0, -coordinate_delta])
+                row_counter += 1
+                n_linking += 1
+            continue
+        if relation != "equal":
+            raise ValueError(
+                f"Unsupported linking relation {relation!r}; expected "
+                "'equal' or 'rigid_affine'."
+            )
+
+        dof_offset = _resolve_dof_component(group["dof"], analysis_type)
         reference_node = int(node_ids[0])
         reference_dof = reference_node * mesh_pkg.n_dof_per_node + dof_offset
 

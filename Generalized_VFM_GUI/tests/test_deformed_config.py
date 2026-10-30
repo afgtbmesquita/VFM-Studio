@@ -97,7 +97,23 @@ def test_missing_w_is_not_deformed():
     assert np.allclose(pts[:, 2], 0.0)
 
 
-def test_load_step_fields_warps_xyz(tmp_path):
+def test_load_step_fields_opens_mat_once(tmp_path, monkeypatch):
+    import scipy.io as sio
+
+    from vfmstudio.core.fields import load_step_fields
+
+    path = _write_step_mat(tmp_path / "once.mat")
+    calls = []
+    real = sio.loadmat
+
+    def wrapped(*args, **kwargs):
+        calls.append(1)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(sio, "loadmat", wrapped)
+    dataset = load_step_fields(path, "out_of_plane")
+    assert has_deformed_configuration(dataset) is True
+    assert len(calls) == 1
     path = _write_step_mat(tmp_path / "step.mat")
     dataset = load_step_fields(path, "out_of_plane")
     assert has_deformed_configuration(dataset) is True

@@ -9,16 +9,16 @@ import numpy as np
 SERIES_COLOUR = (
     "#0072B2",
     "#E69F00",
-    "#F0E442",
+    "#CC79A7",
     "#009E73",
     "#D55E00",
     "#000000",
-    "#CC79A7",
     "#56B4E9",
-    "#2a78d6",
+    "#C59B2D",
     "#eb6834",
     "#1baf7a",
     "#4a3aa7",
+    "#8f8e88",
 )
 SERIES_MARKER = ("o", "s", "^", "D", "v", "P")
 

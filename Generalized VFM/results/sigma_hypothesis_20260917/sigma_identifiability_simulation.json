@@ -1,0 +1,26 @@
+{
+  "experiment": "45deg_A1_PB",
+  "seed": 20260917,
+  "repetitions": 200,
+  "sigma_map_correlation": 0.8540140467559312,
+  "results": [
+    {
+      "assumed_pointwise_error_correlation": 0,
+      "spatial_error_correlation_mean": -0.00015940082635650422,
+      "simulation_2.5_percentile": -0.006469729520891839,
+      "simulation_97.5_percentile": 0.0050587449737442515
+    },
+    {
+      "assumed_pointwise_error_correlation": 0.5,
+      "spatial_error_correlation_mean": 0.49752380414209085,
+      "simulation_2.5_percentile": 0.48564117340576024,
+      "simulation_97.5_percentile": 0.507955569371593
+    },
+    {
+      "assumed_pointwise_error_correlation": 0.9,
+      "spatial_error_correlation_mean": 0.895783763162197,
+      "simulation_2.5_percentile": 0.8922383472591386,
+      "simulation_97.5_percentile": 0.8994791110474744
+    }
+  ]
+}

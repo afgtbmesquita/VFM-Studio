@@ -94,6 +94,10 @@ class VfmProject:
     weighting: str = "gls"
     spatial_correction: bool = False
     covariance_tolerance: float = 1.0e-4
+    #  Two-axis noise weighting.  None on both = the legacy single-`weighting`
+    #  path, bit-for-bit.  See GlsSettings for what each axis means.
+    load_step_weighting: Optional[str] = None
+    experiment_weighting: Optional[str] = None
     description: str = ""
     created: str = ""
     source_path: Optional[Path] = None
@@ -200,6 +204,12 @@ def save_project(project: VfmProject, path: Path) -> Path:
             "weighting": project.weighting,
             "spatial_correction": bool(project.spatial_correction),
             "covariance_tolerance": float(project.covariance_tolerance),
+            #  Written only when set, so projects that never touched the
+            #  two-axis control keep byte-identical files.
+            **({"load_step_weighting": project.load_step_weighting}
+               if project.load_step_weighting else {}),
+            **({"experiment_weighting": project.experiment_weighting}
+               if project.experiment_weighting else {}),
         },
         "tests": [
             {
@@ -294,6 +304,8 @@ def load_project(path: Path) -> VfmProject:
         weighting=str(gls.get("weighting", "gls")),
         spatial_correction=bool(gls.get("spatial_correction", False)),
         covariance_tolerance=float(gls.get("covariance_tolerance", 1.0e-4)),
+        load_step_weighting=(gls.get("load_step_weighting") or None),
+        experiment_weighting=(gls.get("experiment_weighting") or None),
         experiment_names={int(k): str(v) for k, v in
                           (payload.get("experiment_names") or {}).items()},
         description=str(payload.get("description", "")),
@@ -635,6 +647,27 @@ def project_to_cases(project: VfmProject, verbose: bool = False):
             analysis_type=project.analysis_type,
             total_sample_area=test.sample_area_total)
 
+        #  Say which area the run is actually integrating over.  Leaving
+        #  sample_area_total blank is the RECOMMENDED setting: the loader
+        #  then measures it from the point cloud, which is exact for the
+        #  perforated / rotated / anisotropic grids DIC produces and is what
+        #  the quadrature weight dA = area/n_points needs.  A hand-typed
+        #  bounding box counts holes as material and biases every stiffness
+        #  down by that ratio, so it is worth printing either way.
+        info = getattr(measurements, "area_info", None) or {}
+        n_points = int(measurements.points.shape[0])
+        area_used = measurements.area_per_point * n_points
+        method = info.get("method", "unknown")
+        detail = ""
+        if method == "measured":
+            pitch = info.get("pitch") or (float("nan"), float("nan"))
+            detail = (f", lattice pitch {pitch[0]:.4f} x {pitch[1]:.4f} mm, "
+                      f"confidence {info.get('confidence', float('nan')):.2f}")
+        print(f"[VFM-plate] {test.label or Path(test.data_file).name}: "
+              f"integrating over "
+              f"{area_used:.3f} mm^2 ({method}{detail}); "
+              f"dA = {measurements.area_per_point:.6f} mm^2")
+
         mesh_pkg = build_mesh(mesh_settings,
                               analysis_type=project.analysis_type)
         keep_cells = payload.get("keep_cells") or []
@@ -723,7 +756,9 @@ def run_project(project: VfmProject, verbose: bool = False):
             basis_degree=project.basis_degree,
             weighting=project.weighting,
             spatial_correction=project.spatial_correction,
-            covariance_tolerance=project.covariance_tolerance),
+            covariance_tolerance=project.covariance_tolerance,
+            load_step_weighting=project.load_step_weighting,
+            experiment_weighting=project.experiment_weighting),
         verbose=verbose,
     )
 

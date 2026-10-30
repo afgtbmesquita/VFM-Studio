@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
     QSlider,
     QSpinBox,
     QStackedWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -60,6 +61,7 @@ from vfmstudio.core.stress_space import (
     resolve_stress_space_target,
 )
 from vfmstudio.core.uncertainty import default_baseline_flags
+from vfmstudio.gui.dialogs.noise_model_help import show_noise_model_help
 from vfmstudio.gui.results.experiment_check import collect_experiment_steps
 from vfmstudio.gui.results.plot_export import has_exportable_plot
 from vfmstudio.gui.results.plot_style import experiment_colour
@@ -248,12 +250,18 @@ class PropertyEditorDock(QWidget):
         column.addWidget(box)
         return form
 
-    def _hint(self, text: str) -> QLabel:
+    def _hint(self, text: str, tooltip: str = "") -> QLabel:
         label = QLabel(text)
         label.setWordWrap(True)
         label.setProperty("role", "hint")
         label.setAutoFillBackground(False)
+        if tooltip:
+            label.setToolTip(tooltip)
         return label
+
+    def _brief(self, label: QLabel, text: str, tooltip: str = "") -> None:
+        label.setText(text)
+        label.setToolTip(tooltip)
 
     def _compact(self, button: QPushButton) -> QPushButton:
         button.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
@@ -330,7 +338,18 @@ class PropertyEditorDock(QWidget):
         self._finish_page(material)
 
         solver = self._add_page("solver")
-        fgls = self._section(solver, "FGLS")
+        fgls = self._section(solver, "Noise model and weighting  (Γ)")
+        help_row = QHBoxLayout()
+        help_row.addStretch(1)
+        self._sol_noise_help = QToolButton()
+        self._sol_noise_help.setText("?")
+        self._sol_noise_help.setToolTip(
+            "Explain the noise model: how Γ is built, what each setting "
+            "below does, and what happens when you change them.")
+        self._sol_noise_help.setFixedWidth(24)
+        self._sol_noise_help.clicked.connect(self._on_noise_help)
+        help_row.addWidget(self._sol_noise_help)
+        fgls.addRow(help_row)
         self._sol_iters = QSpinBox()
         self._sol_iters.setRange(1, 500)
         self._sol_iters.valueChanged.connect(self._on_solver_iters)
@@ -344,6 +363,49 @@ class PropertyEditorDock(QWidget):
         self._sol_weight = QComboBox()
         self._sol_weight.addItems(["gls", "block_diagonal", "diagonal", "ols"])
         self._sol_weight.currentTextChanged.connect(self._on_solver_weight)
+        #  Two-axis noise weighting.  "" means "use the single Weighting rule
+        #  above", which is the historical behaviour.  The two jobs differ:
+        #  load steps of one test are repeat measurements of the SAME specimen
+        #  (0.96-0.999 correlated here), so GLS ends up DIFFERENCING them and
+        #  its weights go negative; separate tests are independent and carry
+        #  different information, so GLS across them is ordinary
+        #  inverse-variance weighting and is the right tool.
+        self._sol_load_step = QComboBox()
+        for text, key in (
+            ("use Weighting above", ""),
+            ("ols  (average - recommended)", "ols"),
+            ("gls  (full cross-step covariance)", "gls"),
+            ("block_diagonal", "block_diagonal"),
+            ("diagonal", "diagonal"),
+        ):
+            self._sol_load_step.addItem(text, key)
+        self._sol_load_step.setToolTip(
+            "How the LOAD STEPS of one experiment are combined. "
+            "They are repeat measurements of the same specimen and are "
+            "strongly correlated, so 'gls' differences them and can return an "
+            "answer outside the range of the per-step estimates. 'ols' is a "
+            "plain average and cannot. "
+            "With one load step per experiment this has no effect.")
+        self._sol_load_step.currentIndexChanged.connect(
+            self._on_solver_load_step)
+        self._sol_experiment = QComboBox()
+        for text, key in (
+            ("use Weighting above", ""),
+            ("gls  (inverse covariance - recommended)", "gls"),
+            ("diagonal  (inverse variance)", "diagonal"),
+            ("ols  (every experiment equal)", "ols"),
+        ):
+            self._sol_experiment.addItem(text, key)
+        self._sol_experiment.setToolTip(
+            "How the EXPERIMENTS are combined once each is reduced to one "
+            "estimate. "
+            "Separate tests are independent and carry different information, "
+            "so 'gls' belongs here: it stops a coupon that knows nothing "
+            "about a parameter from voting on it at full weight. "
+            "With anything but 'gls' the reported +/- is no longer a "
+            "covariance - use the jackknife.")
+        self._sol_experiment.currentIndexChanged.connect(
+            self._on_solver_experiment)
         self._sol_spatial = QCheckBox()
         self._sol_spatial.setMinimumSize(18, 18)
         self._sol_spatial.setSizePolicy(
@@ -355,12 +417,35 @@ class PropertyEditorDock(QWidget):
         self._sol_cov.setDecimals(12)
         self._sol_cov.setRange(0.0, 1.0)
         self._sol_cov.editingFinished.connect(self._on_solver_cov)
-        fgls.addRow("Max iterations", self._sol_iters)
-        fgls.addRow("Tolerance", self._sol_tol)
+        #  Two groups, because these settings answer two unrelated questions.
+        #
+        #  NOISE MODEL -- what the measurement noise is assumed to be, and how
+        #  that assumption is turned into weights.  These CHANGE THE ANSWER.
+        #
+        #  CONVERGENCE -- when the iteration is allowed to stop.  These do not
+        #  change the answer, only whether you reached it.
         fgls.addRow("Γ basis degree", self._sol_degree)
-        fgls.addRow("Weighting", self._sol_weight)
-        fgls.addRow("Covariance tolerance", self._sol_cov)
         fgls.addRow("Spatial correction of Γ", self._sol_spatial)
+        fgls.addRow("Weighting", self._sol_weight)
+        fgls.addRow("Load-step estimator", self._sol_load_step)
+        fgls.addRow("Experiment estimator", self._sol_experiment)
+        self._sol_gamma_role = QLabel("—")
+        self._sol_gamma_role.setWordWrap(True)
+        self._sol_gamma_role.setProperty("role", "hint")
+        fgls.addRow(self._sol_gamma_role)
+
+        convergence = self._section(solver, "Convergence")
+        convergence.addRow("Max iterations", self._sol_iters)
+        convergence.addRow("Parameter tolerance", self._sol_tol)
+        convergence.addRow("Covariance tolerance", self._sol_cov)
+        self._sol_convergence_note = QLabel(
+            "The loop stops only when BOTH are met: the parameters stop "
+            "moving (relative change, eq. 19) and the re-estimated covariance "
+            "stops moving. Neither changes the answer — only whether you "
+            "reached it.")
+        self._sol_convergence_note.setWordWrap(True)
+        self._sol_convergence_note.setProperty("role", "hint")
+        convergence.addRow(self._sol_convergence_note)
         preflight = self._section(solver, "Pre-flight")
         self._sol_check = QLabel("—")
         self._sol_check.setWordWrap(True)
@@ -732,8 +817,9 @@ class PropertyEditorDock(QWidget):
 
         ident_strength = self._add_page("post_identifiability_strength")
         self._ident_strength_status = self._hint(
+            "Untick tests to measure the information they add (G_k).",
             "The left plot always shows eq. (63) for every test. Untick tests "
-            "to measure the information they add on the right (G_k)."
+            "to measure the information they add on the right (G_k).",
         )
         ident_strength.addWidget(self._ident_strength_status)
         ident_view = self._section(ident_strength, "View")
@@ -757,12 +843,13 @@ class PropertyEditorDock(QWidget):
         self._finish_page(ident_strength)
 
         virtual_fields = self._add_page("post_virtual_fields")
-        self._vf_status = QLabel(
+        self._vf_status = QLabel("Choose experiment, load step, and quantity.")
+        self._vf_status.setWordWrap(True)
+        self._vf_status.setToolTip(
             "Each tile is the optimal virtual field for one constitutive "
             "unknown. FGLS recomputes those fields at every load step of "
-            "every experiment. Choose which experiment and step to plot."
+            "every experiment."
         )
-        self._vf_status.setWordWrap(True)
         virtual_fields.addWidget(self._vf_status)
         vf = self._section(virtual_fields, "View")
         self._vf_experiment = QComboBox()
@@ -787,11 +874,12 @@ class PropertyEditorDock(QWidget):
         self._finish_page(virtual_fields)
 
         plots = self._add_page("post_plots")
-        self._fit_tests_status = QLabel(
+        self._fit_tests_status = QLabel("Tick tests to choose the combination.")
+        self._fit_tests_status.setWordWrap(True)
+        self._fit_tests_status.setToolTip(
             "Tick the tests in the combination. After Identify, every "
             "non-empty subset is already available; ticking applies it instantly."
         )
-        self._fit_tests_status.setWordWrap(True)
         plots.addWidget(self._fit_tests_status)
         fit = self._section(plots, "Tests")
         self._fit_tests_scroll = QScrollArea()
@@ -818,11 +906,12 @@ class PropertyEditorDock(QWidget):
         self._finish_page(plots)
 
         parameter_space = self._add_page("post_parameter_space")
-        self._ps_status = QLabel(
+        self._ps_status = QLabel("Choose which stiffnesses appear on each plot.")
+        self._ps_status.setWordWrap(True)
+        self._ps_status.setToolTip(
             "Each point is one non-empty combination of the identified tests, "
             "using the virtual fields from Identify. The star is all tests."
         )
-        self._ps_status.setWordWrap(True)
         parameter_space.addWidget(self._ps_status)
         axes = self._section(parameter_space, "Axes")
         self._ps_left_x = QComboBox()
@@ -843,9 +932,10 @@ class PropertyEditorDock(QWidget):
         axes.addRow("Right plot Y", self._ps_right_y)
         groups = self._section(parameter_space, "Highlight groups")
         self._ps_groups_hint = self._hint(
+            "Colour combinations that include every ticked test.",
             "Colour every combination that includes all ticked tests. "
             "Ticking more tests keeps the intersection, so fewer points "
-            "stay highlighted. If several groups match, the stricter one wins."
+            "stay highlighted. If several groups match, the stricter one wins.",
         )
         groups.addRow(self._ps_groups_hint)
         self._ps_groups_scroll = QScrollArea()
@@ -868,12 +958,12 @@ class PropertyEditorDock(QWidget):
         self._finish_page(parameter_space)
 
         stress_space = self._add_page("post_stress_space")
-        self._ss_status = QLabel(
-            "Each point is one DIC subset. Resultants are reconstructed from "
-            "the identified stiffness (N = A ε, M = D κ). Choose the test, "
-            "load step, and which resultants appear on the 2D and 3D plots."
-        )
+        self._ss_status = QLabel("Choose experiment, load step, and axes.")
         self._ss_status.setWordWrap(True)
+        self._ss_status.setToolTip(
+            "Each point is one DIC subset. Resultants are reconstructed from "
+            "the identified stiffness (N = A ε, M = D κ)."
+        )
         stress_space.addWidget(self._ss_status)
         ss = self._section(stress_space, "View")
         self._ss_experiment = QComboBox()
@@ -988,21 +1078,21 @@ class PropertyEditorDock(QWidget):
             "step": "Load step",
             "steps": "Load steps",
             "empty": "Properties",
-            "post_processing": "Post Processing",
-            "post_plots": "Coefficient Evolution",
-            "post_parameter_space": "Parameter space",
-            "post_stress_space": "Stress resultant space",
-            "post_experiment_check": "Individual Experiment check",
-            "post_identifiability": "Identifiability",
-            "post_identifiability_strength": "Identifiability strength",
-            "post_virtual_fields": "Virtual fields",
-            "post_uncertainty": "Uncertainty quantification",
-            "post_uncertainty_cov": "Cov(θ)",
-            "post_uncertainty_experiments": "Experiment uncertainty",
-            "post_uncertainty_ab": "Matrices A and B",
-            "post_uncertainty_info": "Information geometry",
-            "post_uncertainty_loo": "Leave-one-out",
-            "uncertainty": "Uncertainty quantification",
+            "post_processing": "Status",
+            "post_plots": "Tests",
+            "post_parameter_space": "Axes",
+            "post_stress_space": "View",
+            "post_experiment_check": "Display",
+            "post_identifiability": "Status",
+            "post_identifiability_strength": "Baseline",
+            "post_virtual_fields": "View",
+            "post_uncertainty": "Overview",
+            "post_uncertainty_cov": "View",
+            "post_uncertainty_experiments": "View",
+            "post_uncertainty_ab": "View",
+            "post_uncertainty_info": "View",
+            "post_uncertainty_loo": "View",
+            "uncertainty": "Overview",
         }
         if page_name in {"experiment", "mesh", "bc", "bcs", "step"} and session.document.experiment_by_id(selection.experiment_id or 0) is None:
             page_name = "empty"
@@ -1091,25 +1181,29 @@ class PropertyEditorDock(QWidget):
 
         targets = list_virtual_field_targets(session.document, session.result)
         if session.result is None:
-            self._vf_status.setText("Run Identify. Virtual fields are computed with FGLS.")
+            self._brief(
+                self._vf_status,
+                "Run Identify first.",
+                "Virtual fields are computed with FGLS at every load step.",
+            )
         elif not targets:
-            self._vf_status.setText(
-                "This result has no per-experiment virtual fields. "
-                "Each tile is one constitutive unknown from the stored Identify fields."
+            self._brief(
+                self._vf_status,
+                "This result has no stored virtual fields.",
+                "Re-run Identify. Each tile is one constitutive unknown.",
             )
         else:
             n_unknowns = len(getattr(session.result, "optimal_field_results", None) or [])
             extra = (
-                f" This identification has {n_unknowns} unknown"
-                f"{'s' if n_unknowns != 1 else ''}."
+                f" {n_unknowns} unknown{'s' if n_unknowns != 1 else ''}."
                 if n_unknowns
                 else ""
             )
-            self._vf_status.setText(
+            self._brief(
+                self._vf_status,
+                "Choose experiment, load step, and quantity." + extra,
                 "Each tile is the optimal virtual field for one constitutive "
-                "unknown. FGLS recomputes those fields at every load step of "
-                "every experiment. Choose which experiment and step to plot."
-                + extra
+                "unknown. FGLS recomputes those fields at every load step.",
             )
         target = resolve_virtual_field_target(
             session.document,
@@ -1252,9 +1346,10 @@ class PropertyEditorDock(QWidget):
         if not experiments:
             self._clear_fit_test_rows()
             self._fit_test_ids = []
-            self._fit_tests_status.setText(
-                "Add experiments first. Tick the tests in the combination "
-                "after Identify."
+            self._brief(
+                self._fit_tests_status,
+                "Add experiments first.",
+                "Tick the tests in the combination after Identify.",
             )
             self._fit_tests_all.setEnabled(False)
             self._fit_tests_none.setEnabled(False)
@@ -1304,8 +1399,10 @@ class PropertyEditorDock(QWidget):
         if n_all == 0:
             return
         if n_on == 0:
-            self._fit_tests_status.setText(
-                "No tests selected. Tick at least one test to show a combination."
+            self._brief(
+                self._fit_tests_status,
+                "No tests selected.",
+                "Tick at least one test to show a combination.",
             )
             return
         if n_on == n_all:
@@ -1314,32 +1411,34 @@ class PropertyEditorDock(QWidget):
             scope = "1 test"
         else:
             scope = f"{n_on} of {n_all} tests"
-        prefix = (
-            f"Selected combination: {scope}. Each ticked test contributes all "
-            "of its load steps (analysis window)."
-        )
         from vfmstudio.core.parameter_space import estimate_combination
 
         estimate = estimate_combination(self._session.result, self._session.document)
         if self._session.result is None or not estimate.has_blocks:
-            self._fit_tests_status.setText(
-                prefix + " Identify to solve; every combination is then "
-                "available by ticking tests."
+            self._brief(
+                self._fit_tests_status,
+                f"{scope}. Identify to solve.",
+                "After Identify, every non-empty subset is available by ticking tests.",
             )
             return
         if estimate.theta is None:
-            self._fit_tests_status.setText(
-                prefix + " Those tests were not in the last Identify."
+            self._brief(
+                self._fit_tests_status,
+                f"{scope}. Not in the last Identify.",
+                "Those tests were not in the last Identify.",
             )
             return
         if estimate.is_full:
-            self._fit_tests_status.setText(
-                prefix + " Showing the last Identify. Tick a subset to apply "
-                "that combination instantly."
+            self._brief(
+                self._fit_tests_status,
+                f"{scope}. Showing the last Identify.",
+                "Tick a subset to apply that combination instantly.",
             )
             return
-        self._fit_tests_status.setText(
-            prefix + " Showing that combination instantly from the last Identify."
+        self._brief(
+            self._fit_tests_status,
+            f"{scope}. Showing that combination.",
+            "Applied instantly from the last Identify.",
         )
 
     def _on_fit_test(self, experiment_id: int, checked: bool) -> None:
@@ -1427,18 +1526,20 @@ class PropertyEditorDock(QWidget):
     def _fill_identifiability_strength(self, session: AppSession) -> None:
         self._clear_ident_base_rows()
         if session.uncertainty is None:
-            self._ident_strength_status.setText(
-                "Information gain and deletion influence need Identify. "
-                "Run Identify first."
+            self._brief(
+                self._ident_strength_status,
+                "Run Identify first.",
+                "Information gain and deletion influence need Identify.",
             )
             return
         names = session.uncertainty.cluster_names
         ids = session.uncertainty.cluster_ids
         defaults = default_baseline_flags(names, ids)
-        self._ident_strength_status.setText(
+        self._brief(
+            self._ident_strength_status,
+            "Untick tests to measure the information they add (G_k).",
             "Left: eq. (63) for every test. Choose parameter units or "
-            "(θ̂₍₋ᵢ₎ − θ̂)/|θ̂|. Untick tests below to measure the information "
-            "they add on the right (G_k)."
+            "(θ̂₍₋ᵢ₎ − θ̂)/|θ̂|. Untick tests below to measure G_k on the right.",
         )
         scale = str(getattr(session, "identifiability_shift_scale", "units") or "units")
         if scale not in {"units", "relative"}:
@@ -1493,9 +1594,10 @@ class PropertyEditorDock(QWidget):
     def _fill_parameter_space(self, session: AppSession) -> None:
         labels = self._parameter_space_labels(session)
         if not labels:
-            self._ps_status.setText(
-                "Set a material model, then run Identify. Combinations use "
-                "the per-test GLS blocks from that solve."
+            self._brief(
+                self._ps_status,
+                "Set a material model, then run Identify.",
+                "Combinations use the per-test GLS blocks from that solve.",
             )
             for combo in self._ps_combos:
                 combo.blockSignals(True)
@@ -1516,17 +1618,17 @@ class PropertyEditorDock(QWidget):
         n_tests = len(reports)
         if n_tests:
             n_subsets = (1 << n_tests) - 1
-            self._ps_status.setText(
-                f"{n_subsets} non-empty combination"
-                f"{'s' if n_subsets != 1 else ''} of {n_tests} identified "
-                "test"
-                f"{'s' if n_tests != 1 else ''}. Choose which stiffnesses "
-                "appear on each plot. The star is all tests together."
+            self._brief(
+                self._ps_status,
+                f"{n_subsets} combination{'s' if n_subsets != 1 else ''} of "
+                f"{n_tests} test{'s' if n_tests != 1 else ''}.",
+                "Choose which stiffnesses appear on each plot. The star is all tests together.",
             )
         else:
-            self._ps_status.setText(
-                "Choose which stiffnesses appear on each plot. Run Identify "
-                "to fill every non-empty combination of tests."
+            self._brief(
+                self._ps_status,
+                "Choose which stiffnesses appear on each plot.",
+                "Run Identify to fill every non-empty combination of tests.",
             )
         current = (
             session.parameter_space_left_x,
@@ -1822,27 +1924,26 @@ class PropertyEditorDock(QWidget):
             session.stress_space_step_index,
         )
         if session.result is None:
-            self._ss_status.setText(
-                "Run Identify first. Stress resultants are reconstructed from "
-                "the identified stiffness at every DIC point."
+            self._brief(
+                self._ss_status,
+                "Run Identify first.",
+                "Stress resultants are reconstructed from the identified stiffness at every DIC point.",
             )
         elif target is None:
-            self._ss_status.setText(
-                "Add an experiment with load steps. Each point is one DIC subset."
+            self._brief(
+                self._ss_status,
+                "Add an experiment with load steps.",
+                "Each point is one DIC subset.",
             )
         else:
             n_steps = len(target.step_indices)
-            extra = (
-                " All load steps overlay the loading path."
-                if step_index == ALL_STEPS
-                else ""
-            )
-            self._ss_status.setText(
+            extra = " All load steps overlay the loading path." if step_index == ALL_STEPS else ""
+            self._brief(
+                self._ss_status,
                 f"{target.experiment_name}: {n_steps} load step"
-                f"{'s' if n_steps != 1 else ''} in the analysis window. "
-                "Choose which resultants appear on the 2D (left) and 3D (right) "
-                "plots."
-                + extra
+                f"{'s' if n_steps != 1 else ''}.",
+                "Choose which resultants appear on the 2D (left) and 3D (right) plots."
+                + extra,
             )
         self._ss_experiment.blockSignals(True)
         self._ss_experiment.clear()
@@ -2012,9 +2113,81 @@ class PropertyEditorDock(QWidget):
         _block_set_spin(self._sol_tol, solver.convergence_tolerance)
         _block_set_spin(self._sol_degree, solver.basis_degree)
         _block_set_combo(self._sol_weight, solver.weighting)
+        _block_set_combo_data(self._sol_load_step, solver.load_step_weighting)
+        _block_set_combo_data(self._sol_experiment,
+                              solver.experiment_weighting)
+        self._update_gamma_role(session)
         _block_set_checked(self._sol_spatial, solver.spatial_correction)
         _block_set_spin(self._sol_cov, solver.covariance_tolerance)
         self._update_solver_check(session)
+
+    def _update_gamma_role(self, session: AppSession) -> None:
+        """Say what Gamma -- and so the polynomial degree -- is doing RIGHT NOW.
+
+        Gamma reaches theta only through C, so several settings make it inert
+        and the panel should say so rather than leave a live-looking spin box
+        that changes nothing.  The cases, all measured:
+
+          legacy weighting='ols'        C = I, Gamma never read at all.
+          two-stage load='ols'          the load steps are averaged, so Gamma
+                                        no longer sets the WITHIN-test weights
+                                        -- but it still sets V_i, hence the
+                                        BETWEEN-test weights.  With several
+                                        experiments its influence goes UP, not
+                                        down, because it is now the only thing
+                                        deciding which coupon counts.
+          two-stage load='ols' exp='ols' every experiment weighted equally, so
+                                        Gamma drops out of theta entirely.
+          one experiment + load='ols'   nothing left for Gamma to weight.
+        """
+        solver = session.document.solver
+        load_step = solver.load_step_weighting or ""
+        experiment = solver.experiment_weighting or ""
+        two_stage = bool(load_step or experiment)
+        resolved_load = load_step or solver.weighting
+        resolved_experiment = experiment or "gls"
+        try:
+            n_experiments = len(session.document.experiments_in_identification())
+        except Exception:                                   # noqa: BLE001
+            n_experiments = len(session.document.experiments)
+
+        #  The legacy `weighting` box is ignored once either axis is set --
+        #  the solver always builds the full dense C in that mode.
+        self._sol_weight.setEnabled(not two_stage)
+
+        if not two_stage and solver.weighting == "ols":
+            text = ("Γ is NOT USED: weighting = 'ols' sets C = I, so the "
+                    "basis degree and the spatial correction change nothing.")
+            active = False
+        elif two_stage and resolved_load == "ols" and n_experiments <= 1:
+            text = ("Γ is NOT USED for θ: the load steps are averaged and "
+                    "there is only one experiment, so nothing is left to "
+                    "weight. It still scales the reported ±.")
+            active = False
+        elif two_stage and resolved_load == "ols" and resolved_experiment == "ols":
+            text = ("Γ is NOT USED for θ: the load steps are averaged and "
+                    "every experiment is weighted equally. It still scales "
+                    "the reported ±.")
+            active = False
+        elif two_stage and resolved_load == "ols":
+            text = (f"Γ does NOT affect the load-step average, but it sets "
+                    f"V_i and therefore how the {n_experiments} experiments "
+                    f"are weighted against each other. Its influence is "
+                    f"concentrated there, so sweep the degree.")
+            active = True
+        else:
+            text = ("Γ sets the load-step weights AND the experiment weights. "
+                    "Sweep the degree: if θ moves, the noise model is "
+                    "carrying the result.")
+            active = True
+
+        if not two_stage:
+            text += " (Weighting is the single legacy rule.)"
+        else:
+            text += " (Weighting above is ignored in two-stage mode.)"
+        self._sol_gamma_role.setText(text)
+        self._sol_degree.setEnabled(active)
+        self._sol_spatial.setEnabled(active)
 
     def _update_solver_check(self, session: AppSession) -> None:
         from vfmstudio.core.jobs import validate_document
@@ -2294,6 +2467,9 @@ class PropertyEditorDock(QWidget):
         ]
         self._notify()
 
+    def _on_noise_help(self) -> None:
+        show_noise_model_help(self)
+
     def _on_solver_iters(self, value: int) -> None:
         if self._session is None:
             return
@@ -2316,6 +2492,23 @@ class PropertyEditorDock(QWidget):
         if self._session is None:
             return
         self._session.document.solver.weighting = text
+        self._update_gamma_role(self._session)
+        self._notify()
+
+    def _on_solver_load_step(self, _index: int) -> None:
+        if self._session is None:
+            return
+        self._session.document.solver.load_step_weighting = (
+            self._sol_load_step.currentData() or "")
+        self._update_gamma_role(self._session)
+        self._notify()
+
+    def _on_solver_experiment(self, _index: int) -> None:
+        if self._session is None:
+            return
+        self._session.document.solver.experiment_weighting = (
+            self._sol_experiment.currentData() or "")
+        self._update_gamma_role(self._session)
         self._notify()
 
     def _on_solver_spatial(self, checked: bool) -> None:

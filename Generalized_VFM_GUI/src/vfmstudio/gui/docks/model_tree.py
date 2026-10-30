@@ -149,6 +149,25 @@ def _node_matches(node: QTreeWidgetItem, selection: Selection) -> bool:
     return True
 
 
+def _tree_signature(session: AppSession) -> tuple:
+    path = session.path
+    document = session.document
+    return (
+        str(path) if path is not None else "",
+        tuple(
+            (
+                int(experiment.experiment_id),
+                experiment.name or "",
+                tuple(_step_label(step) for step in experiment.steps),
+                tuple(_bc_label(entry) for entry in experiment.prescribed),
+                tuple(_bc_label(entry) for entry in experiment.linking),
+                tuple(_bc_label(entry) for entry in experiment.external),
+            )
+            for experiment in document.experiments
+        ),
+    )
+
+
 class ModelTreeDock(QWidget):
     selection_changed = Signal(object)
     request_add_experiment = Signal()
@@ -183,6 +202,14 @@ class ModelTreeDock(QWidget):
         layout.addWidget(self.tree)
 
     def rebuild(self, session: AppSession) -> None:
+        signature = _tree_signature(session)
+        if (
+            signature == getattr(self, "_signature", None)
+            and self.tree.topLevelItemCount() > 0
+        ):
+            self.select(session.selection)
+            return
+        self._signature = signature
         self.tree.blockSignals(True)
         self.tree.clear()
         document = session.document

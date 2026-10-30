@@ -104,6 +104,10 @@ def run_gls_identification_cases(
             weighting=project.weighting,
             spatial_correction=project.spatial_correction,
             covariance_tolerance=project.covariance_tolerance,
+            load_step_weighting=getattr(
+                project, "load_step_weighting", None) or None,
+            experiment_weighting=getattr(
+                project, "experiment_weighting", None) or None,
         ),
         verbose=verbose,
     )
@@ -182,14 +186,18 @@ def bounds_class():
     return vfm_user_inputs().Bounds
 
 
-def load_point_measurements(data_file, analysis_type: str, total_sample_area=None):
+def load_point_measurements(
+    data_file, analysis_type: str, total_sample_area=None, raw=None
+):
     fn = vfm_data_io().load_point_measurements
+    kwargs = {
+        "analysis_type": analysis_type,
+        "total_sample_area": total_sample_area,
+    }
+    if raw is not None:
+        kwargs["raw"] = raw
     try:
-        return fn(
-            data_file,
-            analysis_type=analysis_type,
-            total_sample_area=total_sample_area,
-        )
+        return fn(data_file, **kwargs)
     except TypeError:
         return fn(data_file, analysis_type=analysis_type)
 

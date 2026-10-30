@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 import xarray as xr
@@ -183,6 +183,27 @@ def measurements_to_dataset(
     )
 
 
+_DISPLACEMENT_ALIASES = {
+    "w": ("W", "Wgrid", "Uz", "UZ"),
+    "u": ("U", "Ugrid", "Ux", "UX"),
+    "v": ("V", "Vgrid", "Uy", "UY"),
+    "z": ("Z", "Zgrid"),
+}
+
+
+def extras_from_mat(raw: Optional[Mapping[str, Any]]) -> Dict[str, np.ndarray]:
+    """U/V/W/Z channels from an already-loaded MAT dict."""
+    if not raw:
+        return {}
+    extras: Dict[str, np.ndarray] = {}
+    for key, names in _DISPLACEMENT_ALIASES.items():
+        for name in names:
+            if name in raw:
+                extras[key] = np.asarray(raw[name], dtype=float).ravel()
+                break
+    return extras
+
+
 def try_load_displacements(mat_path: Path) -> Dict[str, np.ndarray]:
     """Best-effort extra channels (W, U, V, Z) from a Vic-3D style MAT file."""
     try:
@@ -195,19 +216,7 @@ def try_load_displacements(mat_path: Path) -> Dict[str, np.ndarray]:
         raw = loadmat(str(mat_path), squeeze_me=True, struct_as_record=False)
     except Exception:
         return {}
-    extras: Dict[str, np.ndarray] = {}
-    aliases = {
-        "w": ("W", "Wgrid", "Uz", "UZ"),
-        "u": ("U", "Ugrid", "Ux", "UX"),
-        "v": ("V", "Vgrid", "Uy", "UY"),
-        "z": ("Z", "Zgrid"),
-    }
-    for key, names in aliases.items():
-        for name in names:
-            if name in raw:
-                extras[key] = np.asarray(raw[name], dtype=float).ravel()
-                break
-    return extras
+    return extras_from_mat(raw)
 
 
 def mat_has_deformed_configuration(mat_path: Optional[Path]) -> bool:
@@ -285,6 +294,19 @@ def _uvw_same_length(
     return True
 
 
+def _loadmat_once(path: Path) -> Optional[dict]:
+    try:
+        from scipy.io import loadmat
+    except ImportError:
+        return None
+    if not path.is_file():
+        return None
+    try:
+        return loadmat(str(path), squeeze_me=True, mat_dtype=False)
+    except Exception:
+        return None
+
+
 def load_step_fields(
     data_file: Path,
     analysis_type: str,
@@ -293,12 +315,15 @@ def load_step_fields(
     align_to_axes: bool = False,
     alignment_angle_deg: Optional[float] = None,
 ) -> xr.Dataset:
+    path = Path(data_file)
+    raw = _loadmat_once(path)
     measurements = bridge.load_point_measurements(
-        Path(data_file),
+        path,
         analysis_type=analysis_type,
         total_sample_area=total_sample_area,
+        raw=raw,
     )
-    extras = try_load_displacements(Path(data_file))
+    extras = extras_from_mat(raw) if raw is not None else try_load_displacements(path)
     if align_to_axes:
         if alignment_angle_deg is None:
             x, y = _xy(measurements)

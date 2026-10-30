@@ -1,0 +1,2538 @@
+{
+ "format": "vfmstudio-bc-library",
+ "version": 1,
+ "generated_at": "2026-10-28 14:23:39",
+ "ranking_rule": "Scheme cards are ordered by: load channels compatible first; then a listed material type matches; then the curvature-direction match, highest first; then the aspect-ratio factor, lowest first; then reward (identifications + 2·adoptions − 2·declines) plus a small bonus for schemes with little feedback. Reward is the running score of the training loop, not a measurement of this test.",
+ "schemes": [
+  {
+   "id": "S-6216713f",
+   "lesson": "Hold W, W_X, W_XY on top. Hold W, W_X, W_Y, W_XY on bottom. Link W_Y on top. Apply W_Y on top.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": -0.243,
+     "kyy": 0.969,
+     "kxy": -0.0303
+    },
+    "aspect_ratio_y_to_x": 3.28,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "top W=0",
+      "dof": "W",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top W_X=0",
+      "dof": "W_X",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top W_XY=0",
+      "dof": "W_XY",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "bottom W=0",
+      "dof": "W",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom W_X=0",
+      "dof": "W_X",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom W_Y=0",
+      "dof": "W_Y",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom W_XY=0",
+      "dof": "W_XY",
+      "edge": "bottom",
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "top W_Y tied",
+      "dof": "W_Y",
+      "edge": "top",
+      "sortDirection": "x"
+     }
+    ],
+    "external": [
+     {
+      "label": "M_yy on top cut",
+      "dof": "W_Y",
+      "edge": "top",
+      "loadType": "concentrated",
+      "sortDirection": "x"
+     }
+    ]
+   },
+   "placement": "edges",
+   "typical_mesh": {
+    "x": 2,
+    "y": 2
+   },
+   "used_on": [
+    "A1_PB",
+    "A2_PB",
+    "A3_PB",
+    "B1_PB",
+    "B2_PB",
+    "B3_PB",
+    "Optimized_T1_trans",
+    "Optimized_T2_trans",
+    "Optimized_T3"
+   ],
+   "scores": {
+    "identifications": 56,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 56.0
+   }
+  },
+  {
+   "id": "S-0ea868c4",
+   "lesson": "Hold W, W_X, W_Y, W_XY on bottom. Hold W_Y, W_XY on top. Link W_X, W on top. Apply W_X on top.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": 0.509,
+     "kyy": 0.861,
+     "kxy": -0.0137
+    },
+    "aspect_ratio_y_to_x": 3.15,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "bottom W=0",
+      "dof": "W",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom W_X=0",
+      "dof": "W_X",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom W_Y=0",
+      "dof": "W_Y",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom W_XY=0",
+      "dof": "W_XY",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "top W_Y=0",
+      "dof": "W_Y",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top W_XY=0",
+      "dof": "W_XY",
+      "edge": "top",
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "top W_X tied",
+      "dof": "W_X",
+      "edge": "top",
+      "sortDirection": "x"
+     },
+     {
+      "label": "top W rigid-affine",
+      "dof": "W",
+      "edge": "top",
+      "sortDirection": "x",
+      "slopeDof": "W_X",
+      "relation": "rigid_affine"
+     }
+    ],
+    "external": [
+     {
+      "label": "twisting couple on top cut",
+      "dof": "W_X",
+      "edge": "top",
+      "loadType": "concentrated",
+      "sortDirection": "x"
+     }
+    ]
+   },
+   "placement": "edges",
+   "typical_mesh": {
+    "x": 2,
+    "y": 2
+   },
+   "used_on": [
+    "A1_Twist",
+    "A2_Twist",
+    "B1_Twist",
+    "B2_Twist"
+   ],
+   "scores": {
+    "identifications": 32,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 32.0
+   }
+  },
+  {
+   "id": "S-b06b3cdb",
+   "lesson": "Hold W, W_X, W_XY on top. Hold W, W_X, W_Y, W_XY on bottom. Apply W_Y on top.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": -0.143,
+     "kyy": 0.975,
+     "kxy": -0.169
+    },
+    "aspect_ratio_y_to_x": 3.63,
+    "material_types": [
+     "anisotropic",
+     "orthotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "top    w*=0",
+      "dof": "W",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top    dw*/dx=0",
+      "dof": "W_X",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top    d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "bottom w*=0",
+      "dof": "W",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom dw*/dx=0",
+      "dof": "W_X",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom dw*/dy=0",
+      "dof": "W_Y",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "bottom",
+      "value": 0.0
+     }
+    ],
+    "linking": [],
+    "external": [
+     {
+      "label": "M_yy on top edge (load cell)",
+      "dof": "W_Y",
+      "edge": "top",
+      "loadType": "concentrated",
+      "sortDirection": "x"
+     }
+    ]
+   },
+   "placement": "edges",
+   "typical_mesh": {
+    "x": 2,
+    "y": 2
+   },
+   "used_on": [
+    "A1_PB",
+    "A2_PB",
+    "A3_PB",
+    "B1_PB",
+    "B2_PB",
+    "B3_PB"
+   ],
+   "scores": {
+    "identifications": 6,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 6.0
+   }
+  },
+  {
+   "id": "S-b967ba0e",
+   "lesson": "Hold W, W_X, W_Y, W_XY on bottom. Hold W_XY on top. Link W_X, W_Y, W on top. Apply W_Y, W_X on top.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": -0.271,
+     "kyy": 0.96,
+     "kxy": 0.0725
+    },
+    "aspect_ratio_y_to_x": 3.22,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "bottom W=0",
+      "dof": "W",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom W_X=0",
+      "dof": "W_X",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom W_Y=0",
+      "dof": "W_Y",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom W_XY=0",
+      "dof": "W_XY",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "top W_XY=0",
+      "dof": "W_XY",
+      "edge": "top",
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "top W_X tied",
+      "dof": "W_X",
+      "edge": "top",
+      "sortDirection": "x"
+     },
+     {
+      "label": "top W_Y tied",
+      "dof": "W_Y",
+      "edge": "top",
+      "sortDirection": "x"
+     },
+     {
+      "label": "top W rigid-affine",
+      "dof": "W",
+      "edge": "top",
+      "value": 0.0,
+      "sortDirection": "x",
+      "relation": "rigid_affine",
+      "slopeDof": "W_X"
+     }
+    ],
+    "external": [
+     {
+      "label": "bending couple",
+      "dof": "W_Y",
+      "edge": "top",
+      "loadType": "concentrated",
+      "sortDirection": "x"
+     },
+     {
+      "label": "twisting couple",
+      "dof": "W_X",
+      "edge": "top",
+      "loadType": "concentrated",
+      "sortDirection": "x"
+     }
+    ]
+   },
+   "placement": "edges",
+   "typical_mesh": {
+    "x": 2,
+    "y": 2
+   },
+   "used_on": [
+    "Optimized_T1_trans",
+    "Optimized_T2_trans"
+   ],
+   "scores": {
+    "identifications": 4,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 4.0
+   }
+  },
+  {
+   "id": "S-e6549b1f",
+   "lesson": "Hold W, W_X, W_Y, W_XY on bottom. Hold W_Y, W_XY on top. Link W_X on top. Apply W_X on top.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": 0.0415,
+     "kyy": 0.0657,
+     "kxy": -0.997
+    },
+    "aspect_ratio_y_to_x": 3.19,
+    "material_types": [
+     "anisotropic",
+     "orthotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "bottom w*=0",
+      "dof": "W",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom dw*/dx=0",
+      "dof": "W_X",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom dw*/dy=0",
+      "dof": "W_Y",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "top    dw*/dy=0",
+      "dof": "W_Y",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top    d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "top",
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "top dw*/dx tied (rigid twist of the loaded edge)",
+      "dof": "W_X",
+      "edge": "top",
+      "sortDirection": "x"
+     }
+    ],
+    "external": [
+     {
+      "label": "twisting couple on the loaded (top) cut",
+      "dof": "W_X",
+      "edge": "top",
+      "loadType": "concentrated",
+      "sortDirection": "x"
+     }
+    ]
+   },
+   "placement": "edges",
+   "typical_mesh": {
+    "x": 2,
+    "y": 2
+   },
+   "used_on": [
+    "A1_Twist",
+    "A2_Twist",
+    "B1_Twist",
+    "B2_Twist"
+   ],
+   "scores": {
+    "identifications": 4,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 4.0
+   }
+  },
+  {
+   "id": "S-0987def9",
+   "lesson": "Hold W, W_X, W_Y, W_XY on selected nodes. Link W_X, W_Y on selected nodes. Apply W_Y, W_X on selected nodes.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": 0.263,
+     "kyy": -0.371,
+     "kxy": -0.891
+    },
+    "aspect_ratio_y_to_x": 0.997,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "W @11, 6, 17, 18",
+      "dof": "W",
+      "nodes": [
+       11,
+       6,
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_X @11, 6, 17, 18",
+      "dof": "W_X",
+      "nodes": [
+       11,
+       6,
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @11, 6, 17, 18",
+      "dof": "W_Y",
+      "nodes": [
+       11,
+       6,
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @11, 6, 17, 18",
+      "dof": "W_XY",
+      "nodes": [
+       11,
+       6,
+       17,
+       18
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "W_X @1, 0",
+      "dof": "W_X",
+      "nodes": [
+       1,
+       0
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @10, 15",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     }
+    ],
+    "external": [
+     {
+      "label": "W_Y @10, 15",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "loadType": "distributed"
+     },
+     {
+      "label": "W_X @0, 1",
+      "dof": "W_X",
+      "nodes": [
+       0,
+       1
+      ],
+      "loadType": "distributed"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": null,
+   "used_on": [
+    "Biaxial Plate - Try 2"
+   ],
+   "scores": {
+    "identifications": 1,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 1.0
+   }
+  },
+  {
+   "id": "S-0cb7fbcc",
+   "lesson": "Hold W, W_X, W_Y, W_XY, W, W_XY on selected nodes. Link W_X, W_Y on selected nodes. Apply W_Y, W_X on selected nodes.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": 0.263,
+     "kyy": -0.371,
+     "kxy": -0.891
+    },
+    "aspect_ratio_y_to_x": 0.997,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "W @6, 11, 18, 17",
+      "dof": "W",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_X @6, 11, 18, 17",
+      "dof": "W_X",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @6, 11, 18, 17",
+      "dof": "W_Y",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @6, 11, 18, 17",
+      "dof": "W_XY",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W @1, 0, 10, 15",
+      "dof": "W",
+      "nodes": [
+       1,
+       0,
+       10,
+       15
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @1, 0, 10, 15",
+      "dof": "W_XY",
+      "nodes": [
+       1,
+       0,
+       10,
+       15
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "W_X @0, 1",
+      "dof": "W_X",
+      "nodes": [
+       0,
+       1
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @10, 15",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     }
+    ],
+    "external": [
+     {
+      "label": "W_Y @10, 15",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "loadType": "concentrated"
+     },
+     {
+      "label": "W_X @0, 1",
+      "dof": "W_X",
+      "nodes": [
+       0,
+       1
+      ],
+      "loadType": "concentrated"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": null,
+   "used_on": [
+    "Biaxial_bending"
+   ],
+   "scores": {
+    "identifications": 1,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 1.0
+   }
+  },
+  {
+   "id": "S-31a02b4b",
+   "lesson": "Hold W, W_X, W_Y, W_XY, W, W_Y, W_XY, W, W_X, W_XY on selected nodes. Link W_X, W_Y on selected nodes. Apply W_Y, W_X on selected nodes.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": -0.553,
+     "kyy": 0.658,
+     "kxy": -0.512
+    },
+    "aspect_ratio_y_to_x": 0.982,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "W @11, 6, 18, 17",
+      "dof": "W",
+      "nodes": [
+       11,
+       6,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_X @11, 6, 18, 17",
+      "dof": "W_X",
+      "nodes": [
+       11,
+       6,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @11, 6, 18, 17",
+      "dof": "W_Y",
+      "nodes": [
+       11,
+       6,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @11, 6, 18, 17",
+      "dof": "W_XY",
+      "nodes": [
+       11,
+       6,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W @0, 1",
+      "dof": "W",
+      "nodes": [
+       0,
+       1
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @0, 1",
+      "dof": "W_Y",
+      "nodes": [
+       0,
+       1
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @0, 1",
+      "dof": "W_XY",
+      "nodes": [
+       0,
+       1
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W @10, 15",
+      "dof": "W",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_X @10, 15",
+      "dof": "W_X",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @10, 15",
+      "dof": "W_XY",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "W_X @1, 0",
+      "dof": "W_X",
+      "nodes": [
+       1,
+       0
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @15, 10",
+      "dof": "W_Y",
+      "nodes": [
+       15,
+       10
+      ],
+      "value": 0.0
+     }
+    ],
+    "external": [
+     {
+      "label": "W_Y @10, 15",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "loadType": "concentrated"
+     },
+     {
+      "label": "W_X @1, 0",
+      "dof": "W_X",
+      "nodes": [
+       1,
+       0
+      ],
+      "loadType": "concentrated"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": null,
+   "used_on": [
+    "Diagonal_tabs_only_bending"
+   ],
+   "scores": {
+    "identifications": 1,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 1.0
+   }
+  },
+  {
+   "id": "S-48bfcb63",
+   "lesson": "Hold W, W_X, W_Y, W_XY, W_XY, W, W_X on selected nodes. Link W_Y on selected nodes. Apply W_Y on selected nodes.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": 0.838,
+     "kyy": -0.233,
+     "kxy": 0.494
+    },
+    "aspect_ratio_y_to_x": 3.84,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "W @2, 5, 8",
+      "dof": "W",
+      "nodes": [
+       2,
+       5,
+       8
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_X @2, 5, 8",
+      "dof": "W_X",
+      "nodes": [
+       2,
+       5,
+       8
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @2, 5, 8",
+      "dof": "W_Y",
+      "nodes": [
+       2,
+       5,
+       8
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @2, 5, 8",
+      "dof": "W_XY",
+      "nodes": [
+       2,
+       5,
+       8
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @0, 3, 6",
+      "dof": "W_XY",
+      "nodes": [
+       0,
+       3,
+       6
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W @0, 3, 6",
+      "dof": "W",
+      "nodes": [
+       0,
+       3,
+       6
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_X @0, 3, 6",
+      "dof": "W_X",
+      "nodes": [
+       0,
+       3,
+       6
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "W_Y @0, 3, 6",
+      "dof": "W_Y",
+      "nodes": [
+       0,
+       3,
+       6
+      ],
+      "value": 0.0
+     }
+    ],
+    "external": [
+     {
+      "label": "W_Y @0, 3, 6",
+      "dof": "W_Y",
+      "nodes": [
+       0,
+       3,
+       6
+      ],
+      "loadType": "distributed"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": {
+    "x": 2,
+    "y": 2
+   },
+   "used_on": [
+    "Optimized_T2"
+   ],
+   "scores": {
+    "identifications": 1,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 1.0
+   }
+  },
+  {
+   "id": "S-9724fed9",
+   "lesson": "Hold W, W_X, W_Y, W_XY, W, W_XY on selected nodes. Link W_X, W_Y on selected nodes. Apply W_Y, W_X on selected nodes.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": -0.553,
+     "kyy": 0.658,
+     "kxy": -0.512
+    },
+    "aspect_ratio_y_to_x": 0.982,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "W @6, 11, 18, 17",
+      "dof": "W",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_X @6, 11, 18, 17",
+      "dof": "W_X",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @6, 11, 18, 17",
+      "dof": "W_Y",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @6, 11, 18, 17",
+      "dof": "W_XY",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W @1, 0, 10, 15",
+      "dof": "W",
+      "nodes": [
+       1,
+       0,
+       10,
+       15
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @1, 0, 10, 15",
+      "dof": "W_XY",
+      "nodes": [
+       1,
+       0,
+       10,
+       15
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "W_X @0, 1",
+      "dof": "W_X",
+      "nodes": [
+       0,
+       1
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @10, 15",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     }
+    ],
+    "external": [
+     {
+      "label": "W_Y @10, 15",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "loadType": "concentrated"
+     },
+     {
+      "label": "W_X @0, 1",
+      "dof": "W_X",
+      "nodes": [
+       0,
+       1
+      ],
+      "loadType": "concentrated"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": null,
+   "used_on": [
+    "Diagonal_tabs_bending"
+   ],
+   "scores": {
+    "identifications": 1,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 1.0
+   }
+  },
+  {
+   "id": "S-ac7007b5",
+   "lesson": "Hold W, W_X, W_Y, W_XY, W_XY, W, W_X on selected nodes. Link W_Y, W_Y on selected nodes. Apply W_Y, W_Y on selected nodes.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": -0.154,
+     "kyy": 0.626,
+     "kxy": -0.764
+    },
+    "aspect_ratio_y_to_x": 0.976,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "W @6, 11, 18, 17",
+      "dof": "W",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_X @6, 11, 18, 17",
+      "dof": "W_X",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @6, 11, 18, 17",
+      "dof": "W_Y",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @6, 11, 18, 17",
+      "dof": "W_XY",
+      "nodes": [
+       6,
+       11,
+       18,
+       17
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @1, 0, 10, 15",
+      "dof": "W_XY",
+      "nodes": [
+       1,
+       0,
+       10,
+       15
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W @10, 15",
+      "dof": "W",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_X @10, 15",
+      "dof": "W_X",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "W_Y @10, 15",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @0, 1",
+      "dof": "W_Y",
+      "nodes": [
+       0,
+       1
+      ],
+      "value": 0.0
+     }
+    ],
+    "external": [
+     {
+      "label": "W_Y @10, 15",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "loadType": "concentrated"
+     },
+     {
+      "label": "W_Y @0, 1",
+      "dof": "W_Y",
+      "nodes": [
+       0,
+       1
+      ],
+      "loadType": "concentrated"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": null,
+   "used_on": [
+    "Diagonal_tabs_twist_bending"
+   ],
+   "scores": {
+    "identifications": 1,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 1.0
+   }
+  },
+  {
+   "id": "S-cf396a8a",
+   "lesson": "Hold W, W_X, W_Y, W_XY, W, W, W_XY on selected nodes. Apply W_Y on selected nodes.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": -0.259,
+     "kyy": 0.964,
+     "kxy": -0.0635
+    },
+    "aspect_ratio_y_to_x": 3.16,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "W @0, 3, 6",
+      "dof": "W",
+      "nodes": [
+       0,
+       3,
+       6
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_X @0, 3, 6",
+      "dof": "W_X",
+      "nodes": [
+       0,
+       3,
+       6
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_Y @0, 3, 6",
+      "dof": "W_Y",
+      "nodes": [
+       0,
+       3,
+       6
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @0, 3, 6",
+      "dof": "W_XY",
+      "nodes": [
+       0,
+       3,
+       6
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W @2, 5, 8",
+      "dof": "W",
+      "nodes": [
+       2,
+       5,
+       8
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W @2, 5, 8",
+      "dof": "W",
+      "nodes": [
+       2,
+       5,
+       8
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "W_XY @2, 5, 8",
+      "dof": "W_XY",
+      "nodes": [
+       2,
+       5,
+       8
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [],
+    "external": [
+     {
+      "label": "W_Y @2, 5, 8",
+      "dof": "W_Y",
+      "nodes": [
+       2,
+       5,
+       8
+      ],
+      "loadType": "concentrated"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": {
+    "x": 2,
+    "y": 2
+   },
+   "used_on": [
+    "Trans"
+   ],
+   "scores": {
+    "identifications": 1,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 1.0
+   }
+  },
+  {
+   "id": "S-0c485f2b",
+   "lesson": "Hold W, W_X, W_XY on top. Hold W, W_Y, W_XY on left. Hold W, W_X, W_Y, W_XY, W, W_X, W_Y, W_XY on selected nodes. Link W_Y on top. Link W_X on left. Apply W_Y on top. Apply W_X on left.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": 0.263,
+     "kyy": -0.371,
+     "kxy": -0.891
+    },
+    "aspect_ratio_y_to_x": 0.997,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "top tab tip  w*=0",
+      "dof": "W",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top tab tip  dw*/dx=0",
+      "dof": "W_X",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top tab tip  d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "left tab tip w*=0",
+      "dof": "W",
+      "edge": "left",
+      "value": 0.0
+     },
+     {
+      "label": "left tab tip dw*/dy=0",
+      "dof": "W_Y",
+      "edge": "left",
+      "value": 0.0
+     },
+     {
+      "label": "left tab tip d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "left",
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre w*=0",
+      "dof": "W",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre dw*/dx=0",
+      "dof": "W_X",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre dw*/dy=0",
+      "dof": "W_Y",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre w*=0",
+      "dof": "W",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre dw*/dx=0",
+      "dof": "W_X",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre dw*/dy=0",
+      "dof": "W_Y",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "top tab tip dw*/dy tied (rigid rotation, Sys1)",
+      "dof": "W_Y",
+      "edge": "top",
+      "value": 0.0,
+      "sortDirection": "x"
+     },
+     {
+      "label": "left tab tip dw*/dx tied (rigid rotation, Sys2)",
+      "dof": "W_X",
+      "edge": "left",
+      "value": 0.0,
+      "sortDirection": "y"
+     }
+    ],
+    "external": [
+     {
+      "label": "Sys1 top tab (W_Y) applied couple",
+      "dof": "W_Y",
+      "edge": "top",
+      "loadType": "concentrated",
+      "sortDirection": "x"
+     },
+     {
+      "label": "Sys2 left tab (W_X) applied couple",
+      "dof": "W_X",
+      "edge": "left",
+      "loadType": "concentrated",
+      "sortDirection": "y"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": null,
+   "used_on": [
+    "biaxial_plate_ref2_3_6"
+   ],
+   "scores": {
+    "identifications": 0,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 0.0
+   }
+  },
+  {
+   "id": "S-1825e8a1",
+   "lesson": "Hold W, W_X, W_XY on top. Hold W, W_X, W_XY on bottom. Apply W_Y on top. Apply W_Y on bottom.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": 0.0245,
+     "kyy": -0.989,
+     "kxy": 0.145
+    },
+    "aspect_ratio_y_to_x": 1.96,
+    "material_types": [
+     "orthotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "top    w*=0",
+      "dof": "W",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top    dw*/dx=0",
+      "dof": "W_X",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top    d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "bottom w*=0",
+      "dof": "W",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom dw*/dx=0",
+      "dof": "W_X",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "bottom",
+      "value": 0.0
+     }
+    ],
+    "linking": [],
+    "external": [
+     {
+      "label": "M_yy on top edge",
+      "dof": "W_Y",
+      "edge": "top",
+      "loadType": "distributed",
+      "sortDirection": "x"
+     },
+     {
+      "label": "M_yy on bottom edge",
+      "dof": "W_Y",
+      "edge": "bottom",
+      "loadType": "distributed",
+      "sortDirection": "x"
+     }
+    ]
+   },
+   "placement": "edges",
+   "typical_mesh": {
+    "x": 2,
+    "y": 2
+   },
+   "used_on": [
+    "longitudinal",
+    "transverse-raw"
+   ],
+   "scores": {
+    "identifications": 0,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 0.0
+   }
+  },
+  {
+   "id": "S-68cd3506",
+   "lesson": "Hold W, W_X, W_XY on top. Hold W, W_X, W_XY, W_Y on bottom. Apply W_Y on top.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": 0.0245,
+     "kyy": -0.989,
+     "kxy": 0.145
+    },
+    "aspect_ratio_y_to_x": 1.96,
+    "material_types": [
+     "orthotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "top    w*=0",
+      "dof": "W",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top    dw*/dx=0",
+      "dof": "W_X",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top    d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "bottom w*=0",
+      "dof": "W",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom dw*/dx=0",
+      "dof": "W_X",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom  dw*/dn = 0  (unknown moment)",
+      "dof": "W_Y",
+      "edge": "bottom",
+      "value": 0.0
+     }
+    ],
+    "linking": [],
+    "external": [
+     {
+      "label": "M_yy on top edge",
+      "dof": "W_Y",
+      "edge": "top",
+      "loadType": "distributed",
+      "sortDirection": "x"
+     }
+    ]
+   },
+   "placement": "edges",
+   "typical_mesh": {
+    "x": 2,
+    "y": 2
+   },
+   "used_on": [
+    "longitudinal",
+    "transverse-raw"
+   ],
+   "scores": {
+    "identifications": 0,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 0.0
+   }
+  },
+  {
+   "id": "S-6b5d411f",
+   "lesson": "Hold W, W_X, W_XY, W_Y on top. Hold W, W_X, W_XY on bottom. Apply W_Y on bottom.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": 0.0245,
+     "kyy": -0.989,
+     "kxy": 0.145
+    },
+    "aspect_ratio_y_to_x": 1.96,
+    "material_types": [
+     "orthotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "top    w*=0",
+      "dof": "W",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top    dw*/dx=0",
+      "dof": "W_X",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top    d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "bottom w*=0",
+      "dof": "W",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom dw*/dx=0",
+      "dof": "W_X",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "bottom d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "bottom",
+      "value": 0.0
+     },
+     {
+      "label": "top  dw*/dn = 0  (unknown moment)",
+      "dof": "W_Y",
+      "edge": "top",
+      "value": 0.0
+     }
+    ],
+    "linking": [],
+    "external": [
+     {
+      "label": "M_yy on bottom edge",
+      "dof": "W_Y",
+      "edge": "bottom",
+      "loadType": "distributed",
+      "sortDirection": "x"
+     }
+    ]
+   },
+   "placement": "edges",
+   "typical_mesh": {
+    "x": 2,
+    "y": 2
+   },
+   "used_on": [
+    "longitudinal",
+    "transverse-raw"
+   ],
+   "scores": {
+    "identifications": 0,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 0.0
+   }
+  },
+  {
+   "id": "S-9c723756",
+   "lesson": "Hold W, W_X, W_XY, W, W_Y, W_XY, W, W_X, W_Y, W_XY, W, W_X, W_Y, W_XY on selected nodes. Link W_Y, W_X on selected nodes. Apply W_Y, W_X on selected nodes.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": -0.538,
+     "kyy": 0.655,
+     "kxy": -0.529
+    },
+    "aspect_ratio_y_to_x": 0.982,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "top tab flat  w*=0",
+      "dof": "W",
+      "nodes": [
+       7,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "top tab flat  dw*/dx=0",
+      "dof": "W_X",
+      "nodes": [
+       7,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "top tab flat  d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       7,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "left tab flat w*=0",
+      "dof": "W",
+      "nodes": [
+       1,
+       2
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "left tab flat dw*/dy=0",
+      "dof": "W_Y",
+      "nodes": [
+       1,
+       2
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "left tab flat d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       1,
+       2
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre w*=0",
+      "dof": "W",
+      "nodes": [
+       4,
+       8
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre dw*/dx=0",
+      "dof": "W_X",
+      "nodes": [
+       4,
+       8
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre dw*/dy=0",
+      "dof": "W_Y",
+      "nodes": [
+       4,
+       8
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       4,
+       8
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre w*=0",
+      "dof": "W",
+      "nodes": [
+       13,
+       14
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre dw*/dx=0",
+      "dof": "W_X",
+      "nodes": [
+       13,
+       14
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre dw*/dy=0",
+      "dof": "W_Y",
+      "nodes": [
+       13,
+       14
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       13,
+       14
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "top tab flat dw*/dy tied (rigid rotation, Sys1)",
+      "dof": "W_Y",
+      "nodes": [
+       7,
+       11
+      ],
+      "value": 0.0,
+      "sortDirection": "x"
+     },
+     {
+      "label": "left tab flat dw*/dx tied (rigid rotation, Sys2)",
+      "dof": "W_X",
+      "nodes": [
+       1,
+       2
+      ],
+      "value": 0.0,
+      "sortDirection": "y"
+     }
+    ],
+    "external": [
+     {
+      "label": "Sys1 top tab (W_Y) applied couple",
+      "dof": "W_Y",
+      "nodes": [
+       7,
+       11
+      ],
+      "loadType": "concentrated",
+      "sortDirection": "x"
+     },
+     {
+      "label": "Sys2 left tab (W_X) applied couple",
+      "dof": "W_X",
+      "nodes": [
+       1,
+       2
+      ],
+      "loadType": "concentrated",
+      "sortDirection": "y"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": null,
+   "used_on": [
+    "biaxial_plate_ref2_3_6",
+    "biaxial_plate_steps_2_5"
+   ],
+   "scores": {
+    "identifications": 0,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 0.0
+   }
+  },
+  {
+   "id": "S-e0bb2889",
+   "lesson": "Hold W, W_X, W_XY, W, W_Y, W_XY, W, W_X, W_Y, W_XY, W, W_X, W_Y, W_XY on selected nodes. Link W_Y, W_X on selected nodes. Apply W_Y, W_X on selected nodes.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": -0.24,
+     "kyy": 0.392,
+     "kxy": -0.888
+    },
+    "aspect_ratio_y_to_x": 1.13,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "top tab flat  w*=0",
+      "dof": "W",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "top tab flat  dw*/dx=0",
+      "dof": "W_X",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "top tab flat  d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "left tab flat w*=0",
+      "dof": "W",
+      "nodes": [
+       0,
+       1
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "left tab flat dw*/dy=0",
+      "dof": "W_Y",
+      "nodes": [
+       0,
+       1
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "left tab flat d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       0,
+       1
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre w*=0",
+      "dof": "W",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre dw*/dx=0",
+      "dof": "W_X",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre dw*/dy=0",
+      "dof": "W_Y",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre w*=0",
+      "dof": "W",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre dw*/dx=0",
+      "dof": "W_X",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre dw*/dy=0",
+      "dof": "W_Y",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "top tab flat dw*/dy tied (rigid rotation, Sys1)",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "value": 0.0,
+      "sortDirection": "x"
+     },
+     {
+      "label": "left tab flat dw*/dx tied (rigid rotation, Sys2)",
+      "dof": "W_X",
+      "nodes": [
+       0,
+       1
+      ],
+      "value": 0.0,
+      "sortDirection": "y"
+     }
+    ],
+    "external": [
+     {
+      "label": "Sys1 top tab (W_Y) applied couple",
+      "dof": "W_Y",
+      "nodes": [
+       10,
+       15
+      ],
+      "loadType": "concentrated",
+      "sortDirection": "x"
+     },
+     {
+      "label": "Sys2 left tab (W_X) applied couple",
+      "dof": "W_X",
+      "nodes": [
+       0,
+       1
+      ],
+      "loadType": "concentrated",
+      "sortDirection": "y"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": null,
+   "used_on": [
+    "biaxial_plate_ref2_3_6",
+    "biaxial_plate_steps_2_5"
+   ],
+   "scores": {
+    "identifications": 0,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 0.0
+   }
+  },
+  {
+   "id": "S-fb322dc5",
+   "lesson": "Hold W, W_X, W_XY on top. Hold W, W_Y, W_XY on left. Hold W, W_X, W_Y, W_XY, W, W_X, W_Y, W_XY on selected nodes. Link W_Y on top. Link W_X on left. Apply W_Y on top. Apply W_X on left.",
+   "use_when": {
+    "moving_channels": [
+     "F[0]",
+     "F[1]"
+    ],
+    "load_channels": [],
+    "channels_labelled": false,
+    "curvature_direction": {
+     "kxx": 0.0191,
+     "kyy": -0.107,
+     "kxy": 0.994
+    },
+    "aspect_ratio_y_to_x": 1.0,
+    "material_types": [
+     "anisotropic"
+    ]
+   },
+   "boundary_conditions": {
+    "prescribed": [
+     {
+      "label": "top tab tip  w*=0",
+      "dof": "W",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top tab tip  dw*/dx=0",
+      "dof": "W_X",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "top tab tip  d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "top",
+      "value": 0.0
+     },
+     {
+      "label": "left tab tip w*=0",
+      "dof": "W",
+      "edge": "left",
+      "value": 0.0
+     },
+     {
+      "label": "left tab tip dw*/dy=0",
+      "dof": "W_Y",
+      "edge": "left",
+      "value": 0.0
+     },
+     {
+      "label": "left tab tip d2w*/dxdy=0",
+      "dof": "W_XY",
+      "edge": "left",
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre w*=0",
+      "dof": "W",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre dw*/dx=0",
+      "dof": "W_X",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre dw*/dy=0",
+      "dof": "W_Y",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "bottom junction encastre d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       6,
+       11
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre w*=0",
+      "dof": "W",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre dw*/dx=0",
+      "dof": "W_X",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre dw*/dy=0",
+      "dof": "W_Y",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     },
+     {
+      "label": "right junction encastre d2w*/dxdy=0",
+      "dof": "W_XY",
+      "nodes": [
+       17,
+       18
+      ],
+      "value": 0.0
+     }
+    ],
+    "linking": [
+     {
+      "label": "top tab tip dw*/dy tied (rigid rotation, Sys1)",
+      "dof": "W_Y",
+      "edge": "top",
+      "value": 0.0,
+      "sortDirection": "x"
+     },
+     {
+      "label": "left tab tip dw*/dx tied (rigid rotation, Sys2)",
+      "dof": "W_X",
+      "edge": "left",
+      "value": 0.0,
+      "sortDirection": "y"
+     }
+    ],
+    "external": [
+     {
+      "label": "Sys1 top tab (W_Y) applied couple",
+      "dof": "W_Y",
+      "edge": "top",
+      "loadType": "concentrated",
+      "sortDirection": "x"
+     },
+     {
+      "label": "Sys2 left tab (W_X) applied couple",
+      "dof": "W_X",
+      "edge": "left",
+      "loadType": "concentrated",
+      "sortDirection": "y"
+     }
+    ]
+   },
+   "placement": "nodes",
+   "typical_mesh": null,
+   "used_on": [
+    "biaxial_plate_steps_2_5"
+   ],
+   "scores": {
+    "identifications": 0,
+    "adoptions": 0,
+    "declines": 0,
+    "reward": 0.0
+   }
+  }
+ ],
+ "source": null
+}
